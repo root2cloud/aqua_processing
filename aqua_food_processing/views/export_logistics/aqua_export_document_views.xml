@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_aqua_export_document_list" model="ir.ui.view">
+        <field name="name">aqua.export.document.list</field>
+        <field name="model">aqua.export.document</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="shipment_id"/>
+                <field name="document_type"/>
+                <field name="state" widget="badge"/>
+            </list>
+        </field>
+    </record>
+    <record id="action_aqua_export_document" model="ir.actions.act_window">
+        <field name="name">Export Documents</field>
+        <field name="res_model">aqua.export.document</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_aqua_build_pallet_wizard_form" model="ir.ui.view">
+        <field name="name">aqua.build.pallet.wizard.form</field>
+        <field name="model">aqua.build.pallet.wizard</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <field name="carton_ids" widget="many2many_tags"/>
+                </group>
+                <footer>
+                    <button name="action_confirm" type="object" string="Build Pallet" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

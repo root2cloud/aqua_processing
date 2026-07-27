@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="aqua_food_processing.DashboardMain">
+        <div class="o_aqua_dashboard">
+            <div class="o_aqua_header">
+                <h2><i class="fa fa-anchor mr-2"/> Aqua Processing </h2>
+            </div>
+
+            <t t-if="state.isLoading">
+                <div class="o_aqua_loading"><i class="fa fa-spinner fa-spin mr-2"/> Loading dashboard...</div>
+            </t>
+            <t t-else="">
+
+                <!-- KPI CARDS -->
+                <div class="o_aqua_kpi_row">
+                    <div class="o_aqua_kpi_card">
+                        <div class="o_kpi_icon" style="background:#2C7A7B22;color:#2C7A7B;"><i class="fa fa-truck"/></div>
+                        <div>
+                            <div class="o_kpi_value" t-esc="state.total_receipts"/>
+                            <div class="o_kpi_label">Total Catch Receipts</div>
+                        </div>
+                    </div>
+                    <div class="o_aqua_kpi_card">
+                        <div class="o_kpi_icon" style="background:#3182CE22;color:#3182CE;"><i class="fa fa-check-circle"/></div>
+                        <div>
+                            <div class="o_kpi_value" t-esc="state.accepted_receipts"/>
+                            <div class="o_kpi_label">Accepted Receipts</div>
+                        </div>
+                    </div>
+                    <div class="o_aqua_kpi_card">
+                        <div class="o_kpi_icon" style="background:#38A16922;color:#38A169;"><i class="fa fa-flask"/></div>
+                        <div>
+                            <div class="o_kpi_value" t-esc="Math.round(state.qc_pass_rate) + '%'"/>
+                            <div class="o_kpi_label">QC Pass Rate</div>
+                        </div>
+                    </div>
+                    <div class="o_aqua_kpi_card">
+                        <div class="o_kpi_icon" style="background:#D69E2E22;color:#D69E2E;"><i class="fa fa-ship"/></div>
+                        <div>
+                            <div class="o_kpi_value" t-esc="Math.round(state.on_time_dispatch_rate) + '%'"/>
+                            <div class="o_kpi_label">On-time Dispatch Rate</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CHART ROW 1: bar + donut -->
+                <div class="o_aqua_chart_row">
+                    <div class="o_aqua_panel o_aqua_panel_wide">
+                        <div class="o_aqua_panel_title">Receipts by Species</div>
+                        <t t-if="state.receipts_by_species.length">
+                            <div class="o_aqua_barchart">
+                                <t t-foreach="state.receipts_by_species" t-as="item" t-key="item.label">
+                                    <div class="o_aqua_bar_row">
+                                        <div class="o_aqua_bar_label" t-esc="item.label"/>
+                                        <div class="o_aqua_bar_track">
+                                            <div class="o_aqua_bar_fill"
+                                                 t-attf-style="width: {{barWidth(item.value, state.receipts_by_species)}}%; background: {{color(item_index)}};"/>
+                                        </div>
+                                        <div class="o_aqua_bar_value" t-esc="item.value"/>
+                                    </div>
+                                </t>
+                            </div>
+                        </t>
+                        <t t-else="">
+                            <div class="o_aqua_empty">No catch receipts recorded yet.</div>
+                        </t>
+                    </div>
+
+                    <div class="o_aqua_panel">
+                        <div class="o_aqua_panel_title">QC Result Breakdown</div>
+                        <t t-if="state.qc_breakdown.length">
+                            <div class="o_aqua_donut_wrap">
+                                <div class="o_aqua_donut" t-attf-style="{{donutStyle(state.qc_breakdown)}}">
+                                    <div class="o_aqua_donut_hole"/>
+                                </div>
+                                <div class="o_aqua_legend">
+                                    <t t-foreach="state.qc_breakdown" t-as="item" t-key="item.label">
+                                        <div class="o_aqua_legend_item">
+                                            <span class="o_aqua_legend_dot" t-attf-style="background:{{color(item_index)}};"/>
+                                            <span t-esc="item.label"/>
+                                            <span class="o_aqua_legend_value" t-esc="item.value"/>
+                                        </div>
+                                    </t>
+                                </div>
+                            </div>
+                        </t>
+                        <t t-else="">
+                            <div class="o_aqua_empty">No QC tests recorded yet.</div>
+                        </t>
+                    </div>
+                </div>
+
+                <!-- CHART ROW 2: donut + sparkline -->
+                <div class="o_aqua_chart_row">
+                    <div class="o_aqua_panel">
+                        <div class="o_aqua_panel_title">Shipment Status</div>
+                        <t t-if="state.shipment_breakdown.length">
+                            <div class="o_aqua_donut_wrap">
+                                <div class="o_aqua_donut" t-attf-style="{{donutStyle(state.shipment_breakdown)}}">
+                                    <div class="o_aqua_donut_hole"/>
+                                </div>
+                                <div class="o_aqua_legend">
+                                    <t t-foreach="state.shipment_breakdown" t-as="item" t-key="item.label">
+                                        <div class="o_aqua_legend_item">
+                                            <span class="o_aqua_legend_dot" t-attf-style="background:{{color(item_index)}};"/>
+                                            <span t-esc="item.label"/>
+                                            <span class="o_aqua_legend_value" t-esc="item.value"/>
+                                        </div>
+                                    </t>
+                                </div>
+                            </div>
+                        </t>
+                        <t t-else="">
+                            <div class="o_aqua_empty">No shipments recorded yet.</div>
+                        </t>
+                    </div>
+
+                    <div class="o_aqua_panel o_aqua_panel_wide">
+                        <div class="o_aqua_panel_title">Weekly Receipt Trend</div>
+                        <t t-if="state.receipt_trend.length">
+                            <svg class="o_aqua_sparkline" viewBox="0 0 400 120" preserveAspectRatio="none">
+                                <polyline
+                                    fill="none" stroke="#2C7A7B" stroke-width="3"
+                                    t-att-points="sparklinePoints(state.receipt_trend, 400, 100)"/>
+                            </svg>
+                            <div class="o_aqua_sparkline_labels">
+                                <t t-foreach="state.receipt_trend" t-as="item" t-key="item.label">
+                                    <span t-esc="item.label"/>
+                                </t>
+                            </div>
+                        </t>
+                        <t t-else="">
+                            <div class="o_aqua_empty">Not enough data yet for a trend line.</div>
+                        </t>
+                    </div>
+                </div>
+
+                <!-- YIELD TREND -->
+                <div class="o_aqua_panel o_aqua_panel_full">
+                    <div class="o_aqua_panel_title">Recent Processing Orders — Yield %</div>
+                    <t t-if="state.yield_trend.length">
+                        <div class="o_aqua_barchart">
+                            <t t-foreach="state.yield_trend" t-as="item" t-key="item.label">
+                                <div class="o_aqua_bar_row">
+                                    <div class="o_aqua_bar_label" t-esc="item.label"/>
+                                    <div class="o_aqua_bar_track">
+                                        <div class="o_aqua_bar_fill"
+                                             t-attf-style="width: {{item.value}}%; background: #805AD5;"/>
+                                    </div>
+                                    <div class="o_aqua_bar_value" t-esc="item.value + '%'"/>
+                                </div>
+                            </t>
+                        </div>
+                    </t>
+                    <t t-else="">
+                        <div class="o_aqua_empty">No processing orders recorded yet.</div>
+                    </t>
+                </div>
+
+                <!-- COLD ROOM UTILIZATION -->
+                <div class="o_aqua_panel o_aqua_panel_full">
+                    <div class="o_aqua_panel_title">Cold Room Utilization</div>
+                    <t t-if="state.cold_room_utilization.length">
+                        <table class="o_aqua_table">
+                            <thead><tr><th>Room</th><th>Capacity (kg)</th><th>Active Lots</th><th>Utilization</th></tr></thead>
+                            <tbody>
+                                <t t-foreach="state.cold_room_utilization" t-as="room" t-key="room.name">
+                                    <tr>
+                                        <td t-esc="room.name"/>
+                                        <td t-esc="room.capacity_kg"/>
+                                        <td t-esc="room.lots"/>
+                                        <td>
+                                            <div class="o_aqua_bar_track o_aqua_bar_track_inline">
+                                                <div class="o_aqua_bar_fill" t-attf-style="width: {{room.pct}}%; background: #3182CE;"/>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </t>
+                    <t t-else="">
+                        <div class="o_aqua_empty">No cold rooms configured yet.</div>
+                    </t>
+                </div>
+
+            </t>
+        </div>
+    </t>
+</templates>

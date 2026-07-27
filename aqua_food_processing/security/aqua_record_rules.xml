@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="rule_aqua_species_company" model="ir.rule">
+        <field name="name">Aqua Species: multi-company</field>
+        <field name="model_id" ref="model_aqua_species"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_aqua_catch_receipt_company" model="ir.rule">
+        <field name="name">Catch Receipt: multi-company</field>
+        <field name="model_id" ref="model_aqua_catch_receipt"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_aqua_quality_test_company" model="ir.rule">
+        <field name="name">Quality Test: multi-company</field>
+        <field name="model_id" ref="model_aqua_quality_test"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_aqua_cold_room_company" model="ir.rule">
+        <field name="name">Cold Room: multi-company</field>
+        <field name="model_id" ref="model_aqua_cold_room"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_aqua_pack_order_company" model="ir.rule">
+        <field name="name">Pack Order: multi-company</field>
+        <field name="model_id" ref="model_aqua_pack_order"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_aqua_shipment_company" model="ir.rule">
+        <field name="name">Shipment: multi-company</field>
+        <field name="model_id" ref="model_aqua_shipment"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+</odoo>

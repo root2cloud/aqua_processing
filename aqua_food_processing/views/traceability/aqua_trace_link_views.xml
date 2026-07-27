@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_aqua_trace_link_list" model="ir.ui.view">
+        <field name="name">aqua.trace.link.list</field>
+        <field name="model">aqua.trace.link</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="catch_receipt_id"/>
+                <field name="processing_order_id"/>
+                <field name="pack_order_id"/>
+                <field name="pallet_id"/>
+                <field name="shipment_id"/>
+                <field name="customer_id"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_aqua_trace_link_form" model="ir.ui.view">
+        <field name="name">aqua.trace.link.form</field>
+        <field name="model">aqua.trace.link</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_catch_receipt" type="object" class="oe_stat_button" icon="fa-anchor">
+                            <div class="o_stat_info"><span class="o_stat_text">Catch</span></div>
+                        </button>
+                        <button name="action_view_processing_order" type="object" class="oe_stat_button" icon="fa-cogs">
+                            <div class="o_stat_info"><span class="o_stat_text">Processing</span></div>
+                        </button>
+                        <button name="action_view_shipments" type="object" class="oe_stat_button" icon="fa-truck">
+                            <div class="o_stat_info"><span class="o_stat_text">Shipment</span></div>
+                        </button>
+                    </div>
+                    <div class="oe_title"><h1><field name="name" readonly="1"/></h1></div>
+                    <group>
+                        <group>
+                            <field name="catch_receipt_id"/>
+                            <field name="processing_order_id"/>
+                            <field name="pack_order_id"/>
+                        </group>
+                        <group>
+                            <field name="carton_id"/>
+                            <field name="pallet_id"/>
+                            <field name="shipment_id"/>
+                            <field name="customer_id"/>
+                        </group>
+                    </group>
+                    <field name="quality_test_ids" widget="many2many_tags"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="action_aqua_trace_link" model="ir.actions.act_window">
+        <field name="name">Traceability</field>
+        <field name="res_model">aqua.trace.link</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

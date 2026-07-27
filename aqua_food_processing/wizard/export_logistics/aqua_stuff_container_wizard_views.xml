@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_aqua_stuff_container_wizard_form" model="ir.ui.view">
+        <field name="name">aqua.stuff.container.wizard.form</field>
+        <field name="model">aqua.stuff.container.wizard</field>
+        <field name="arch" type="xml">
+            <form>
+                <field name="shipment_id" invisible="1"/>
+                <group>
+                    <field name="container_id"/>
+                    <field name="pallet_ids" widget="many2many_tags"/>
+                </group>
+                <footer>
+                    <button name="action_confirm" type="object" string="Stuff Container" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

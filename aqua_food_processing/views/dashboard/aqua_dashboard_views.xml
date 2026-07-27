@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_aqua_dashboard" model="ir.actions.client">
+        <field name="name">Aqua Dashboard</field>
+        <field name="tag">aqua_dashboard_action</field>
+    </record>
+</odoo>

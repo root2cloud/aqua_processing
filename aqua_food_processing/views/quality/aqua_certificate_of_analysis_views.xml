@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_aqua_coa_list" model="ir.ui.view">
+        <field name="name">aqua.certificate.of.analysis.list</field>
+        <field name="model">aqua.certificate.of.analysis</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="issue_date"/>
+                <field name="certifying_body_id"/>
+                <field name="shipment_id"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_aqua_coa_form" model="ir.ui.view">
+        <field name="name">aqua.certificate.of.analysis.form</field>
+        <field name="model">aqua.certificate.of.analysis</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_title"><h1><field name="name" readonly="1"/></h1></div>
+                    <group>
+                        <group>
+                            <field name="issue_date"/>
+                            <field name="certifying_body_id"/>
+                        </group>
+                        <group>
+                            <field name="shipment_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <field name="quality_test_ids" widget="many2many_tags"/>
+                    <field name="snapshot_notes" readonly="1"/>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+    <record id="action_aqua_coa" model="ir.actions.act_window">
+        <field name="name">Certificates of Analysis</field>
+        <field name="res_model">aqua.certificate.of.analysis</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

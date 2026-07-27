@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="trace_lookup_template" name="Aqua Product Trace Lookup">
+        <t t-call="website.layout">
+            <div class="container o_aqua_trace_lookup py-5">
+                <h1>Product Journey</h1>
+                <t t-if="not lot">
+                    <p>Scan the QR code on your product packaging to see its journey from catch to table.</p>
+                </t>
+                <t t-elif="not trace_link">
+                    <p>No traceability record found for lot <strong t-out="lot"/>.</p>
+                </t>
+                <t t-else="">
+                    <div class="card p-4">
+                        <h3>Lot <span t-out="lot"/></h3>
+                        <ul class="list-unstyled">
+                            <li t-if="trace_link.catch_receipt_id">
+                                <strong>Sourced from:</strong>
+                                <span t-out="trace_link.catch_receipt_id.vendor_id.name"/>
+                                on <span t-out="trace_link.catch_receipt_id.receipt_date"/>
+                            </li>
+                            <li t-if="trace_link.catch_receipt_id.species_id">
+                                <strong>Species:</strong> <span t-out="trace_link.catch_receipt_id.species_id.name"/>
+                            </li>
+                            <li t-if="trace_link.processing_order_id">
+                                <strong>Processed:</strong> <span t-out="trace_link.processing_order_id.name"/>
+                            </li>
+                            <li t-if="trace_link.shipment_id">
+                                <strong>Shipped:</strong> <span t-out="trace_link.shipment_id.name"/>
+                            </li>
+                        </ul>
+                    </div>
+                </t>
+            </div>
+        </t>
+    </template>
+
+    <template id="packing_scan_template" name="Aqua Packing Scan Screen">
+        <t t-call="website.layout">
+            <div class="container o_aqua_packing_scan py-5">
+                <h2>Scan to Pack</h2>
+                <p>Scan a carton barcode to associate it with the active pack order.</p>
+                <input type="text" id="aqua_scan_input" class="form-control" placeholder="Scan barcode..."/>
+                <div id="aqua_scan_result" class="mt-3"/>
+            </div>
+        </t>
+    </template>
+</odoo>

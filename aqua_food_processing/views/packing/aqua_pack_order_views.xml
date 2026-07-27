@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_aqua_pack_order_list" model="ir.ui.view">
+        <field name="name">aqua.pack.order.list</field>
+        <field name="model">aqua.pack.order</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="processing_order_id"/>
+                <field name="cold_room_id"/>
+                <field name="carton_count"/>
+                <field name="state" widget="badge"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_aqua_pack_order_form" model="ir.ui.view">
+        <field name="name">aqua.pack.order.form</field>
+        <field name="model">aqua.pack.order</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_confirm" type="object" string="Confirm" class="oe_highlight"
+                            invisible="state != 'draft'"/>
+                    <button name="action_reset_to_draft" type="object" string="Reset to Ready"
+                            invisible="state not in ('loaded', 'shipped')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,ready,loaded,shipped"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_cartons" type="object" class="oe_stat_button" icon="fa-cube">
+                            <field name="carton_count" widget="statinfo" string="Cartons"/>
+                        </button>
+                        <button name="action_view_traceability" type="object" class="oe_stat_button" icon="fa-search">
+                            <div class="o_stat_info"><span class="o_stat_text">Trace</span></div>
+                        </button>
+                    </div>
+                    <div class="oe_title"><h1><field name="name" readonly="1"/></h1></div>
+                    <group>
+                        <group>
+                            <field name="processing_order_id" domain="[('state', '=', 'done')]"/>
+                            <field name="cold_room_id"/>
+                        </group>
+                        <group>
+                            <field name="weight_tolerance"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Cartons">
+                            <field name="carton_ids">
+                                <list editable="bottom">
+                                    <field name="name"/>
+                                    <field name="product_id"/>
+                                    <field name="total_weight"/>
+                                    <field name="unit_pack_weight"/>
+                                    <field name="pack_count" readonly="1"/>
+                                    <field name="pallet_id"/>
+                                    <field name="barcode"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+    <record id="action_aqua_pack_order" model="ir.actions.act_window">
+        <field name="name">Pack Orders</field>
+        <field name="res_model">aqua.pack.order</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

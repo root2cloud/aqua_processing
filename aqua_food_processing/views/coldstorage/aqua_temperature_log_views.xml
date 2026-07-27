@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_aqua_temperature_log_list" model="ir.ui.view">
+        <field name="name">aqua.temperature.log.list</field>
+        <field name="model">aqua.temperature.log</field>
+        <field name="arch" type="xml">
+            <list decoration-danger="is_excursion==True">
+                <field name="cold_room_id"/>
+                <field name="log_datetime"/>
+                <field name="temperature"/>
+                <field name="is_excursion"/>
+                <field name="source"/>
+            </list>
+        </field>
+    </record>
+    <record id="action_aqua_temperature_log" model="ir.actions.act_window">
+        <field name="name">Temperature Logs</field>
+        <field name="res_model">aqua.temperature.log</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

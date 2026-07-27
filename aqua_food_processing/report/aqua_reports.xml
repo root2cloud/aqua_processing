@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_report_aqua_carton_label" model="ir.actions.report">
+        <field name="name">Carton Label</field>
+        <field name="model">aqua.carton</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">aqua_food_processing.report_aqua_carton_label</field>
+        <field name="print_report_name">'Carton Label - %s' % (object.name)</field>
+        <field name="binding_model_id" ref="model_aqua_carton"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="report_aqua_carton_label">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <div class="page" style="width:10cm;height:7cm;padding:0.5cm;">
+                    <h3 t-esc="doc.name"/>
+                    <p>Weight: <span t-esc="doc.total_weight"/> kg</p>
+                    <p t-if="doc.pack_order_id.processing_order_id.catch_receipt_id.species_id">
+                        Species: <span t-esc="doc.pack_order_id.processing_order_id.catch_receipt_id.species_id.name"/>
+                    </p>
+                    <p>Barcode: <span t-esc="doc.barcode"/></p>
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <record id="action_report_aqua_coa" model="ir.actions.report">
+        <field name="name">Certificate of Analysis</field>
+        <field name="model">aqua.certificate.of.analysis</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">aqua_food_processing.report_aqua_coa</field>
+        <field name="print_report_name">'COA - %s' % (object.name)</field>
+        <field name="binding_model_id" ref="model_aqua_certificate_of_analysis"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="report_aqua_coa">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2>Certificate of Analysis - <span t-esc="doc.name"/></h2>
+                        <p>Issue Date: <span t-esc="doc.issue_date"/></p>
+                        <p>Certifying Body: <span t-esc="doc.certifying_body_id.name"/></p>
+                        <table class="table table-sm">
+                            <thead><tr><th>Test</th><th>Stage</th><th>Result</th><th>Histamine (ppm)</th></tr></thead>
+                            <tbody>
+                                <tr t-foreach="doc.quality_test_ids" t-as="test">
+                                    <td t-esc="test.name"/>
+                                    <td t-esc="test.test_stage"/>
+                                    <td t-esc="test.result_state"/>
+                                    <td t-esc="test.histamine_ppm"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

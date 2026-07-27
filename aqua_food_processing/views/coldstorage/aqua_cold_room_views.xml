@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_aqua_cold_room_list" model="ir.ui.view">
+        <field name="name">aqua.cold.room.list</field>
+        <field name="model">aqua.cold.room</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="capacity_kg"/>
+                <field name="min_temperature"/>
+                <field name="max_temperature"/>
+                <field name="current_lot_count"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_aqua_cold_room_form" model="ir.ui.view">
+        <field name="name">aqua.cold.room.form</field>
+        <field name="model">aqua.cold.room</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_temperature_logs" type="object" class="oe_stat_button" icon="fa-thermometer-half">
+                            <field name="temperature_log_count" widget="statinfo" string="Temp Logs"/>
+                        </button>
+                        <button name="action_view_blast_freeze_cycles" type="object" class="oe_stat_button" icon="fa-snowflake-o">
+                            <field name="blast_freeze_cycle_count" widget="statinfo" string="Freeze Cycles"/>
+                        </button>
+                    </div>
+                    <div class="oe_title"><h1><field name="name" placeholder="Cold Room Name"/></h1></div>
+                    <group>
+                        <group>
+                            <field name="code"/>
+                            <field name="location_id"/>
+                            <field name="capacity_kg"/>
+                        </group>
+                        <group>
+                            <field name="min_temperature"/>
+                            <field name="max_temperature"/>
+                            <field name="active"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+    <record id="action_aqua_cold_room" model="ir.actions.act_window">
+        <field name="name">Cold Rooms</field>
+        <field name="res_model">aqua.cold.room</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

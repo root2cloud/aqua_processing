@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_aqua_trace_query_form" model="ir.ui.view">
+        <field name="name">aqua.trace.query.form</field>
+        <field name="model">aqua.trace.query</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <field name="direction"/>
+                    <field name="catch_receipt_id" invisible="direction != 'forward'"/>
+                    <field name="lot_id" invisible="direction not in ('backward', 'recall')"/>
+                    <field name="customer_id" invisible="direction == 'forward'"/>
+                </group>
+                <footer>
+                    <button name="action_search" type="object" string="Search" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_aqua_trace_query_wizard" model="ir.actions.act_window">
+        <field name="name">Trace Query</field>
+        <field name="res_model">aqua.trace.query</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

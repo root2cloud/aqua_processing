@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_aqua_species_list" model="ir.ui.view">
+        <field name="name">aqua.species.list</field>
+        <field name="model">aqua.species</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="category"/>
+                <field name="region"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_aqua_species_form" model="ir.ui.view">
+        <field name="name">aqua.species.form</field>
+        <field name="model">aqua.species</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <field name="image" widget="image" class="oe_avatar"/>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_grading_standards" type="object"
+                                class="oe_stat_button" icon="fa-list">
+                            <field name="grading_standard_count" widget="statinfo" string="Grading Bands"/>
+                        </button>
+                        <button name="action_view_vendors" type="object"
+                                class="oe_stat_button" icon="fa-truck">
+                            <field name="vendor_count" widget="statinfo" string="Vendors"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <label for="product_tmpl_id" string="Species"/>
+                        <h2><field name="product_tmpl_id" placeholder="Select an existing Product..."/></h2>
+                        <field name="name" invisible="1"/>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="code"/>
+                            <field name="category"/>
+                            <field name="scientific_name"/>
+                        </group>
+                        <group>
+                            <field name="region"/>
+                            <field name="active"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Grading Bands">
+                            <field name="grading_standard_ids">
+                                <list editable="bottom">
+                                    <field name="name"/>
+                                    <field name="min_weight"/>
+                                    <field name="max_weight"/>
+                                    <field name="quality_criteria"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Harvest Methods">
+                            <field name="harvest_method_ids" widget="many2many_tags"/>
+                        </page>
+                        <page string="Nutritional Info">
+                            <field name="nutritional_info"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_aqua_species" model="ir.actions.act_window">
+        <field name="name">Species</field>
+        <field name="res_model">aqua.species</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

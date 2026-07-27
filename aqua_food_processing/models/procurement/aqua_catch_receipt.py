@@ -1,0 +1,313 @@
+from odoo import api, fields, models
+from odoo.exceptions import UserError, ValidationError
+
+
+class AquaCatchReceipt(models.Model):
+    _name = 'aqua.catch.receipt'
+    _description = 'Catch Receipt'
+    _inherit = ['mail.thread', 'mail.activity.mixin']
+    _order = 'receipt_date desc'
+
+    name = fields.Char(required=True, copy=False, readonly=True, default='New')
+    vendor_id = fields.Many2one('res.partner', required=True, tracking=True, string='Vendor / Harvester')
+    species_id = fields.Many2one('aqua.species', required=True, tracking=True)
+    harvest_method_id = fields.Many2one('aqua.harvest.method')
+    rate_contract_id = fields.Many2one('aqua.vendor.rate.contract')
+    receipt_date = fields.Datetime(required=True, default=fields.Datetime.now)
+    purchase_order_id = fields.Many2one('purchase.order', string='Purchase Order')
+    company_id = fields.Many2one('res.company', default=lambda self: self.env.company)
+
+    gross_weight = fields.Float(string='Gross Weight (kg)', tracking=True)
+    tare_weight = fields.Float(string='Tare Weight (kg)')
+    net_weight = fields.Float(string='Net Weight (kg)', tracking=True)
+
+    # ------------------------------------------------------------------
+    # Composite production batch number: DDMMYYYY + PO<n> + rcp<n> + -<serial>
+    # e.g. 15072026PO05rcp05-001. Generated once, at Accept, and then reused
+    # unchanged as-is through every processing Work Order (Cleaning, Peeling
+    # & Deveining, Freezing, Grading). New batch numbers are only created
+    # later, at Packing (one per size grade) and at the Peeling by-product
+    # declaration (Shells & Heads) -- both linked back to this parent batch,
+    # not replacing it.
+    # ------------------------------------------------------------------
+    batch_number = fields.Char(copy=False, readonly=True, tracking=True,
+        help='Auto-composed at Accept from the receipt date, Purchase Order number, '
+             'Receipt number, and a running serial. This is the parent production batch '
+             'number carried through Cleaning, Peeling & Deveining, Freezing and Grading '
+             'unchanged; Packing and Shells & Heads generate their own child batch numbers '
+             'linked back to this one.')
+
+    @api.model
+    def _extract_seq_digits(self, name):
+        """Pull the trailing digits out of a sequence-generated name (e.g. 'P00005' -> '05',
+        'RCP/00005' -> '05'). Falls back to '00' if nothing numeric is found, so batch number
+        generation never hard-fails just because a sequence format changed."""
+        import re
+        match = re.search(r'(\d+)$', name or '')
+        if not match:
+            return '00'
+        digits = match.group(1)
+        return digits[-2:].zfill(2) if len(digits) >= 2 else digits.zfill(2)
+
+    def _generate_batch_number(self):
+        """Compose and store the parent batch number. Idempotent: does nothing if a batch
+        number already exists, so re-accepting or re-running this never overwrites it."""
+        for rec in self:
+            if rec.batch_number:
+                continue
+            if not rec.purchase_order_id:
+                rec.message_post(body='Batch number not generated: no Purchase Order linked yet.')
+                continue
+            date_part = fields.Datetime.context_timestamp(rec, rec.receipt_date).strftime('%d%m%Y')
+            po_part = 'PO%s' % rec._extract_seq_digits(rec.purchase_order_id.name)
+            rcp_part = 'rcp%s' % rec._extract_seq_digits(rec.name)
+            serial = self.env['ir.sequence'].next_by_code('aqua.catch.receipt.batch.serial') or '001'
+            rec.batch_number = '%s%s%s-%s' % (date_part, po_part, rcp_part, serial.zfill(3))
+
+    # ------------------------------------------------------------------
+    # FIX : Previously, purchase_order_id existed as a plain, optional Many2one
+    # that nothing in this file ever set. Accepting a Catch Receipt only
+    # changed its own state field -- it never created a Purchase Order,
+    # never touched stock, and never produced the raw-material lot that
+    # the rest of the module (Processing Order, Yield Record, etc.)
+    # assumes already exists. A user following this app alone would have
+    # no actual Raw Shrimp (or any species) in Inventory at all.
+    #
+    # This adds product_id (defaulted from the selected Species) and has
+    # action_accept() create and confirm a real purchase.order for the
+    # net weight received, at the vendor rate contract's rate if one is
+    # linked. Deliberately NOT automated further than button_confirm():
+    # the actual receipt (button_validate on the resulting picking) is
+    # left for the user to complete via the normal Purchase/Inventory
+    # screens, because your own warehouse is configured for a 3-step
+    # Receive -> Quality Control -> Store flow (see the setup
+    # documentation, Section 4) -- a real human QC checkpoint belongs
+    # there, and auto-validating the receipt here would silently skip it.
+    #
+    # VERSION NOTE: purchase.order / purchase.order.line field names
+    # (product_qty, product_uom, price_unit) and button_confirm() are
+    # stable across recent Odoo versions, so this part is low-risk.
+    # Where you may need to adjust: uom_po_id vs uom_id on the product
+    # (some products don't define a distinct purchase UoM), and whatever
+    # your GST/tax defaults require on the PO line for l10n_in.
+    # ------------------------------------------------------------------
+    product_id = fields.Many2one(
+        'product.product', string='Raw Material Product',
+        help='Stock-tracked product this receipt books into inventory once accepted. '
+             'Defaults from the selected Species\' configured Raw Material Product.')
+
+    line_ids = fields.One2many('aqua.catch.receipt.line', 'catch_receipt_id', string='Receipt Lines')
+
+    state = fields.Selection([
+        ('draft', 'Draft'),
+        ('weighed', 'Weighed'),
+        ('accepted', 'Accepted'),
+        ('cancelled', 'Cancelled'),
+    ], default='draft', tracking=True)
+
+    processing_order_ids = fields.One2many('mrp.production', 'catch_receipt_id', string='Processing Orders')
+    quality_test_ids = fields.One2many('aqua.quality.test', 'catch_receipt_id', string='QC Tests')
+
+    processing_order_count = fields.Integer(compute='_compute_counts')
+    quality_test_count = fields.Integer(compute='_compute_counts')
+
+    _sql_constraints = [
+        ('receipt_uniq', 'unique(vendor_id, receipt_date, species_id, company_id)',
+         'A receipt already exists for this vendor/date/species/company.'),
+    ]
+
+    @api.constrains('gross_weight', 'net_weight')
+    def _check_weights(self):
+        for rec in self:
+            if rec.net_weight and rec.gross_weight and rec.net_weight > rec.gross_weight:
+                raise ValidationError('Net weight cannot exceed gross weight.')
+
+    def _compute_counts(self):
+        for rec in self:
+            rec.processing_order_count = len(rec.processing_order_ids)
+            rec.quality_test_count = len(rec.quality_test_ids)
+
+    @api.onchange('vendor_id')
+    def _onchange_vendor_id(self):
+        if self.vendor_id:
+            contract = self.env['aqua.vendor.rate.contract'].search([
+                ('vendor_id', '=', self.vendor_id.id),
+                ('active', '=', True),
+            ], limit=1)
+            if contract:
+                self.rate_contract_id = contract
+
+    @api.onchange('species_id')
+    def _onchange_species_id(self):
+        if self.species_id and not self.product_id:
+            product = self._get_product(self.species_id, raise_if_missing=False)
+            if product:
+                self.product_id = product
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get('name', 'New') == 'New':
+                vals['name'] = self.env['ir.sequence'].next_by_code('aqua.catch.receipt') or 'New'
+            vals.setdefault('state', 'draft')
+        return super().create(vals_list)
+
+    def write(self, vals):
+        locked_fields = {'gross_weight', 'tare_weight', 'net_weight', 'line_ids'}
+        for rec in self:
+            if rec.state == 'accepted' and locked_fields.intersection(vals.keys()):
+                raise UserError('Weighment/grading fields cannot be edited once the receipt is accepted.')
+        return super().write(vals)
+
+    def unlink(self):
+        for rec in self:
+            if rec.processing_order_ids:
+                raise UserError('Cannot delete a catch receipt that has processing orders linked to it.')
+        return super().unlink()
+
+    def action_confirm_weighment(self):
+        self.write({'state': 'weighed'})
+
+    def action_accept(self):
+        self.write({'state': 'accepted'})
+        self._create_purchase_order()
+        self._generate_batch_number()
+
+    def _get_product(self, species, raise_if_missing=True):
+        """Single lookup for the raw-material product linked to a species, sourced only
+        from product.aqua_species_id (Product -> Species). This replaces two previously
+        duplicated/conflicting mechanisms: a reverse species.raw_material_product_id field,
+        and an unreachable aqua.generate.po.wizard that reimplemented this same search."""
+        products = self.env['product.template'].search([('aqua_species_id', '=', species.id)])
+        purchasable = products.filtered('purchase_ok')
+        if len(purchasable) == 1:
+            products = purchasable
+        if not products:
+            if raise_if_missing:
+                raise UserError(
+                    "No product is linked to species '%s'. Go to the Product form, "
+                    "General Information tab, and set 'Aqua Species' to '%s'." % (species.name, species.name)
+                )
+            return False
+        if len(products) > 1:
+            if raise_if_missing:
+                raise UserError(
+                    "More than one purchasable product is linked to species '%s': %s. "
+                    "Set the correct product manually, or make sure only one raw-material "
+                    "product per species has 'Can be Purchased' checked." %
+                    (species.name, ', '.join(products.mapped('name')))
+                )
+            return False
+        return products.product_variant_id
+
+    def _get_rate_fallback(self, rec):
+        contract = self.env['aqua.vendor.rate.contract'].search([
+            ('vendor_id', '=', rec.vendor_id.id),
+            ('species_id', '=', rec.species_id.id),
+            ('active', '=', True),
+        ], limit=1)
+        return contract.rate if contract else (rec.product_id.standard_price if rec.product_id else 0.0)
+
+    def _create_purchase_order(self):
+        """Create and confirm a real purchase.order for this receipt, so this Catch Receipt
+        is backed by an actual Odoo procurement document instead of only a state flag.
+
+        ------------------------------------------------------------------
+        FIX: Previously built one PO line per aqua.catch.receipt.line grade
+        split (line.grading_standard_id), i.e. size grade was declared at
+        intake. Per the confirmed business process (aqua_by_m.docx), size
+        grading only happens during the Grading Work Order, roughly the
+        4th of 5 processing operations -- well after Cleaning, Peeling &
+        Deveining and Freezing. The raw material arrives and is purchased
+        as a single ungraded quantity identified only by its species/count
+        spec (e.g. "c50"), not by size. Declaring a grade split here was
+        the same mistake as choosing a graded finished product at MO
+        creation: both assume information that doesn't exist yet.
+        This now always creates a single ungraded PO line from net_weight.
+        aqua.catch.receipt.line / grading_standard_id are left in place as
+        a model (still useful as master data for the Grading/Packing
+        stage bands) but are no longer read here.
+        ------------------------------------------------------------------
+        """
+        for rec in self:
+            if rec.purchase_order_id:
+                continue
+            product = rec.product_id or rec._get_product(rec.species_id, raise_if_missing=False)
+            if not product:
+                rec.message_post(
+                    body='Purchase Order not created automatically: no product is linked to '
+                         'Species "%s". Set Product > General Information > Aqua Species, or set '
+                         'the Raw Material Product on this receipt directly, then use "Create '
+                         'Purchase Order" manually.' % rec.species_id.name)
+                continue
+            if not rec.net_weight:
+                rec.message_post(body='Purchase Order not created automatically: Net Weight is zero.')
+                continue
+
+            rate = rec.rate_contract_id.rate if rec.rate_contract_id else rec._get_rate_fallback(rec)
+            po_uom = product.uom_po_id or product.uom_id
+
+            purchase_order = self.env['purchase.order'].create({
+                'partner_id': rec.vendor_id.id,
+                'origin': rec.name,
+                'company_id': rec.company_id.id,
+                'order_line': [(0, 0, {
+                    'product_id': product.id,
+                    'name': product.display_name,
+                    'product_qty': rec.net_weight,
+                    'product_uom': po_uom.id,
+                    'price_unit': rate,
+                })],
+            })
+            purchase_order.button_confirm()
+            rec.purchase_order_id = purchase_order.id
+            rec.message_post(
+                body=f'Purchase Order {purchase_order.name} created and confirmed. '
+                     f'Complete the Receive / Quality Control / Store transfers from the '
+                     f'Purchase Order to bring this catch into usable stock.')
+
+    def action_view_purchase_order(self):
+        self.ensure_one()
+        if not self.purchase_order_id:
+            raise UserError('No Purchase Order is linked to this receipt yet.')
+        return {
+            'type': 'ir.actions.act_window', 'name': 'Purchase Order',
+            'res_model': 'purchase.order', 'view_mode': 'form',
+            'res_id': self.purchase_order_id.id,
+        }
+
+    def action_reset_to_draft(self):
+        for rec in self:
+            if rec.state not in ('accepted', 'cancelled'):
+                raise UserError('Only an Accepted or Cancelled receipt can be reset to draft.')
+        self.write({'state': 'draft'})
+
+    def action_view_processing_orders(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Processing Orders',
+            'res_model': 'mrp.production',
+            'view_mode': 'list,form',
+            'domain': [('catch_receipt_id', '=', self.id)],
+        }
+
+    def action_view_quality_tests(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'QC Tests',
+            'res_model': 'aqua.quality.test',
+            'view_mode': 'list,form',
+            'domain': [('catch_receipt_id', '=', self.id)],
+        }
+
+
+class AquaCatchReceiptLine(models.Model):
+    _name = 'aqua.catch.receipt.line'
+    _description = 'Catch Receipt Line (Grade-wise Split)'
+
+    catch_receipt_id = fields.Many2one('aqua.catch.receipt', required=True, ondelete='cascade')
+    grading_standard_id = fields.Many2one('aqua.grading.standard', string='Grade')
+    quantity = fields.Float(string='Quantity (kg)')
+    lot_id = fields.Many2one('stock.lot', string='Stock Lot')

@@ -1,0 +1,150 @@
+.o_aqua_dashboard {
+    padding: 24px 28px;
+    background: #f5f7f9;
+    min-height: 100%;
+}
+.o_aqua_header h2 {
+    font-weight: 600;
+    color: #1a202c;
+    margin-bottom: 20px;
+}
+.o_aqua_loading {
+    padding: 40px;
+    text-align: center;
+    color: #718096;
+    font-size: 1.1rem;
+}
+
+/* KPI cards */
+.o_aqua_kpi_row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+.o_aqua_kpi_card {
+    flex: 1 1 220px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: box-shadow .15s ease;
+}
+.o_aqua_kpi_card:hover {
+    box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+}
+.o_kpi_icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+.o_kpi_value {
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: #1a202c;
+    line-height: 1.1;
+}
+.o_kpi_label {
+    font-size: 0.82rem;
+    color: #718096;
+    margin-top: 2px;
+}
+
+/* Panels */
+.o_aqua_chart_row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+.o_aqua_panel {
+    flex: 1 1 320px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    padding: 18px 20px;
+}
+.o_aqua_panel_wide {
+    flex: 2 1 420px;
+}
+.o_aqua_panel_full {
+    width: 100%;
+    margin-bottom: 16px;
+}
+.o_aqua_panel_title {
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 14px;
+    font-size: 0.95rem;
+}
+.o_aqua_empty {
+    color: #a0aec0;
+    font-style: italic;
+    padding: 20px 0;
+    text-align: center;
+}
+
+/* Bar chart */
+.o_aqua_barchart { display: flex; flex-direction: column; gap: 10px; }
+.o_aqua_bar_row { display: flex; align-items: center; gap: 10px; }
+.o_aqua_bar_label { width: 130px; font-size: 0.85rem; color: #4a5568; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.o_aqua_bar_track { flex: 1; background: #edf2f7; border-radius: 6px; height: 16px; overflow: hidden; }
+.o_aqua_bar_track_inline { height: 10px; min-width: 100px; }
+.o_aqua_bar_fill { height: 100%; border-radius: 6px; transition: width .3s ease; }
+.o_aqua_bar_value { width: 34px; text-align: right; font-size: 0.85rem; color: #2d3748; font-weight: 600; flex-shrink: 0; }
+
+/* Donut */
+.o_aqua_donut_wrap { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+.o_aqua_donut {
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    position: relative;
+    flex-shrink: 0;
+}
+.o_aqua_donut_hole {
+    position: absolute;
+    top: 20px; left: 20px; right: 20px; bottom: 20px;
+    background: #fff;
+    border-radius: 50%;
+}
+.o_aqua_legend { display: flex; flex-direction: column; gap: 8px; }
+.o_aqua_legend_item { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #4a5568; }
+.o_aqua_legend_dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.o_aqua_legend_value { font-weight: 700; color: #1a202c; margin-left: auto; }
+
+/* Sparkline */
+.o_aqua_sparkline { width: 100%; height: 100px; }
+.o_aqua_sparkline_labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: #a0aec0;
+    margin-top: 4px;
+}
+
+/* Table */
+.o_aqua_table { width: 100%; border-collapse: collapse; }
+.o_aqua_table th {
+    text-align: left;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: #a0aec0;
+    padding: 8px 10px;
+    border-bottom: 1px solid #edf2f7;
+}
+.o_aqua_table td {
+    padding: 10px 10px;
+    font-size: 0.88rem;
+    color: #2d3748;
+    border-bottom: 1px solid #f7fafc;
+}

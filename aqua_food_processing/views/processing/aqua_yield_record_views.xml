@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_aqua_yield_record_list" model="ir.ui.view">
+        <field name="name">aqua.yield.record.list</field>
+        <field name="model">aqua.yield.record</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="processing_order_id"/>
+                <field name="grading_standard_id"/>
+                <field name="qty_output"/>
+                <field name="shift"/>
+                <field name="operator_id"/>
+                <field name="date"/>
+            </list>
+        </field>
+    </record>
+    <record id="action_aqua_yield_record" model="ir.actions.act_window">
+        <field name="name">Yield Records</field>
+        <field name="res_model">aqua.yield.record</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

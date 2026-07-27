@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_aqua_quality_test_list" model="ir.ui.view">
+        <field name="name">aqua.quality.test.list</field>
+        <field name="model">aqua.quality.test</field>
+        <field name="arch" type="xml">
+            <list decoration-danger="result_state=='fail'" decoration-success="result_state=='pass'"
+                  decoration-warning="result_state=='hold'">
+                <field name="name"/>
+                <field name="test_stage"/>
+                <field name="catch_receipt_id"/>
+                <field name="processing_order_id"/>
+                <field name="histamine_ppm"/>
+                <field name="result_state" widget="badge"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_aqua_quality_test_form" model="ir.ui.view">
+        <field name="name">aqua.quality.test.form</field>
+        <field name="model">aqua.quality.test</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_pass" type="object" string="Pass" class="oe_highlight"
+                            invisible="result_state != 'pending'"/>
+                    <button name="action_fail" type="object" string="Fail"
+                            invisible="result_state != 'pending'"/>
+                    <button name="action_hold" type="object" string="Hold"
+                            invisible="result_state != 'pending'"/>
+                    <button name="action_reset_to_draft" type="object" string="Reset to Pending"
+                            invisible="result_state not in ('hold', 'fail')"/>
+                    <field name="result_state" widget="statusbar" statusbar_visible="pending,pass"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_certificate" type="object" class="oe_stat_button" icon="fa-certificate"
+                                invisible="not certificate_id">
+                            <div class="o_stat_info">
+                                <span class="o_stat_text">Certificate</span>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="oe_title"><h1><field name="name" readonly="1"/></h1></div>
+                    <group>
+                        <group>
+                            <field name="test_date"/>
+                            <field name="test_stage"/>
+                            <field name="catch_receipt_id"/>
+                            <field name="processing_order_id"/>
+                            <field name="pack_order_id"/>
+                        </group>
+                        <group>
+                            <field name="certificate_id" readonly="1"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Sensory">
+                            <group>
+                                <field name="sensory_score"/>
+                                <field name="sensory_notes"/>
+                            </group>
+                        </page>
+                        <page string="Chemical">
+                            <group>
+                                <field name="histamine_ppm"/>
+                                <field name="ph_value"/>
+                                <field name="moisture_percentage"/>
+                            </group>
+                        </page>
+                        <page string="Microbiological">
+                            <group>
+                                <field name="total_plate_count"/>
+                                <field name="e_coli_count"/>
+                                <field name="salmonella_detected"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_aqua_quality_test" model="ir.actions.act_window">
+        <field name="name">Quality Tests</field>
+        <field name="res_model">aqua.quality.test</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

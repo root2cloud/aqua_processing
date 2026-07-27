@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="email_template_aqua_coa_issued" model="mail.template">
+        <field name="name">Aqua: Certificate of Analysis Issued</field>
+        <field name="model_id" ref="model_aqua_certificate_of_analysis"/>
+        <field name="subject">Certificate of Analysis {{ object.name }} Issued</field>
+        <field name="body_html" type="html">
+            <div>
+                <p>Certificate of Analysis <strong t-out="object.name"/> has been issued.</p>
+                <p>Issue Date: <span t-out="object.issue_date"/></p>
+            </div>
+        </field>
+    </record>
+</odoo>

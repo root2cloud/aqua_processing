@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="seq_aqua_catch_receipt" model="ir.sequence">
+        <field name="name">Aqua Catch Receipt</field>
+        <field name="code">aqua.catch.receipt</field>
+        <field name="prefix">CR/%(year)s/</field>
+        <field name="padding">5</field>
+        <field name="company_id" eval="False"/>
+    </record>
+    <record id="seq_aqua_vendor_rate_contract" model="ir.sequence">
+        <field name="name">Aqua Vendor Rate Contract</field>
+        <field name="code">aqua.vendor.rate.contract</field>
+        <field name="prefix">VRC/%(year)s/</field>
+        <field name="padding">4</field>
+        <field name="company_id" eval="False"/>
+    </record>
+    <record id="seq_aqua_quality_test" model="ir.sequence">
+        <field name="name">Aqua Quality Test</field>
+        <field name="code">aqua.quality.test</field>
+        <field name="prefix">QC/%(year)s/</field>
+        <field name="padding">5</field>
+        <field name="company_id" eval="False"/>
+    </record>
+    <record id="seq_aqua_certificate_of_analysis" model="ir.sequence">
+        <field name="name">Aqua Certificate of Analysis</field>
+        <field name="code">aqua.certificate.of.analysis</field>
+        <field name="prefix">COA/%(year)s/</field>
+        <field name="padding">4</field>
+        <field name="company_id" eval="False"/>
+    </record>
+    <record id="seq_aqua_blast_freeze_cycle" model="ir.sequence">
+        <field name="name">Aqua Blast Freeze Cycle</field>
+        <field name="code">aqua.blast.freeze.cycle</field>
+        <field name="prefix">BFC/%(year)s/</field>
+        <field name="padding">4</field>
+        <field name="company_id" eval="False"/>
+    </record>
+    <record id="seq_aqua_pack_order" model="ir.sequence">
+        <field name="name">Aqua Pack Order</field>
+        <field name="code">aqua.pack.order</field>
+        <field name="prefix">PACK/%(year)s/</field>
+        <field name="padding">5</field>
+        <field name="company_id" eval="False"/>
+    </record>
+    <record id="seq_aqua_carton" model="ir.sequence">
+        <field name="name">Aqua Carton</field>
+        <field name="code">aqua.carton</field>
+        <field name="prefix">CTN/%(year)s/</field>
+        <field name="padding">6</field>
+        <field name="company_id" eval="False"/>
+    </record>
+    <record id="seq_aqua_pallet" model="ir.sequence">
+        <field name="name">Aqua Pallet</field>
+        <field name="code">aqua.pallet</field>
+        <field name="prefix">PLT/%(year)s/</field>
+        <field name="padding">5</field>
+        <field name="company_id" eval="False"/>
+    </record>
+    <record id="seq_aqua_shipment" model="ir.sequence">
+        <field name="name">Aqua Shipment</field>
+        <field name="code">aqua.shipment</field>
+        <field name="prefix">SHP/%(year)s/</field>
+        <field name="padding">4</field>
+        <field name="company_id" eval="False"/>
+    </record>
+    <record id="seq_aqua_catch_receipt_batch_serial" model="ir.sequence">
+        <field name="name">Aqua Catch Receipt - Batch Serial</field>
+        <field name="code">aqua.catch.receipt.batch.serial</field>
+        <field name="prefix"></field>
+        <field name="padding">3</field>
+        <field name="company_id" eval="False"/>
+    </record>
+</odoo>

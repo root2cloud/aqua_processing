@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="module_category_aqua" model="ir.module.category">
+        <field name="name">Aqua Food Processing</field>
+        <field name="sequence">25</field>
+    </record>
+
+    <!-- Base -->
+    <record id="group_aqua_user" model="res.groups">
+        <field name="name">Aqua / User</field>
+        <field name="category_id" ref="module_category_aqua"/>
+    </record>
+    <record id="group_aqua_manager" model="res.groups">
+        <field name="name">Aqua / Manager</field>
+        <field name="category_id" ref="module_category_aqua"/>
+        <field name="implied_ids" eval="[(4, ref('group_aqua_user'))]"/>
+    </record>
+
+    <!-- Procurement -->
+    <record id="group_aqua_procurement_officer" model="res.groups">
+        <field name="name">Aqua / Procurement Officer</field>
+        <field name="category_id" ref="module_category_aqua"/>
+        <field name="implied_ids" eval="[(4, ref('group_aqua_user'))]"/>
+    </record>
+    <record id="group_aqua_procurement_manager" model="res.groups">
+        <field name="name">Aqua / Procurement Manager</field>
+        <field name="category_id" ref="module_category_aqua"/>
+        <field name="implied_ids" eval="[(4, ref('group_aqua_procurement_officer'))]"/>
+    </record>
+
+    <!-- Processing -->
+    <record id="group_aqua_plant_operator" model="res.groups">
+        <field name="name">Aqua / Plant Operator</field>
+        <field name="category_id" ref="module_category_aqua"/>
+        <field name="implied_ids" eval="[(4, ref('group_aqua_user'))]"/>
+    </record>
+    <record id="group_aqua_plant_supervisor" model="res.groups">
+        <field name="name">Aqua / Plant Supervisor</field>
+        <field name="category_id" ref="module_category_aqua"/>
+        <field name="implied_ids" eval="[(4, ref('group_aqua_plant_operator'))]"/>
+    </record>
+    <record id="group_aqua_plant_manager" model="res.groups">
+        <field name="name">Aqua / Plant Manager</field>
+        <field name="category_id" ref="module_category_aqua"/>
+        <field name="implied_ids" eval="[(4, ref('group_aqua_plant_supervisor'))]"/>
+    </record>
+
+    <!-- Quality -->
+    <record id="group_aqua_qc_inspector" model="res.groups">
+        <field name="name">Aqua / QC Inspector</field>
+        <field name="category_id" ref="module_category_aqua"/>
+        <field name="implied_ids" eval="[(4, ref('group_aqua_user'))]"/>
+    </record>
+    <record id="group_aqua_qc_manager" model="res.groups">
+        <field name="name">Aqua / QC Manager</field>
+        <field name="category_id" ref="module_category_aqua"/>
+        <field name="implied_ids" eval="[(4, ref('group_aqua_qc_inspector'))]"/>
+    </record>
+
+    <!-- Cold storage -->
+    <record id="group_aqua_coldstorage_operator" model="res.groups">
+        <field name="name">Aqua / Cold Storage Operator</field>
+        <field name="category_id" ref="module_category_aqua"/>
+        <field name="implied_ids" eval="[(4, ref('group_aqua_user'))]"/>
+    </record>
+    <record id="group_aqua_coldstorage_manager" model="res.groups">
+        <field name="name">Aqua / Cold Storage Manager</field>
+        <field name="category_id" ref="module_category_aqua"/>
+        <field name="implied_ids" eval="[(4, ref('group_aqua_coldstorage_operator'))]"/>
+    </record>
+
+    <!-- Packing -->
+    <record id="group_aqua_packing_operator" model="res.groups">
+        <field name="name">Aqua / Packing Operator</field>
+        <field name="category_id" ref="module_category_aqua"/>
+        <field name="implied_ids" eval="[(4, ref('group_aqua_user'))]"/>
+    </record>
+    <record id="group_aqua_packing_supervisor" model="res.groups">
+        <field name="name">Aqua / Packing Supervisor</field>
+        <field name="category_id" ref="module_category_aqua"/>
+        <field name="implied_ids" eval="[(4, ref('group_aqua_packing_operator'))]"/>
+    </record>
+
+    <!-- Traceability / Compliance -->
+    <record id="group_aqua_traceability_officer" model="res.groups">
+        <field name="name">Aqua / Traceability Officer</field>
+        <field name="category_id" ref="module_category_aqua"/>
+        <field name="implied_ids" eval="[(4, ref('group_aqua_user'))]"/>
+    </record>
+    <record id="group_aqua_compliance_manager" model="res.groups">
+        <field name="name">Aqua / Compliance Manager</field>
+        <field name="category_id" ref="module_category_aqua"/>
+        <field name="implied_ids" eval="[(4, ref('group_aqua_traceability_officer'))]"/>
+    </record>
+
+    <!-- Export logistics -->
+    <record id="group_aqua_export_coordinator" model="res.groups">
+        <field name="name">Aqua / Export Coordinator</field>
+        <field name="category_id" ref="module_category_aqua"/>
+        <field name="implied_ids" eval="[(4, ref('group_aqua_user'))]"/>
+    </record>
+    <record id="group_aqua_export_manager" model="res.groups">
+        <field name="name">Aqua / Export Manager</field>
+        <field name="category_id" ref="module_category_aqua"/>
+        <field name="implied_ids" eval="[(4, ref('group_aqua_export_coordinator'))]"/>
+    </record>
+</odoo>

@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_aqua_shipment_list" model="ir.ui.view">
+        <field name="name">aqua.shipment.list</field>
+        <field name="model">aqua.shipment</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="customer_id"/>
+                <field name="etd"/>
+                <field name="eta"/>
+                <field name="state" widget="badge"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_aqua_shipment_form" model="ir.ui.view">
+        <field name="name">aqua.shipment.form</field>
+        <field name="model">aqua.shipment</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_stuff" type="object" string="Mark Stuffed" class="oe_highlight"
+                            invisible="state != 'booked'"/>
+                    <button name="action_dispatch" type="object" string="Dispatch" class="oe_highlight"
+                            invisible="state != 'stuffed'"/>
+                    <button name="action_deliver" type="object" string="Mark Delivered" class="oe_highlight"
+                            invisible="state != 'dispatched'"/>
+                    <button name="action_reset_to_draft" type="object" string="Reset to Booked"
+                            invisible="state != 'stuffed'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="booked,stuffed,dispatched,delivered"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_containers" type="object" class="oe_stat_button" icon="fa-cubes">
+                            <field name="container_count" widget="statinfo" string="Container"/>
+                        </button>
+                        <button name="action_view_documents" type="object" class="oe_stat_button" icon="fa-file-text">
+                            <field name="document_count" widget="statinfo" string="Documents"/>
+                        </button>
+                        <button name="action_view_traceability_summary" type="object" class="oe_stat_button" icon="fa-search">
+                            <div class="o_stat_info"><span class="o_stat_text">Traceability</span></div>
+                        </button>
+                    </div>
+                    <div class="oe_title"><h1><field name="name" readonly="1"/></h1></div>
+                    <group>
+                        <group>
+                            <field name="customer_id"/>
+                            <field name="sale_order_id" readonly="1"/>
+                            <button name="action_create_sale_order" type="object" string="Create Sale Order"
+                                    class="oe_link" icon="fa-plus" invisible="sale_order_id"/>
+                            <field name="incoterm"/>
+                            <field name="container_id"/>
+                        </group>
+                        <group>
+                            <field name="etd"/>
+                            <field name="eta"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Pallets">
+                            <field name="pallet_ids">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="gross_weight"/>
+                                    <field name="state"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="India Compliance">
+                            <group>
+                                <group>
+                                    <field name="fssai_ref"/>
+                                    <field name="mpeda_ref"/>
+                                    <field name="eic_ref"/>
+                                </group>
+                                <group>
+                                    <field name="gstin"/>
+                                    <field name="hsn_code"/>
+                                    <field name="iec_code"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Documents">
+                            <field name="export_document_ids">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="document_type"/>
+                                    <field name="state"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Certificates">
+                            <field name="certificate_ids">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="issue_date"/>
+                                    <field name="certifying_body_id"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_aqua_shipment" model="ir.actions.act_window">
+        <field name="name">Shipments</field>
+        <field name="res_model">aqua.shipment</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

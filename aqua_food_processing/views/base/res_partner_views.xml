@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_partner_form_aqua_inherit" model="ir.ui.view">
+        <field name="name">res.partner.form.aqua.inherit</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page name="aqua_vendor_info" string="Aqua Vendor Info">
+                    <group>
+                        <field name="is_aqua_vendor"/>
+                        <field name="aqua_vendor_rating" invisible="not is_aqua_vendor"/>
+                        <field name="fssai_license_no" invisible="not is_aqua_vendor"/>
+                        <field name="aqua_certification" invisible="not is_aqua_vendor"/>
+                        <field name="aqua_region" invisible="not is_aqua_vendor"/>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_aqua_root" name="Aqua Processing" sequence="60"/>
+
+    <menuitem id="menu_aqua_dashboard" name="Dashboard" parent="menu_aqua_root" action="action_aqua_dashboard" sequence="1"/>
+
+    <!-- Procurement -->
+    <menuitem id="menu_aqua_procurement" name="Procurement" parent="menu_aqua_root" sequence="10"/>
+    <menuitem id="menu_aqua_catch_receipt" name="Catch Receipts" parent="menu_aqua_procurement"
+              action="action_aqua_catch_receipt" sequence="1"/>
+    <menuitem id="menu_aqua_vendor_rate_contract" name="Vendor Rate Contracts" parent="menu_aqua_procurement"
+              action="action_aqua_vendor_rate_contract" sequence="2"/>
+
+    <!-- Processing -->
+    <menuitem id="menu_aqua_processing" name="Processing" parent="menu_aqua_root" sequence="20"/>
+    <menuitem id="menu_aqua_processing_order" name="Processing Orders" parent="menu_aqua_processing"
+              action="action_aqua_processing_order" sequence="1"/>
+    <menuitem id="menu_aqua_yield_record" name="Yield Records" parent="menu_aqua_processing"
+              action="action_aqua_yield_record" sequence="2"/>
+    <menuitem id="menu_aqua_byproduct_record" name="By-products" parent="menu_aqua_processing"
+              action="action_aqua_byproduct_record" sequence="3"/>
+
+    <!-- Quality -->
+    <menuitem id="menu_aqua_quality" name="Quality Control" parent="menu_aqua_root" sequence="30"/>
+    <menuitem id="menu_aqua_quality_test" name="Quality Tests" parent="menu_aqua_quality"
+              action="action_aqua_quality_test" sequence="1"/>
+    <menuitem id="menu_aqua_coa" name="Certificates of Analysis" parent="menu_aqua_quality"
+              action="action_aqua_coa" sequence="2"/>
+
+    <!-- Cold Storage -->
+    <menuitem id="menu_aqua_coldstorage" name="Cold Storage" parent="menu_aqua_root" sequence="40"/>
+    <menuitem id="menu_aqua_cold_room" name="Cold Rooms" parent="menu_aqua_coldstorage"
+              action="action_aqua_cold_room" sequence="1"/>
+    <menuitem id="menu_aqua_temperature_log" name="Temperature Logs" parent="menu_aqua_coldstorage"
+              action="action_aqua_temperature_log" sequence="2"/>
+    <menuitem id="menu_aqua_blast_freeze_cycle" name="Blast Freeze Cycles" parent="menu_aqua_coldstorage"
+              action="action_aqua_blast_freeze_cycle" sequence="3"/>
+
+    <!-- Packing -->
+    <menuitem id="menu_aqua_packing" name="Packing" parent="menu_aqua_root" sequence="50"/>
+    <menuitem id="menu_aqua_pack_order" name="Pack Orders" parent="menu_aqua_packing"
+              action="action_aqua_pack_order" sequence="1"/>
+    <menuitem id="menu_aqua_carton" name="Cartons" parent="menu_aqua_packing"
+              action="action_aqua_carton" sequence="2"/>
+    <menuitem id="menu_aqua_pallet" name="Pallets" parent="menu_aqua_packing"
+              action="action_aqua_pallet" sequence="3"/>
+
+    <!-- Traceability -->
+    <menuitem id="menu_aqua_traceability" name="Traceability" parent="menu_aqua_root" sequence="60"/>
+    <menuitem id="menu_aqua_trace_link" name="Trace Records" parent="menu_aqua_traceability"
+              action="action_aqua_trace_link" sequence="1"/>
+    <menuitem id="menu_aqua_trace_query" name="Trace Query" parent="menu_aqua_traceability"
+              action="action_aqua_trace_query_wizard" sequence="2"/>
+
+    <!-- Export Logistics -->
+    <menuitem id="menu_aqua_export_logistics" name="Export Logistics" parent="menu_aqua_root" sequence="70"/>
+    <menuitem id="menu_aqua_shipment" name="Shipments" parent="menu_aqua_export_logistics"
+              action="action_aqua_shipment" sequence="1"/>
+    <menuitem id="menu_aqua_container" name="Containers" parent="menu_aqua_export_logistics"
+              action="action_aqua_container" sequence="2"/>
+    <menuitem id="menu_aqua_export_document" name="Export Documents" parent="menu_aqua_export_logistics"
+              action="action_aqua_export_document" sequence="3"/>
+
+    <!-- Configuration -->
+    <menuitem id="menu_aqua_configuration" name="Configuration" parent="menu_aqua_root" sequence="90"
+              groups="aqua_food_processing.group_aqua_manager"/>
+    <menuitem id="menu_aqua_species" name="Species" parent="menu_aqua_configuration"
+              action="action_aqua_species" sequence="1"/>
+    <menuitem id="menu_aqua_grading_standard" name="Grading Standards" parent="menu_aqua_configuration"
+              action="action_aqua_grading_standard" sequence="2"/>
+    <menuitem id="menu_aqua_harvest_method" name="Harvest Methods" parent="menu_aqua_configuration"
+              action="action_aqua_harvest_method" sequence="3"/>
+    <menuitem id="menu_aqua_certifying_body" name="Certifying Bodies" parent="menu_aqua_configuration"
+              action="action_aqua_certifying_body" sequence="4"/>
+</odoo>

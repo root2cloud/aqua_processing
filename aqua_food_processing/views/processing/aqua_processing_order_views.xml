@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_aqua_processing_order_form" model="ir.ui.view">
+        <field name="name">aqua.processing.order.form.inherit</field>
+        <field name="model">mrp.production</field>
+        <field name="inherit_id" ref="mrp.mrp_production_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_view_yield_records" type="object" class="oe_stat_button" icon="fa-balance-scale"
+                        invisible="not id">
+                    <field name="yield_record_count" widget="statinfo" string="Yield Records"/>
+                </button>
+                <button name="action_view_quality_tests" type="object" class="oe_stat_button" icon="fa-flask"
+                        invisible="not id">
+                    <field name="quality_test_count" widget="statinfo" string="QC Tests"/>
+                </button>
+            </xpath>
+            <xpath expr="//sheet" position="inside">
+                <group string="Aqua Processing" invisible="not catch_receipt_id and not qty_input">
+                    <group>
+                        <field name="catch_receipt_id"/>
+                        <field name="species_id" readonly="1"/>
+                    </group>
+                    <group>
+                        <label for="qty_input"/>
+                        <div>
+                            <field name="qty_input" readonly="1" class="oe_inline"/> kg
+                        </div>
+                        <label for="product_qty_kg"/>
+                        <div>
+                            <field name="product_qty_kg" readonly="1" class="oe_inline"/> kg
+                        </div>
+                        <label for="byproduct_qty"/>
+                        <div>
+                            <field name="byproduct_qty" readonly="1" class="oe_inline"/> kg
+                        </div>
+                    </group>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_aqua_processing_order_list" model="ir.ui.view">
+        <field name="name">aqua.processing.order.list</field>
+        <field name="model">mrp.production</field>
+        <field name="mode">primary</field>
+        <field name="arch" type="xml">
+            <list string="Processing Orders">
+                <field name="name"/>
+                <field name="catch_receipt_id"/>
+                <field name="species_id"/>
+                <field name="product_id" string="Stage Output"/>
+                <field name="qty_input"/>
+                <field name="product_qty_kg"/>
+                <field name="byproduct_qty"/>
+                <field name="state"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_aqua_processing_order" model="ir.actions.act_window">
+        <field name="name">Processing Orders</field>
+        <field name="res_model">mrp.production</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('catch_receipt_id', '!=', False)]</field>
+        <field name="context">{'default_catch_receipt_id': True}</field>
+    </record>
+</odoo>
