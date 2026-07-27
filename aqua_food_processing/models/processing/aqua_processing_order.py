@@ -218,14 +218,3 @@ class AquaProcessingOrder(models.Model):
             'res_model': 'aqua.catch.receipt', 'view_mode': 'form',
             'res_id': self.catch_receipt_id.id,
         }
-
-
-class AquaProcessingStage(models.Model):
-    _name = 'aqua.processing.stage'
-    _description = 'Processing Stage Configuration'
-    _order = 'sequence'
-
-    name = fields.Char(required=True)
-    sequence = fields.Integer(default=10)
-    work_center_id = fields.Many2one('mrp.workcenter', string='Work Center')
-    active = fields.Boolean(default=True)
