@@ -22,47 +22,36 @@ class AquaCatchReceipt(models.Model):
     net_weight = fields.Float(string='Net Weight (kg)', tracking=True)
 
     # ------------------------------------------------------------------
-    # Composite production batch number: DDMMYYYY + PO<n> + rcp<n> + -<serial>
-    # e.g. 15072026PO05rcp05-001. Generated once, at Accept, and then reused
-    # unchanged as-is through every processing Work Order (Cleaning, Peeling
-    # & Deveining, Freezing, Grading). New batch numbers are only created
-    # later, at Packing (one per size grade) and at the Peeling by-product
-    # declaration (Shells & Heads) -- both linked back to this parent batch,
-    # not replacing it.
+    # FIX: batch_number used to be a manually-composed string (date + PO
+    # digits + receipt digits + a private serial), generated once on
+    # Accept via its own private ir.sequence. That number matched nothing
+    # else in Odoo: the actual receipt transfer, once grouped into a
+    # Batch Transfer (stock.picking.batch, e.g. "BATCH/00007") from
+    # Inventory, has its own real Odoo-sequenced name -- and that's the
+    # number the warehouse floor actually works off of.
+    #
+    # This field now simply mirrors that real batch name: it looks at
+    # the Purchase Order's incoming transfer(s) (purchase_order_id
+    # .picking_ids) and takes the name of whichever stock.picking.batch
+    # they've been added to. There is nothing to enter manually and
+    # nothing composed here -- it just follows Odoo's own Batch Transfer
+    # sequence. It's blank until someone (or an automation) adds the
+    # receipt's transfer to a batch in Inventory, and updates itself
+    # automatically the moment that happens, since it's a stored
+    # computed field depending on that relation.
     # ------------------------------------------------------------------
-    batch_number = fields.Char(copy=False, readonly=True, tracking=True,
-        help='Auto-composed at Accept from the receipt date, Purchase Order number, '
-             'Receipt number, and a running serial. This is the parent production batch '
-             'number carried through Cleaning, Peeling & Deveining, Freezing and Grading '
-             'unchanged; Packing and Shells & Heads generate their own child batch numbers '
-             'linked back to this one.')
+    batch_number = fields.Char(string='Batch Number', compute='_compute_batch_number',
+        store=True, tracking=True,
+        help='Mirrors the name of the Batch Transfer (stock.picking.batch) that this '
+             'receipt\'s incoming transfer has been added to in Inventory (e.g. '
+             '"BATCH/00007"). Blank until that transfer is added to a batch; updates '
+             'itself automatically after that -- nothing to enter here.')
 
-    @api.model
-    def _extract_seq_digits(self, name):
-        """Pull the trailing digits out of a sequence-generated name (e.g. 'P00005' -> '05',
-        'RCP/00005' -> '05'). Falls back to '00' if nothing numeric is found, so batch number
-        generation never hard-fails just because a sequence format changed."""
-        import re
-        match = re.search(r'(\d+)$', name or '')
-        if not match:
-            return '00'
-        digits = match.group(1)
-        return digits[-2:].zfill(2) if len(digits) >= 2 else digits.zfill(2)
-
-    def _generate_batch_number(self):
-        """Compose and store the parent batch number. Idempotent: does nothing if a batch
-        number already exists, so re-accepting or re-running this never overwrites it."""
+    @api.depends('purchase_order_id.picking_ids.batch_id.name')
+    def _compute_batch_number(self):
         for rec in self:
-            if rec.batch_number:
-                continue
-            if not rec.purchase_order_id:
-                rec.message_post(body='Batch number not generated: no Purchase Order linked yet.')
-                continue
-            date_part = fields.Datetime.context_timestamp(rec, rec.receipt_date).strftime('%d%m%Y')
-            po_part = 'PO%s' % rec._extract_seq_digits(rec.purchase_order_id.name)
-            rcp_part = 'rcp%s' % rec._extract_seq_digits(rec.name)
-            serial = self.env['ir.sequence'].next_by_code('aqua.catch.receipt.batch.serial') or '001'
-            rec.batch_number = '%s%s%s-%s' % (date_part, po_part, rcp_part, serial.zfill(3))
+            batch = rec.purchase_order_id.picking_ids.batch_id[:1]
+            rec.batch_number = batch.name or False
 
     # ------------------------------------------------------------------
     # FIX : Previously, purchase_order_id existed as a plain, optional Many2one
@@ -171,7 +160,6 @@ class AquaCatchReceipt(models.Model):
     def action_accept(self):
         self.write({'state': 'accepted'})
         self._create_purchase_order()
-        self._generate_batch_number()
 
     def _get_product(self, species, raise_if_missing=True):
         """Single lookup for the raw-material product linked to a species, sourced only
