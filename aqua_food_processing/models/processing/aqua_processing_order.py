@@ -89,20 +89,12 @@ class AquaProcessingOrder(models.Model):
         help='Automatically computed from the quantities actually consumed on this order\'s '
              'raw material moves, restricted to Weight (kg) components only -- packaging '
              'materials tracked in Units are correctly excluded.')
-    product_qty_kg = fields.Float(
-        compute='_compute_yield_percentage', store=True, string='Product Yield',
-        help='Finished product output converted to kg (Units Produced x product Weight field). '
-             'Falls back to the manual Yield Record log if no done finished-goods move exists yet.')
     yield_percentage = fields.Float(
         compute='_compute_yield_percentage', store=True, string='Product Yield %',
         help='Finished product weight-equivalent / Input Qty (kg), expressed as a percentage. '
              'Requires the finished product\'s Weight (kg) field to be set on the Inventory tab '
              'of its product form -- see code comment. This is the FINISHED PRODUCT only; '
              'by-products are tracked separately below.')
-    byproduct_qty = fields.Float(
-        compute='_compute_yield_percentage', store=True, string='By-product Qty',
-        help='Total weight of by-products (Weight/kg category only) produced on this order, '
-             'taken from done by-product stock moves.')
     byproduct_yield_percentage = fields.Float(
         compute='_compute_yield_percentage', store=True, string='By-product Yield %',
         help='By-product Qty (kg) / Input Qty (kg), expressed as a percentage.')
@@ -181,9 +173,7 @@ class AquaProcessingOrder(models.Model):
             manual_output = sum(rec.yield_record_ids.mapped('qty_output'))
             product_output = produced_weight or manual_output
 
-            rec.product_qty_kg = product_output
             rec.yield_percentage = (product_output / rec.qty_input * 100.0) if rec.qty_input else 0.0
-            rec.byproduct_qty = byproduct_weight
             rec.byproduct_yield_percentage = (byproduct_weight / rec.qty_input * 100.0) if rec.qty_input else 0.0
 
     def _compute_counts(self):

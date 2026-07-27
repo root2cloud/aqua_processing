@@ -26,14 +26,6 @@
                         <div>
                             <field name="qty_input" readonly="1" class="oe_inline"/> kg
                         </div>
-                        <label for="product_qty_kg"/>
-                        <div>
-                            <field name="product_qty_kg" readonly="1" class="oe_inline"/> kg
-                        </div>
-                        <label for="byproduct_qty"/>
-                        <div>
-                            <field name="byproduct_qty" readonly="1" class="oe_inline"/> kg
-                        </div>
                     </group>
                 </group>
             </xpath>
@@ -51,8 +43,6 @@
                 <field name="species_id"/>
                 <field name="product_id" string="Stage Output"/>
                 <field name="qty_input"/>
-                <field name="product_qty_kg"/>
-                <field name="byproduct_qty"/>
                 <field name="state"/>
             </list>
         </field>
