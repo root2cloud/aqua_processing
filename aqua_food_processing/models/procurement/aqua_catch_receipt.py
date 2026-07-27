@@ -54,6 +54,46 @@ class AquaCatchReceipt(models.Model):
             rec.batch_number = batch.name or False
 
     # ------------------------------------------------------------------
+    # NOTE on receipt_date vs. these two: receipt_date stays a separate,
+    # manually-set field -- it's the physical intake time at the gate,
+    # entered (or defaulted to "now") before a Purchase Order may even
+    # exist yet, since weighment happens first and Accept only creates
+    # the PO afterwards. confirmation_date and arrival_date below are a
+    # different pair of dates entirely: they're mirrors of the PO's own
+    # dates, and stay blank until that PO exists and reaches those
+    # stages. Not merged into receipt_date because overwriting it would
+    # lose the actual gate-intake time this receipt was weighed at.
+    # ------------------------------------------------------------------
+    confirmation_date = fields.Datetime(string='Confirmation Date', compute='_compute_po_dates',
+        store=True, tracking=True,
+        help='Mirrors the linked Purchase Order\'s Confirmation Date. Blank until that '
+             'Purchase Order is confirmed.')
+    arrival_date = fields.Datetime(string='Arrival', compute='_compute_po_dates',
+        store=True, tracking=True,
+        help='Mirrors the linked Purchase Order\'s Arrival date -- its Effective Date once '
+             'the receipt transfer is done, otherwise its Expected Arrival.')
+
+    @api.depends('purchase_order_id.date_approve', 'purchase_order_id.effective_date',
+                 'purchase_order_id.date_planned')
+    def _compute_po_dates(self):
+        for rec in self:
+            po = rec.purchase_order_id
+            rec.confirmation_date = po.date_approve or False
+            rec.arrival_date = po.effective_date or po.date_planned or False
+
+    lot_number = fields.Char(string='Lot/Serial Number', compute='_compute_lot_number',
+        store=True, tracking=True,
+        help='Mirrors the Lot/Serial Number recorded on the incoming transfer\'s Detailed '
+             'Operations for this receipt\'s raw-material product. Blank until that\'s set.')
+
+    @api.depends('purchase_order_id.picking_ids.move_line_ids.lot_id.name', 'product_id')
+    def _compute_lot_number(self):
+        for rec in self:
+            move_lines = rec.purchase_order_id.picking_ids.move_line_ids.filtered(
+                lambda ml: ml.product_id == rec.product_id and ml.lot_id)
+            rec.lot_number = move_lines[:1].lot_id.name or False
+
+    # ------------------------------------------------------------------
     # FIX : Previously, purchase_order_id existed as a plain, optional Many2one
     # that nothing in this file ever set. Accepting a Catch Receipt only
     # changed its own state field -- it never created a Purchase Order,
