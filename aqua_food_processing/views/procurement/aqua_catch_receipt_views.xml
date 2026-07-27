@@ -10,7 +10,10 @@
                 <field name="species_id"/>
                 <field name="receipt_date"/>
                 <field name="net_weight"/>
+                <field name="confirmation_date"/>
+                <field name="arrival_date"/>
                 <field name="batch_number"/>
+                <field name="lot_number"/>
                 <field name="state" widget="badge"/>
             </list>
         </field>
@@ -53,7 +56,10 @@
                         <group>
                             <field name="receipt_date"/>
                             <field name="purchase_order_id"/>
+                            <field name="confirmation_date" readonly="1"/>
+                            <field name="arrival_date" readonly="1"/>
                             <field name="batch_number" readonly="1"/>
+                            <field name="lot_number" readonly="1"/>
                             <field name="company_id" groups="base.group_multi_company"/>
                         </group>
                     </group>
