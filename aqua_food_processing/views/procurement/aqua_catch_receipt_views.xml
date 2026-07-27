@@ -46,14 +46,14 @@
                         <h1><field name="name" readonly="1"/></h1>
                     </div>
                     <group>
-                        <group>
+                        <group string="Catch Details">
                             <field name="vendor_id"/>
                             <field name="species_id"/>
                             <field name="product_id" invisible="1"/>
                             <field name="harvest_method_id"/>
                             <field name="rate_contract_id"/>
                         </group>
-                        <group>
+                        <group string="Purchase &amp; Traceability">
                             <field name="receipt_date"/>
                             <field name="purchase_order_id"/>
                             <field name="confirmation_date" readonly="1"/>
@@ -63,11 +63,17 @@
                             <field name="company_id" groups="base.group_multi_company"/>
                         </group>
                     </group>
-                    <group string="Weighment">
-                        <group>
+                    <group>
+                        <group string="Weighment">
                             <field name="gross_weight"/>
                             <field name="tare_weight"/>
                             <field name="net_weight"/>
+                        </group>
+                        <group string="Shrimp Counting">
+                            <field name="sample_weight"/>
+                            <field name="sample_count"/>
+                            <field name="avg_body_weight" readonly="1"/>
+                            <field name="shrimp_count" readonly="1"/>
                         </group>
                     </group>
                 </sheet>

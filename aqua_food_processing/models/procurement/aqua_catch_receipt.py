@@ -19,7 +19,51 @@ class AquaCatchReceipt(models.Model):
 
     gross_weight = fields.Float(string='Gross Weight (kg)', tracking=True)
     tare_weight = fields.Float(string='Tare Weight (kg)')
+    # ------------------------------------------------------------------
+    # FIX: net_weight used to be a plain, independently-entered Float --
+    # nothing tied it to gross_weight/tare_weight, so it could be typed
+    # in wrong (or left at 0) with no relation to the other two at all.
+    # The only guard was the _check_weights constraint rejecting
+    # net > gross after the fact. It's now auto-calculated by onchange
+    # as gross - tare (the standard Weighment formula), while staying a
+    # normal editable field in case a workman needs to correct it by
+    # hand for a specific reason (e.g. weighbridge drift).
+    # ------------------------------------------------------------------
     net_weight = fields.Float(string='Net Weight (kg)', tracking=True)
+
+    @api.onchange('gross_weight', 'tare_weight')
+    def _onchange_weighment(self):
+        self.net_weight = self.gross_weight - self.tare_weight
+
+    # ------------------------------------------------------------------
+    # Shrimp counting: done by factory workers once the catch arrives,
+    # from a small counted sample -- not the whole lot. Sample weight is
+    # taken in kg, matching Gross/Tare/Net Weight above (no reason to
+    # make a worker weigh in grams when the whole receipt is in kg); the
+    # x1000 conversion to grams happens internally in the formula below.
+    # Formulas (as supplied):
+    #   Average Body Weight (g) = Total Sample Biomass (g) / Shrimp Counted
+    #   Count (per kg)          = 1000 / Average Body Weight (g)
+    # e.g. 3 kg (3000 g) / 250 shrimp = 12 g avg body weight;
+    #      1000 / 12 g = 83.3, i.e. ~83 shrimp per kg.
+    # Both formulas as given are correct -- implemented as-is below.
+    # ------------------------------------------------------------------
+    sample_weight = fields.Float(string='Sample Weight (kg)',
+        help='Total weight of the counted sample, in kg (e.g. 3 for 3 kg / 3000 g).')
+    sample_count = fields.Integer(string='Shrimp Counted',
+        help='Number of shrimp in that sample.')
+    avg_body_weight = fields.Float(string='Average Body Weight (g)',
+        compute='_compute_shrimp_count', store=True, digits=(16, 2),
+        help='(Sample Weight in kg x 1000) / Shrimp Counted.')
+    shrimp_count = fields.Float(string='Count (per kg)',
+        compute='_compute_shrimp_count', store=True, digits=(16, 1),
+        help='1000 / Average Body Weight (g) -- how many shrimp make up one kilogram.')
+
+    @api.depends('sample_weight', 'sample_count')
+    def _compute_shrimp_count(self):
+        for rec in self:
+            rec.avg_body_weight = (rec.sample_weight * 1000.0 / rec.sample_count) if rec.sample_count else 0.0
+            rec.shrimp_count = (1000.0 / rec.avg_body_weight) if rec.avg_body_weight else 0.0
 
     # ------------------------------------------------------------------
     # FIX: batch_number used to be a manually-composed string (date + PO
@@ -86,11 +130,12 @@ class AquaCatchReceipt(models.Model):
         help='Mirrors the Lot/Serial Number recorded on the incoming transfer\'s Detailed '
              'Operations for this receipt\'s raw-material product. Blank until that\'s set.')
 
-    @api.depends('purchase_order_id.picking_ids.move_line_ids.lot_id.name', 'product_id')
+    @api.depends('purchase_order_id.picking_ids.move_line_ids.lot_id.name', 'product_id', 'species_id')
     def _compute_lot_number(self):
         for rec in self:
+            product = rec.product_id or rec._get_product(rec.species_id, raise_if_missing=False)
             move_lines = rec.purchase_order_id.picking_ids.move_line_ids.filtered(
-                lambda ml: ml.product_id == rec.product_id and ml.lot_id)
+                lambda ml: product and ml.product_id == product and ml.lot_id)
             rec.lot_number = move_lines[:1].lot_id.name or False
 
     # ------------------------------------------------------------------
