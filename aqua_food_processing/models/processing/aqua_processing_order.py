@@ -9,10 +9,6 @@ class AquaProcessingOrder(models.Model):
 
     species_id = fields.Many2one('aqua.species', related='catch_receipt_id.species_id', store=True)
 
-    yield_record_ids = fields.One2many('aqua.yield.record', 'processing_order_id', string='Yield Records')
-
-    byproduct_record_ids = fields.One2many('aqua.byproduct.record', 'processing_order_id', string='By-products')
-
     pack_order_ids = fields.One2many('aqua.pack.order', 'processing_order_id', string='Pack Orders')
 
     quality_test_ids = fields.One2many('aqua.quality.test', 'processing_order_id', string='QC Tests')
@@ -45,10 +41,6 @@ class AquaProcessingOrder(models.Model):
                 )
             rec.qty_input = sum(done_moves.mapped('quantity'))
 
-    yield_record_count = fields.Integer(compute='_compute_counts')
-
-    byproduct_record_count = fields.Integer(compute='_compute_counts')
-
     quality_test_count = fields.Integer(compute='_compute_counts')
 
     pack_order_count = fields.Integer(compute='_compute_counts')
@@ -72,38 +64,19 @@ class AquaProcessingOrder(models.Model):
                 )
             byproduct_weight = sum(byproduct_moves.mapped('quantity'))
 
-            manual_output = sum(rec.yield_record_ids.mapped('qty_output'))
-            product_output = produced_weight or manual_output
+            product_output = produced_weight
 
             rec.yield_percentage = (product_output / rec.qty_input * 100.0) if rec.qty_input else 0.0
             rec.byproduct_yield_percentage = (byproduct_weight / rec.qty_input * 100.0) if rec.qty_input else 0.0
 
     def _compute_counts(self):
         for rec in self:
-            rec.yield_record_count = len(rec.yield_record_ids)
-            rec.byproduct_record_count = len(rec.byproduct_record_ids)
             rec.quality_test_count = len(rec.quality_test_ids)
             rec.pack_order_count = len(rec.pack_order_ids)
 
     def action_done(self):
         # Delegates to native MRP "Mark as Done"; aqua stage should already be packing_ready
         return super().button_mark_done() if hasattr(super(), 'button_mark_done') else True
-
-    def action_view_yield_records(self):
-        self.ensure_one()
-        return {
-            'type': 'ir.actions.act_window', 'name': 'Yield Records',
-            'res_model': 'aqua.yield.record', 'view_mode': 'list,form',
-            'domain': [('processing_order_id', '=', self.id)],
-        }
-
-    def action_view_byproduct_records(self):
-        self.ensure_one()
-        return {
-            'type': 'ir.actions.act_window', 'name': 'By-products',
-            'res_model': 'aqua.byproduct.record', 'view_mode': 'list,form',
-            'domain': [('processing_order_id', '=', self.id)],
-        }
 
     def action_view_quality_tests(self):
         self.ensure_one()

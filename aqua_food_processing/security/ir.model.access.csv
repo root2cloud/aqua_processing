@@ -15,13 +15,6 @@ access_aqua_catch_receipt_manager,aqua.catch.receipt manager,model_aqua_catch_re
 access_aqua_catch_receipt_line_officer,aqua.catch.receipt.line officer,model_aqua_catch_receipt_line,group_aqua_procurement_officer,1,1,1,0
 access_aqua_catch_receipt_line_manager,aqua.catch.receipt.line manager,model_aqua_catch_receipt_line,group_aqua_procurement_manager,1,1,1,1
 
-access_aqua_processing_stage_operator,aqua.processing.stage operator,model_aqua_processing_stage,group_aqua_plant_operator,1,0,0,0
-access_aqua_processing_stage_manager,aqua.processing.stage manager,model_aqua_processing_stage,group_aqua_plant_manager,1,1,1,1
-access_aqua_yield_record_operator,aqua.yield.record operator,model_aqua_yield_record,group_aqua_plant_operator,1,1,1,0
-access_aqua_yield_record_manager,aqua.yield.record manager,model_aqua_yield_record,group_aqua_plant_manager,1,1,1,1
-access_aqua_byproduct_record_operator,aqua.byproduct.record operator,model_aqua_byproduct_record,group_aqua_plant_operator,1,1,1,0
-access_aqua_byproduct_record_manager,aqua.byproduct.record manager,model_aqua_byproduct_record,group_aqua_plant_manager,1,1,1,1
-
 access_aqua_quality_test_inspector,aqua.quality.test inspector,model_aqua_quality_test,group_aqua_qc_inspector,1,1,1,0
 access_aqua_quality_test_manager,aqua.quality.test manager,model_aqua_quality_test,group_aqua_qc_manager,1,1,1,1
 access_aqua_certificate_of_analysis_inspector,aqua.certificate.of.analysis inspector,model_aqua_certificate_of_analysis,group_aqua_qc_inspector,1,0,0,0
@@ -60,9 +53,6 @@ access_aqua_dashboard_user,aqua.dashboard user,model_aqua_dashboard,group_aqua_u
 access_aqua_weighment_entry_wizard,aqua.weighment.entry.wizard,model_aqua_weighment_entry_wizard,group_aqua_procurement_officer,1,1,1,1
 access_aqua_grade_catch_wizard,aqua.grade.catch.wizard,model_aqua_grade_catch_wizard,group_aqua_procurement_officer,1,1,1,1
 access_aqua_grade_catch_wizard_line,aqua.grade.catch.wizard.line,model_aqua_grade_catch_wizard_line,group_aqua_procurement_officer,1,1,1,1
-access_aqua_record_yield_wizard,aqua.record.yield.wizard,model_aqua_record_yield_wizard,group_aqua_plant_operator,1,1,1,1
-access_aqua_split_batch_wizard,aqua.split.batch.wizard,model_aqua_split_batch_wizard,group_aqua_plant_supervisor,1,1,1,1
-access_aqua_split_batch_wizard_line,aqua.split.batch.wizard.line,model_aqua_split_batch_wizard_line,group_aqua_plant_supervisor,1,1,1,1
 access_aqua_record_lab_result_wizard,aqua.record.lab.result.wizard,model_aqua_record_lab_result_wizard,group_aqua_qc_inspector,1,1,1,1
 access_aqua_issue_coa_wizard,aqua.issue.coa.wizard,model_aqua_issue_coa_wizard,group_aqua_qc_manager,1,1,1,1
 access_aqua_quarantine_hold_wizard,aqua.quarantine.hold.wizard,model_aqua_quarantine_hold_wizard,group_aqua_qc_inspector,1,1,1,1
