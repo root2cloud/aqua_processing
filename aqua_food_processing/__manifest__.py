@@ -50,10 +50,6 @@
         'wizard/procurement/aqua_grade_catch_wizard_views.xml',
         # processing
         'views/processing/aqua_processing_order_views.xml',
-        'views/processing/aqua_yield_record_views.xml',
-        'views/processing/aqua_byproduct_record_views.xml',
-        'wizard/processing/aqua_record_yield_wizard_views.xml',
-        'wizard/processing/aqua_split_batch_wizard_views.xml',
         # quality
         'views/quality/aqua_quality_test_views.xml',
         'views/quality/aqua_certificate_of_analysis_views.xml',
