@@ -63,7 +63,7 @@
                             <field name="company_id" groups="base.group_multi_company"/>
                         </group>
                     </group>
-                    <group>
+                    <group col="3">
                         <group string="Weighment">
                             <field name="gross_weight"/>
                             <field name="tare_weight"/>
@@ -74,6 +74,9 @@
                             <field name="sample_count"/>
                             <field name="avg_body_weight" readonly="1"/>
                             <field name="shrimp_count" readonly="1"/>
+                        </group>
+                        <group string="Vendor Reported">
+                            <field name="vendor_shrimp_count" readonly="1"/>
                         </group>
                     </group>
                 </sheet>

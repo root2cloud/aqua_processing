@@ -66,6 +66,24 @@ class AquaCatchReceipt(models.Model):
             rec.shrimp_count = (1000.0 / rec.avg_body_weight) if rec.avg_body_weight else 0.0
 
     # ------------------------------------------------------------------
+    # Vendor-reported count: the vendor enters this on the RFQ portal
+    # (purchase.order.line.shrimp_count) before the catch ever arrives.
+    # Surfaced here read-only so the factory's own count above (from the
+    # physical sample) can be checked against what the vendor claimed.
+    # A catch receipt's PO normally carries a single product line for the
+    # species being received, so the first order line is used.
+    # ------------------------------------------------------------------
+    vendor_shrimp_count = fields.Integer(string='Vendor Reported Count',
+        compute='_compute_vendor_shrimp_count',
+        help='Shrimp count (per kg) the vendor reported on the RFQ portal, for comparison against the count taken on arrival.')
+
+    @api.depends('purchase_order_id', 'purchase_order_id.order_line.shrimp_count')
+    def _compute_vendor_shrimp_count(self):
+        for rec in self:
+            line = rec.purchase_order_id.order_line.filtered(lambda l: not l.display_type)[:1]
+            rec.vendor_shrimp_count = line.shrimp_count if line else 0
+
+    # ------------------------------------------------------------------
     # FIX: batch_number used to be a manually-composed string (date + PO
     # digits + receipt digits + a private serial), generated once on
     # Accept via its own private ir.sequence. That number matched nothing
