@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="purchase_order_portal_content_shrimp_count"
+              name="Purchase Order Portal Content: Shrimp Count"
+              inherit_id="purchase.purchase_order_portal_content">
+
+        <xpath expr="//th[@class='text-end' and text()='Quantity']" position="after">
+            <th t-if="order.state == 'sent'" class="text-end">Shrimp Count</th>
+        </xpath>
+
+        <xpath expr="//div[@id='quote_qty']/.." position="after">
+            <td t-if="order.state == 'sent'" class="text-end">
+                <input t-if="not request.env.user._is_public() and request.env.user.partner_id == order.partner_id"
+                       type="number" min="0" step="1"
+                       class="form-control text-end o-aqua-shrimp-count-input"
+                       t-att-data-access-token="order.access_token"
+                       t-att-data-order-id="order.id"
+                       t-att-data-line-id="line.id"
+                       t-att-value="line.shrimp_count"/>
+                <span t-else="" t-field="line.shrimp_count"/>
+            </td>
+        </xpath>
+
+    </template>
+</odoo>
