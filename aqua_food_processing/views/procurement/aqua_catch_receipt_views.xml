@@ -82,6 +82,17 @@
         </field>
     </record>
 
+    <record id="view_purchase_order_form_shrimp_count" model="ir.ui.view">
+        <field name="name">purchase.order.form.shrimp.count</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='product_qty'][@readonly='is_downpayment']" position="after">
+                <field name="shrimp_count" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+
     <record id="action_aqua_catch_receipt" model="ir.actions.act_window">
         <field name="name">Catch Receipts</field>
         <field name="res_model">aqua.catch.receipt</field>
