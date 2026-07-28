@@ -35,15 +35,25 @@
         <field name="arch" type="xml">
             <list string="Processing Orders">
                 <field name="name"/>
-                <field name="catch_receipt_id"/>
-                <field name="species_id"/>
-                <field name="product_id" string="Stage Output"/>
-                <field name="qty_input"/>
+                <field name="catch_receipt_id" optional="show"/>
+                <field name="date_start" optional="show"/>
+                <field name="date_finished" optional="show"/>
+                <field name="date_deadline" optional="hide"/>
+                <field name="lot_producing_id" optional="hide"/>
+                <field name="bom_id" optional="show"/>
+                <field name="activity_ids" optional="hide"/>
+                <field name="product_qty" optional="show"/>
+                <field name="product_uom_id" optional="show"/>
+                <field name="duration_expected" optional="hide"/>
+                <field name="duration" optional="hide"/>
+                <field name="company_id" optional="hide"/>
+                <field name="species_id" optional="show"/>
+                <field name="product_id" string="Stage Output" optional="show"/>
+                <field name="qty_input" optional="show"/>
                 <field name="state"/>
             </list>
         </field>
     </record>
-
     <record id="action_aqua_processing_order" model="ir.actions.act_window">
         <field name="name">Processing Orders</field>
         <field name="res_model">mrp.production</field>
