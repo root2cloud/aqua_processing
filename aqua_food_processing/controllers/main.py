@@ -2,6 +2,7 @@ import json
 
 from odoo import http
 from odoo.http import request
+from odoo.exceptions import AccessError, MissingError
 
 
 class AquaProcurementController(http.Controller):
@@ -73,3 +74,43 @@ class AquaTraceabilityController(http.Controller):
             'lot': lot,
             'trace_link': trace_link,
         })
+
+
+class AquaPurchasePortalController(http.Controller):
+
+    @http.route(['/my/purchase/<int:order_id>/update_shrimp_count'], type='json', auth='public', website=True)
+    def portal_update_shrimp_count(self, order_id=None, access_token=None, **kw):
+        """Vendor reports shrimp count per line from the RFQ portal page.
+
+        Restricted to the RFQ's own vendor, and only while the order is still
+        in 'sent' (RFQ Sent) state.
+        """
+        PurchaseOrder = request.env['purchase.order']
+        try:
+            order_sudo = PurchaseOrder.sudo().browse(order_id).exists()
+        except (AccessError, MissingError):
+            return {'error': 'not found'}
+
+        if not order_sudo:
+            return {'error': 'not found'}
+
+        if access_token and order_sudo.access_token != access_token:
+            return {'error': 'invalid access token'}
+
+        if request.env.user._is_public() or request.env.user.partner_id != order_sudo.partner_id:
+            return {'error': 'not allowed'}
+
+        if order_sudo.state != 'sent':
+            return {'error': 'order is no longer open for RFQ updates'}
+
+        for id_str, count_str in kw.items():
+            try:
+                line_id = int(id_str)
+                count = int(count_str)
+            except (TypeError, ValueError):
+                continue
+            line = order_sudo.order_line.filtered(lambda l: l.id == line_id)
+            if line:
+                line.write({'shrimp_count': count})
+
+        return {'success': True}
