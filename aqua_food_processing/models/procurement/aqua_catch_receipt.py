@@ -384,3 +384,11 @@ class AquaCatchReceiptLine(models.Model):
     grading_standard_id = fields.Many2one('aqua.grading.standard', string='Grade')
     quantity = fields.Float(string='Quantity (kg)')
     lot_id = fields.Many2one('stock.lot', string='Stock Lot')
+
+class PurchaseOrderLine(models.Model):
+    _inherit = 'purchase.order.line'
+
+    shrimp_count = fields.Integer(
+        string='Shrimp Count',
+        help='Count per kg reported by the vendor for this line, filled in from the vendor portal.',
+    )
