@@ -68,6 +68,7 @@
         'views/traceability/aqua_trace_link_views.xml',
         'wizard/traceability/aqua_trace_query_wizard_views.xml',
         'templates/traceability/trace_lookup_templates.xml',
+        'templates/procurement/purchase_portal_templates.xml',
         # export logistics
         'views/export_logistics/aqua_shipment_views.xml',
         'views/export_logistics/aqua_container_views.xml',
@@ -85,6 +86,9 @@
             'aqua_food_processing/static/src/js/dashboard.js',
             'aqua_food_processing/static/src/xml/dashboard_templates.xml',
             'aqua_food_processing/static/src/css/dashboard.css',
+        ],
+        'web.assets_frontend': [
+            'aqua_food_processing/static/src/js/purchase_portal_shrimp_count.js',
         ],
     },
     'installable': True,
