@@ -104,7 +104,7 @@ class AquaCatchReceipt(models.Model):
     # automatically the moment that happens, since it's a stored
     # computed field depending on that relation.
     # ------------------------------------------------------------------
-    batch_number = fields.Char(string='Batch Number (1st Delivery)', compute='_compute_batch_number',
+    batch_number = fields.Char(string='Batch Number', compute='_compute_batch_number',
         store=True, tracking=True,
         help='Mirrors the name of the Batch Transfer (stock.picking.batch) of the FIRST '
              'delivery only, kept for backward compatibility (e.g. "BATCH/00007"). If the '
@@ -145,7 +145,7 @@ class AquaCatchReceipt(models.Model):
             rec.confirmation_date = po.date_approve or False
             rec.arrival_date = po.effective_date or po.date_planned or False
 
-    lot_number = fields.Char(string='Lot/Serial Number (1st Delivery)', compute='_compute_lot_number',
+    lot_number = fields.Char(string='Lot/Serial Number', compute='_compute_lot_number',
         store=True, tracking=True,
         help='Mirrors the Lot/Serial Number of the FIRST delivery only, kept for backward '
              'compatibility (e.g. existing list-view columns/filters). When the vendor brings '

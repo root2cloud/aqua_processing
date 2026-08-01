@@ -72,12 +72,6 @@
                             <field name="company_id" groups="base.group_multi_company"/>
                         </group>
                     </group>
-                    <!-- Weighment/Shrimp Counting fields (gross_weight, tare_weight, net_weight,
-                         sample_weight, sample_count, avg_body_weight, shrimp_count) still exist on
-                         this model but are intentionally not shown here anymore. Every delivery,
-                         including the first, is now weighed/counted on its own row in the Deliveries
-                         tab below (via its linked Incoming Transfer), so a separate "1st Delivery"
-                         group here was just duplicate data entry. -->
                     <notebook>
                         <page string="Deliveries" name="deliveries">
                             <field name="delivery_ids">
