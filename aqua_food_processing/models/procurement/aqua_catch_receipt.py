@@ -14,7 +14,9 @@ class AquaCatchReceipt(models.Model):
     harvest_method_id = fields.Many2one('aqua.harvest.method')
     rate_contract_id = fields.Many2one('aqua.vendor.rate.contract')
     receipt_date = fields.Datetime(required=True, default=fields.Datetime.now)
-    purchase_order_id = fields.Many2one('purchase.order', string='Purchase Order')
+    purchase_order_id = fields.Many2one('purchase.order', string='Purchase Order',
+        help='Set automatically by "Create Purchase Order" below, or pick an existing, '
+             'already-confirmed Purchase Order if one was created elsewhere.')
     company_id = fields.Many2one('res.company', default=lambda self: self.env.company)
 
     gross_weight = fields.Float(string='Gross Weight (kg)', tracking=True)
@@ -102,17 +104,17 @@ class AquaCatchReceipt(models.Model):
     # automatically the moment that happens, since it's a stored
     # computed field depending on that relation.
     # ------------------------------------------------------------------
-    batch_number = fields.Char(string='Batch Number', compute='_compute_batch_number',
+    batch_number = fields.Char(string='Batch Number (1st Delivery)', compute='_compute_batch_number',
         store=True, tracking=True,
-        help='Mirrors the name of the Batch Transfer (stock.picking.batch) that this '
-             'receipt\'s incoming transfer has been added to in Inventory (e.g. '
-             '"BATCH/00007"). Blank until that transfer is added to a batch; updates '
-             'itself automatically after that -- nothing to enter here.')
+        help='Mirrors the name of the Batch Transfer (stock.picking.batch) of the FIRST '
+             'delivery only, kept for backward compatibility (e.g. "BATCH/00007"). If the '
+             'catch arrives in more than one delivery, see the "Deliveries" tab below for '
+             'every delivery\'s own batch -- this field alone will not reflect later ones.')
 
     @api.depends('purchase_order_id.picking_ids.batch_id.name')
     def _compute_batch_number(self):
         for rec in self:
-            batch = rec.purchase_order_id.picking_ids.batch_id[:1]
+            batch = rec.purchase_order_id.picking_ids.sorted('id').batch_id[:1]
             rec.batch_number = batch.name or False
 
     # ------------------------------------------------------------------
@@ -143,18 +145,90 @@ class AquaCatchReceipt(models.Model):
             rec.confirmation_date = po.date_approve or False
             rec.arrival_date = po.effective_date or po.date_planned or False
 
-    lot_number = fields.Char(string='Lot/Serial Number', compute='_compute_lot_number',
+    lot_number = fields.Char(string='Lot/Serial Number (1st Delivery)', compute='_compute_lot_number',
         store=True, tracking=True,
-        help='Mirrors the Lot/Serial Number recorded on the incoming transfer\'s Detailed '
-             'Operations for this receipt\'s raw-material product. Blank until that\'s set.')
+        help='Mirrors the Lot/Serial Number of the FIRST delivery only, kept for backward '
+             'compatibility (e.g. existing list-view columns/filters). When the vendor brings '
+             'the catch in more than one delivery, see the "Deliveries" tab below for the full '
+             'breakdown -- this field alone will not reflect later deliveries.')
 
     @api.depends('purchase_order_id.picking_ids.move_line_ids.lot_id.name', 'product_id', 'species_id')
     def _compute_lot_number(self):
         for rec in self:
             product = rec.product_id or rec._get_product(rec.species_id, raise_if_missing=False)
-            move_lines = rec.purchase_order_id.picking_ids.move_line_ids.filtered(
+            move_lines = rec.purchase_order_id.picking_ids.sorted('id').move_line_ids.filtered(
                 lambda ml: product and ml.product_id == product and ml.lot_id)
             rec.lot_number = move_lines[:1].lot_id.name or False
+
+    # ------------------------------------------------------------------
+    # Deliveries: a single PO/Catch Receipt is frequently fulfilled by the
+    # vendor across more than one physical arrival (the total ordered
+    # quantity shows up in batches over hours/days, not all at once), and
+    # -- per your confirmation -- EACH of those arrivals gets its own
+    # Weighment and Shrimp Counting done at the gate, just like the very
+    # first one above. Odoo already models each arrival as its own
+    # Incoming Transfer (stock.picking), chained as backorders of one
+    # another, each optionally grouped into its own Batch Transfer with
+    # its own Lot/Serial Number.
+    #
+    # delivery_ids is a genuine stored table (aqua.catch.receipt.delivery)
+    # -- one row per Incoming Transfer -- where Weighment/Shrimp Counting
+    # for deliveries after the first are entered directly on that row.
+    # IMPORTANT: unlike the old version, this is NOT a fully-recomputed
+    # field anymore. It used to be a `compute` field that cleared and
+    # rebuilt every row from scratch on every change -- which would have
+    # silently wiped out any Gross/Tare/Net Weight or Shrimp Counting a
+    # user had typed into a delivery row the moment anything else on the
+    # PO's pickings changed. It's now a normal relation: action_sync_
+    # deliveries() (button "Update Deliveries", also called automatically
+    # right after the Purchase Order is created) only ADDS a row for any
+    # Incoming Transfer that doesn't have one yet -- it never touches or
+    # removes an existing row, so manually entered data is always safe.
+    # ------------------------------------------------------------------
+    delivery_ids = fields.One2many('aqua.catch.receipt.delivery', 'catch_receipt_id', string='Deliveries')
+    delivery_count = fields.Integer(string='Delivery Count', compute='_compute_delivery_totals', store=True)
+    total_received = fields.Float(string='Total Received (kg)', compute='_compute_delivery_totals',
+        store=True,
+        help='Sum of the quantities received across all Done deliveries so far.')
+
+    @api.depends('delivery_ids.quantity', 'delivery_ids.state')
+    def _compute_delivery_totals(self):
+        for rec in self:
+            rec.delivery_count = len(rec.delivery_ids)
+            rec.total_received = sum(rec.delivery_ids.filtered(lambda d: d.state == 'done').mapped('quantity'))
+
+    def action_sync_deliveries(self):
+        """Add a Deliveries row for any Incoming Transfer on this receipt's Purchase Order that
+        doesn't have one yet. Purely additive -- never edits or removes an existing row, so any
+        Weighment/Shrimp Counting already entered on a delivery is never touched.
+
+        Exception: the FIRST delivery's picking gets the header's own Weighment/Shrimp Counting
+        (taken before the PO/picking existed) copied onto it once, so it isn't left blank on the
+        actual receipt screen -- but only if that picking doesn't already have its own values."""
+        for rec in self:
+            if not rec.purchase_order_id:
+                continue
+            pickings = rec.purchase_order_id.picking_ids.filtered(
+                lambda p: p.picking_type_id.code == 'incoming').sorted('scheduled_date')
+            existing = {d.picking_id.id: d for d in rec.delivery_ids}
+            for seq, picking in enumerate(pickings, start=1):
+                if picking.id in existing:
+                    if existing[picking.id].sequence != seq:
+                        existing[picking.id].sequence = seq
+                else:
+                    self.env['aqua.catch.receipt.delivery'].create({
+                        'catch_receipt_id': rec.id,
+                        'sequence': seq,
+                        'picking_id': picking.id,
+                    })
+                if seq == 1 and not picking.aqua_gross_weight and not picking.aqua_sample_count:
+                    picking.write({
+                        'aqua_gross_weight': rec.gross_weight,
+                        'aqua_tare_weight': rec.tare_weight,
+                        'aqua_net_weight': rec.net_weight,
+                        'aqua_sample_weight': rec.sample_weight,
+                        'aqua_sample_count': rec.sample_count,
+                    })
 
     # ------------------------------------------------------------------
     # FIX : Previously, purchase_order_id existed as a plain, optional Many2one
@@ -190,12 +264,53 @@ class AquaCatchReceipt(models.Model):
 
     line_ids = fields.One2many('aqua.catch.receipt.line', 'catch_receipt_id', string='Receipt Lines')
 
+    # ------------------------------------------------------------------
+    # FIX: Draft -> Weighed -> Accepted used to be a manual 3-click state
+    # machine, where "Accept" was the trigger that created the Purchase
+    # Order from this receipt's own weighment. Since your actual process
+    # is the other way around -- you create and confirm the PO in
+    # Purchase first, THEN this receipt gets linked to it (purchase_
+    # order_id is now required, see above) -- clicking through those 3
+    # states did nothing real anymore: _create_purchase_order() always
+    # skipped itself the moment a PO was already linked, so "Accept" was
+    # just relabelling a status pill.
+    #
+    # state is now computed, not clicked: it reflects whether every
+    # delivery this PO is expecting has actually arrived
+    # (total_received >= ordered_qty) or not, straight from the
+    # Deliveries tab -- nothing to remember to press. "Cancelled" is the
+    # one case that still needs a person's judgment call (the whole
+    # receipt is void, e.g. an order was scrapped), so that stays a
+    # manual action (action_cancel / action_reopen below), stored
+    # separately in `cancelled` so it isn't overwritten by the automatic
+    # open/completed recompute.
+    # ------------------------------------------------------------------
+    cancelled = fields.Boolean(default=False, copy=False)
+    ordered_qty = fields.Float(string='Ordered Quantity (kg)', compute='_compute_ordered_qty', store=True,
+        help='Quantity on the linked Purchase Order\'s line for this receipt\'s product.')
     state = fields.Selection([
-        ('draft', 'Draft'),
-        ('weighed', 'Weighed'),
-        ('accepted', 'Accepted'),
+        ('open', 'Open'),
+        ('completed', 'Completed'),
         ('cancelled', 'Cancelled'),
-    ], default='draft', tracking=True)
+    ], default='open', compute='_compute_state', store=True, tracking=True)
+
+    @api.depends('purchase_order_id.order_line.product_qty', 'purchase_order_id.order_line.product_id', 'product_id')
+    def _compute_ordered_qty(self):
+        for rec in self:
+            product = rec.product_id or rec._get_product(rec.species_id, raise_if_missing=False)
+            lines = rec.purchase_order_id.order_line.filtered(
+                lambda l: not l.display_type and (not product or l.product_id == product))
+            rec.ordered_qty = sum(lines.mapped('product_qty'))
+
+    @api.depends('cancelled', 'total_received', 'ordered_qty', 'purchase_order_id')
+    def _compute_state(self):
+        for rec in self:
+            if rec.cancelled:
+                rec.state = 'cancelled'
+            elif rec.purchase_order_id and rec.ordered_qty and rec.total_received >= rec.ordered_qty:
+                rec.state = 'completed'
+            else:
+                rec.state = 'open'
 
     processing_order_ids = fields.One2many('mrp.production', 'catch_receipt_id', string='Processing Orders')
     quality_test_ids = fields.One2many('aqua.quality.test', 'catch_receipt_id', string='QC Tests')
@@ -241,15 +356,37 @@ class AquaCatchReceipt(models.Model):
         for vals in vals_list:
             if vals.get('name', 'New') == 'New':
                 vals['name'] = self.env['ir.sequence'].next_by_code('aqua.catch.receipt') or 'New'
-            vals.setdefault('state', 'draft')
-        return super().create(vals_list)
+        records = super().create(vals_list)
+        records.filtered('purchase_order_id').action_sync_deliveries()
+        return records
 
+    # ------------------------------------------------------------------
+    # FIX: action_sync_deliveries() was previously only ever called from
+    # the two wizards (AquaWeighmentEntryWizard / AquaCreatePoWizard) --
+    # i.e. only when the Purchase Order was created FROM this Catch
+    # Receipt via the "Create Purchase Order" button. The Many2one help
+    # text explicitly also allows "pick an existing, already-confirmed
+    # Purchase Order if one was created elsewhere" (as shown in the UI:
+    # picking P00044 from the dropdown), but doing that never triggered
+    # a sync -- Deliveries stayed empty and Total Received/Delivery
+    # Count stayed at 0 even though the linked PO's Receipt already had
+    # real, validated transfers with quantities on them. The user had to
+    # know to separately click "Update Deliveries" by hand, with nothing
+    # telling them that step was needed.
+    #
+    # Now, writing purchase_order_id (from the form, an import, or code)
+    # automatically runs the same sync the wizards already relied on, so
+    # linking to an existing PO behaves the same as creating one via the
+    # wizard. This does not remove the manual "Update Deliveries" button
+    # -- it's still needed to pick up NEW backorders/deliveries created
+    # in Inventory after the initial link, since nothing here hooks into
+    # stock.picking creation itself.
+    # ------------------------------------------------------------------
     def write(self, vals):
-        locked_fields = {'gross_weight', 'tare_weight', 'net_weight', 'line_ids'}
-        for rec in self:
-            if rec.state == 'accepted' and locked_fields.intersection(vals.keys()):
-                raise UserError('Weighment/grading fields cannot be edited once the receipt is accepted.')
-        return super().write(vals)
+        res = super().write(vals)
+        if vals.get('purchase_order_id'):
+            self.filtered('purchase_order_id').action_sync_deliveries()
+        return res
 
     def unlink(self):
         for rec in self:
@@ -257,12 +394,11 @@ class AquaCatchReceipt(models.Model):
                 raise UserError('Cannot delete a catch receipt that has processing orders linked to it.')
         return super().unlink()
 
-    def action_confirm_weighment(self):
-        self.write({'state': 'weighed'})
+    def action_cancel(self):
+        self.write({'cancelled': True})
 
-    def action_accept(self):
-        self.write({'state': 'accepted'})
-        self._create_purchase_order()
+    def action_reopen(self):
+        self.write({'cancelled': False})
 
     def _get_product(self, species, raise_if_missing=True):
         """Single lookup for the raw-material product linked to a species, sourced only
@@ -291,71 +427,34 @@ class AquaCatchReceipt(models.Model):
             return False
         return products.product_variant_id
 
-    def _get_rate_fallback(self, rec):
-        contract = self.env['aqua.vendor.rate.contract'].search([
-            ('vendor_id', '=', rec.vendor_id.id),
-            ('species_id', '=', rec.species_id.id),
-            ('active', '=', True),
-        ], limit=1)
-        return contract.rate if contract else (rec.product_id.standard_price if rec.product_id else 0.0)
-
-    def _create_purchase_order(self):
-        """Create and confirm a real purchase.order for this receipt, so this Catch Receipt
-        is backed by an actual Odoo procurement document instead of only a state flag.
-
-        ------------------------------------------------------------------
-        FIX: Previously built one PO line per aqua.catch.receipt.line grade
-        split (line.grading_standard_id), i.e. size grade was declared at
-        intake. Per the confirmed business process (aqua_by_m.docx), size
-        grading only happens during the Grading Work Order, roughly the
-        4th of 5 processing operations -- well after Cleaning, Peeling &
-        Deveining and Freezing. The raw material arrives and is purchased
-        as a single ungraded quantity identified only by its species/count
-        spec (e.g. "c50"), not by size. Declaring a grade split here was
-        the same mistake as choosing a graded finished product at MO
-        creation: both assume information that doesn't exist yet.
-        This now always creates a single ungraded PO line from net_weight.
-        aqua.catch.receipt.line / grading_standard_id are left in place as
-        a model (still useful as master data for the Grading/Packing
-        stage bands) but are no longer read here.
-        ------------------------------------------------------------------
-        """
-        for rec in self:
-            if rec.purchase_order_id:
-                continue
-            product = rec.product_id or rec._get_product(rec.species_id, raise_if_missing=False)
-            if not product:
-                rec.message_post(
-                    body='Purchase Order not created automatically: no product is linked to '
-                         'Species "%s". Set Product > General Information > Aqua Species, or set '
-                         'the Raw Material Product on this receipt directly, then use "Create '
-                         'Purchase Order" manually.' % rec.species_id.name)
-                continue
-            if not rec.net_weight:
-                rec.message_post(body='Purchase Order not created automatically: Net Weight is zero.')
-                continue
-
-            rate = rec.rate_contract_id.rate if rec.rate_contract_id else rec._get_rate_fallback(rec)
-            po_uom = product.uom_po_id or product.uom_id
-
-            purchase_order = self.env['purchase.order'].create({
-                'partner_id': rec.vendor_id.id,
-                'origin': rec.name,
-                'company_id': rec.company_id.id,
-                'order_line': [(0, 0, {
-                    'product_id': product.id,
-                    'name': product.display_name,
-                    'product_qty': rec.net_weight,
-                    'product_uom': po_uom.id,
-                    'price_unit': rate,
-                })],
-            })
-            purchase_order.button_confirm()
-            rec.purchase_order_id = purchase_order.id
-            rec.message_post(
-                body=f'Purchase Order {purchase_order.name} created and confirmed. '
-                     f'Complete the Receive / Quality Control / Store transfers from the '
-                     f'Purchase Order to bring this catch into usable stock.')
+    def action_open_create_po_wizard(self):
+        """Opens a small wizard to create+confirm a Purchase Order for this receipt, without
+        ever leaving Aqua Processing or touching the generic Many2one "Create" dialog on
+        purchase_order_id (that dialog's "open full form" link is what caused the
+        "Invalid fields: Purchase Order" error -- it detaches the new PO from this receipt if
+        this receipt isn't saved yet). This button auto-saves the receipt first if needed
+        (standard Odoo behavior for an object-type button), then the wizard writes the new
+        PO's id back onto this specific, already-saved record -- so that failure mode can't
+        happen here."""
+        self.ensure_one()
+        if self.purchase_order_id:
+            raise UserError('This receipt is already linked to Purchase Order %s.' % self.purchase_order_id.name)
+        product = self.product_id or self._get_product(self.species_id, raise_if_missing=False)
+        rate = self.rate_contract_id.rate if self.rate_contract_id else (
+            product.standard_price if product else 0.0)
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Create Purchase Order',
+            'res_model': 'aqua.create.po.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_catch_receipt_id': self.id,
+                'default_vendor_id': self.vendor_id.id,
+                'default_product_id': product.id if product else False,
+                'default_price_unit': rate,
+            },
+        }
 
     def action_view_purchase_order(self):
         self.ensure_one()
@@ -367,11 +466,22 @@ class AquaCatchReceipt(models.Model):
             'res_id': self.purchase_order_id.id,
         }
 
-    def action_reset_to_draft(self):
-        for rec in self:
-            if rec.state not in ('accepted', 'cancelled'):
-                raise UserError('Only an Accepted or Cancelled receipt can be reset to draft.')
-        self.write({'state': 'draft'})
+    def action_view_receipts(self):
+        """Same idea as the "Receipt" smart button on the Purchase Order form itself -- opens
+        the Incoming Transfers for this receipt's linked PO, straight from the Catch Receipt."""
+        self.ensure_one()
+        pickings = self.purchase_order_id.picking_ids
+        action = {
+            'type': 'ir.actions.act_window',
+            'name': 'Receipts',
+            'res_model': 'stock.picking',
+            'domain': [('id', 'in', pickings.ids)],
+        }
+        if len(pickings) == 1:
+            action.update(view_mode='form', res_id=pickings.id)
+        else:
+            action.update(view_mode='list,form')
+        return action
 
     def action_view_processing_orders(self):
         self.ensure_one()
@@ -394,6 +504,79 @@ class AquaCatchReceipt(models.Model):
         }
 
 
+class AquaCatchReceiptDelivery(models.Model):
+    _name = 'aqua.catch.receipt.delivery'
+    _description = 'Catch Receipt Delivery (one row per partial arrival/backorder)'
+    _order = 'catch_receipt_id, sequence'
+
+    catch_receipt_id = fields.Many2one('aqua.catch.receipt', required=True, ondelete='cascade')
+    sequence = fields.Integer(string='Delivery #', help='1 = first delivery received against this receipt\'s '
+                               'Purchase Order, 2 = the next partial delivery (its backorder), and so on.')
+    picking_id = fields.Many2one('stock.picking', string='Transfer', required=True, ondelete='cascade')
+
+    # ------------------------------------------------------------------
+    # Identity fields below (backorder_of_id, batch_id, lot_number,
+    # quantity, state) only ever read from THIS row's own picking_id --
+    # never from sibling rows or from the parent Catch Receipt's whole
+    # picking set -- so recomputing one row can never disturb another
+    # row's data, and none of them touch the manually entered Weighment/
+    # Shrimp Counting fields further down.
+    # ------------------------------------------------------------------
+    backorder_of_id = fields.Many2one('stock.picking', string='Backorder Of',
+        related='picking_id.backorder_id', store=True,
+        help='The previous delivery this one is a backorder of. Blank for the first delivery.')
+    batch_id = fields.Many2one('stock.picking.batch', string='Batch Transfer',
+        related='picking_id.batch_id', store=True)
+    state = fields.Selection(related='picking_id.state', store=True, string='Status')
+
+    lot_number = fields.Char(string='Lot/Serial Number', compute='_compute_picking_data', store=True)
+    quantity = fields.Float(string='Quantity Received (kg)', compute='_compute_picking_data', store=True)
+
+    @api.depends('picking_id.move_line_ids.lot_id.name', 'picking_id.move_line_ids.quantity',
+                 'picking_id.move_line_ids.product_id', 'catch_receipt_id.product_id',
+                 'catch_receipt_id.species_id')
+    def _compute_picking_data(self):
+        for rec in self:
+            cr = rec.catch_receipt_id
+            product = cr.product_id or (cr._get_product(cr.species_id, raise_if_missing=False) if cr.species_id else False)
+            move_lines = rec.picking_id.move_line_ids.filtered(lambda ml: product and ml.product_id == product)
+            rec.lot_number = ', '.join(sorted(set(move_lines.mapped('lot_id.name')) - {False})) or False
+            rec.quantity = sum(move_lines.mapped('quantity'))
+
+    # ------------------------------------------------------------------
+    # FIX: Weighment and Shrimp Counting used to live ONLY on this
+    # aqua.catch.receipt.delivery row, meaning a warehouse user sitting on
+    # the actual Incoming Transfer screen (Purchase > Receipt, e.g.
+    # AQP/IN/00028) had no way to enter or even see them there -- they'd
+    # have to go find the right Catch Receipt and its Deliveries tab
+    # instead. Per your point, this belongs right on the receipt screen
+    # itself, at the moment the truck is actually being weighed/counted.
+    #
+    # The real fields now live on stock.picking (see StockPicking below,
+    # aqua_gross_weight etc.) and are shown directly on the Incoming
+    # Transfer form. These fields here are `related` to that same record
+    # (store=True so they still work in list/group-by/filters) -- so
+    # there is exactly one place the data actually lives; entering it on
+    # the Receipt screen or on this Deliveries tab updates the same
+    # record either way, nothing to keep in sync manually.
+    # ------------------------------------------------------------------
+    gross_weight = fields.Float(string='Gross Weight (kg)', related='picking_id.aqua_gross_weight',
+        store=True, readonly=False)
+    tare_weight = fields.Float(string='Tare Weight (kg)', related='picking_id.aqua_tare_weight',
+        store=True, readonly=False)
+    net_weight = fields.Float(string='Net Weight (kg)', related='picking_id.aqua_net_weight',
+        store=True, readonly=False)
+    sample_weight = fields.Float(string='Sample Weight (kg)', related='picking_id.aqua_sample_weight',
+        store=True, readonly=False,
+        help='Total weight of the counted sample, in kg (e.g. 3 for 3 kg / 3000 g).')
+    sample_count = fields.Integer(string='Shrimp Counted', related='picking_id.aqua_sample_count',
+        store=True, readonly=False, help='Number of shrimp in that sample.')
+    avg_body_weight = fields.Float(string='Average Body Weight (g)', related='picking_id.aqua_avg_body_weight',
+        store=True, digits=(16, 2), help='(Sample Weight in kg x 1000) / Shrimp Counted.')
+    shrimp_count = fields.Float(string='Count (per kg)', related='picking_id.aqua_shrimp_count',
+        store=True, digits=(16, 1), help='1000 / Average Body Weight (g) -- how many shrimp make up one kilogram.')
+
+
 class AquaCatchReceiptLine(models.Model):
     _name = 'aqua.catch.receipt.line'
     _description = 'Catch Receipt Line (Grade-wise Split)'
@@ -410,3 +593,53 @@ class PurchaseOrderLine(models.Model):
         string='Shrimp Count',
         help='Count per kg reported by the vendor for this line, filled in from the vendor portal.',
     )
+
+
+class StockPicking(models.Model):
+    _inherit = 'stock.picking'
+
+    # ------------------------------------------------------------------
+    # Same fields/formulas as aqua.catch.receipt's header Weighment and
+    # Shrimp Counting -- placed here too so they're right there on the
+    # Incoming Transfer screen for EVERY delivery (not only the first),
+    # at the point the truck is actually being weighed and counted.
+    # aqua.catch.receipt.delivery.gross_weight etc. are `related` to
+    # these, so filling them in here (or from the Catch Receipt's
+    # Deliveries tab) is the same single record either way.
+    #
+    # FIX: copy=False on all of these. When you click Validate on a
+    # partial delivery and choose "Create Backorder", Odoo creates that
+    # backorder picking (AQP/IN/00031 etc.) internally via a `copy()` of
+    # the picking you just validated (AQP/IN/00030) -- and by default
+    # ANY custom field copies along with it unless told not to. Without
+    # copy=False here, the backorder silently inherited delivery #1's
+    # exact Gross/Tare/Net Weight and Shrimp Counting instead of starting
+    # blank, which is exactly the "auto-filled, can't edit" symptom you
+    # saw -- each delivery/trip weighs and counts separately, so each
+    # backorder now always starts empty and has to be entered fresh.
+    # ------------------------------------------------------------------
+    aqua_gross_weight = fields.Float(string='Gross Weight (kg)', copy=False)
+    aqua_tare_weight = fields.Float(string='Tare Weight (kg)', copy=False)
+    aqua_net_weight = fields.Float(string='Net Weight (kg)', copy=False)
+
+    @api.onchange('aqua_gross_weight', 'aqua_tare_weight')
+    def _onchange_aqua_weighment(self):
+        for rec in self:
+            rec.aqua_net_weight = rec.aqua_gross_weight - rec.aqua_tare_weight
+
+    aqua_sample_weight = fields.Float(string='Sample Weight (kg)', copy=False,
+        help='Total weight of the counted sample, in kg (e.g. 3 for 3 kg / 3000 g).')
+    aqua_sample_count = fields.Integer(string='Shrimp Counted', copy=False,
+        help='Number of shrimp in that sample.')
+    aqua_avg_body_weight = fields.Float(string='Average Body Weight (g)',
+        compute='_compute_aqua_shrimp_count', store=True, copy=False, digits=(16, 2),
+        help='(Sample Weight in kg x 1000) / Shrimp Counted.')
+    aqua_shrimp_count = fields.Float(string='Count (per kg)',
+        compute='_compute_aqua_shrimp_count', store=True, copy=False, digits=(16, 1),
+        help='1000 / Average Body Weight (g) -- how many shrimp make up one kilogram.')
+
+    @api.depends('aqua_sample_weight', 'aqua_sample_count')
+    def _compute_aqua_shrimp_count(self):
+        for rec in self:
+            rec.aqua_avg_body_weight = (rec.aqua_sample_weight * 1000.0 / rec.aqua_sample_count) if rec.aqua_sample_count else 0.0
+            rec.aqua_shrimp_count = (1000.0 / rec.aqua_avg_body_weight) if rec.aqua_avg_body_weight else 0.0

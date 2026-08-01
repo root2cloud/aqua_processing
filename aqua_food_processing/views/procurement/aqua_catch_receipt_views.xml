@@ -4,16 +4,18 @@
         <field name="name">aqua.catch.receipt.list</field>
         <field name="model">aqua.catch.receipt</field>
         <field name="arch" type="xml">
-            <list decoration-muted="state=='cancelled'" decoration-success="state=='accepted'">
+            <list decoration-muted="state=='cancelled'" decoration-success="state=='completed'">
                 <field name="name"/>
                 <field name="vendor_id"/>
                 <field name="species_id"/>
                 <field name="receipt_date"/>
-                <field name="net_weight"/>
                 <field name="confirmation_date"/>
                 <field name="arrival_date"/>
-                <field name="batch_number"/>
-                <field name="lot_number"/>
+                <field name="ordered_qty" optional="hide"/>
+                <field name="total_received"/>
+                <field name="delivery_count"/>
+                <field name="batch_number" optional="hide"/>
+                <field name="lot_number" optional="hide"/>
                 <field name="state" widget="badge"/>
             </list>
         </field>
@@ -25,16 +27,21 @@
         <field name="arch" type="xml">
             <form>
                 <header>
-                    <button name="action_confirm_weighment" type="object" string="Confirm Weighment"
-                            class="oe_highlight" invisible="state != 'draft'"/>
-                    <button name="action_accept" type="object" string="Accept"
-                            class="oe_highlight" invisible="state != 'weighed'"/>
-                    <button name="action_reset_to_draft" type="object" string="Reset to Draft"
-                            invisible="state not in ('accepted', 'cancelled')"/>
-                    <field name="state" widget="statusbar" statusbar_visible="draft,weighed,accepted"/>
+                    <button name="action_sync_deliveries" type="object" string="Update Deliveries"
+                            invisible="not purchase_order_id"
+                            help="Add a row below for any new Incoming Transfer (delivery) on the Purchase Order that doesn't have one yet. Never touches an existing row."/>
+                    <button name="action_cancel" type="object" string="Cancel"
+                            invisible="state == 'cancelled'"/>
+                    <button name="action_reopen" type="object" string="Reopen"
+                            invisible="state != 'cancelled'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="open,completed"/>
                 </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
+                        <button name="action_view_receipts" type="object" class="oe_stat_button" icon="fa-truck"
+                                invisible="not purchase_order_id">
+                            <field name="delivery_count" widget="statinfo" string="Receipts"/>
+                        </button>
                         <button name="action_view_processing_orders" type="object" class="oe_stat_button" icon="fa-cogs">
                             <field name="processing_order_count" widget="statinfo" string="Processing Orders"/>
                         </button>
@@ -52,33 +59,47 @@
                             <field name="product_id" invisible="1"/>
                             <field name="harvest_method_id"/>
                             <field name="rate_contract_id"/>
+                            <field name="vendor_shrimp_count" readonly="1"/>
                         </group>
                         <group string="Purchase &amp; Traceability">
                             <field name="receipt_date"/>
                             <field name="purchase_order_id"/>
                             <field name="confirmation_date" readonly="1"/>
                             <field name="arrival_date" readonly="1"/>
-                            <field name="batch_number" readonly="1"/>
-                            <field name="lot_number" readonly="1"/>
+                            <field name="ordered_qty" readonly="1"/>
+                            <field name="total_received" readonly="1"/>
+                            <field name="delivery_count" readonly="1"/>
                             <field name="company_id" groups="base.group_multi_company"/>
                         </group>
                     </group>
-                    <group col="3">
-                        <group string="Weighment">
-                            <field name="gross_weight"/>
-                            <field name="tare_weight"/>
-                            <field name="net_weight"/>
-                        </group>
-                        <group string="Shrimp Counting">
-                            <field name="sample_weight"/>
-                            <field name="sample_count"/>
-                            <field name="avg_body_weight" readonly="1"/>
-                            <field name="shrimp_count" readonly="1"/>
-                        </group>
-                        <group string="Vendor Reported">
-                            <field name="vendor_shrimp_count" readonly="1"/>
-                        </group>
-                    </group>
+                    <!-- Weighment/Shrimp Counting fields (gross_weight, tare_weight, net_weight,
+                         sample_weight, sample_count, avg_body_weight, shrimp_count) still exist on
+                         this model but are intentionally not shown here anymore. Every delivery,
+                         including the first, is now weighed/counted on its own row in the Deliveries
+                         tab below (via its linked Incoming Transfer), so a separate "1st Delivery"
+                         group here was just duplicate data entry. -->
+                    <notebook>
+                        <page string="Deliveries" name="deliveries">
+                            <field name="delivery_ids">
+                                <list editable="bottom" decoration-muted="state in ('draft','cancel')" decoration-success="state=='done'">
+                                    <field name="sequence" string="Delivery #" readonly="1"/>
+                                    <field name="picking_id" string="Transfer" readonly="1"/>
+                                    <field name="backorder_of_id" string="Backorder Of" readonly="1"/>
+                                    <field name="batch_id" string="Batch" readonly="1"/>
+                                    <field name="lot_number" string="Lot/Serial Number" readonly="1"/>
+                                    <field name="quantity" string="Qty Received (kg)" sum="Total" readonly="1"/>
+                                    <field name="state" widget="badge" readonly="1"/>
+                                    <field name="gross_weight" string="Gross Wt (kg)"/>
+                                    <field name="tare_weight" string="Tare Wt (kg)"/>
+                                    <field name="net_weight" string="Net Wt (kg)"/>
+                                    <field name="sample_weight" string="Sample Wt (kg)"/>
+                                    <field name="sample_count" string="Shrimp Counted"/>
+                                    <field name="avg_body_weight" string="Avg Body Wt (g)" readonly="1"/>
+                                    <field name="shrimp_count" string="Count/kg" readonly="1"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
                 </sheet>
                 <chatter/>
             </form>
@@ -92,6 +113,29 @@
         <field name="arch" type="xml">
             <xpath expr="//field[@name='product_qty'][@readonly='is_downpayment']" position="after">
                 <field name="shrimp_count" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_stock_picking_form_weighment" model="ir.ui.view">
+        <field name="name">stock.picking.form.aqua.weighment</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="before">
+                <group col="2">
+                    <group string="Weighment">
+                        <field name="aqua_gross_weight"/>
+                        <field name="aqua_tare_weight"/>
+                        <field name="aqua_net_weight"/>
+                    </group>
+                    <group string="Shrimp Counting">
+                        <field name="aqua_sample_weight"/>
+                        <field name="aqua_sample_count"/>
+                        <field name="aqua_avg_body_weight" readonly="1"/>
+                        <field name="aqua_shrimp_count" readonly="1"/>
+                    </group>
+                </group>
             </xpath>
         </field>
     </record>
