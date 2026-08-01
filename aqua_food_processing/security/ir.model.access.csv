@@ -14,6 +14,8 @@ access_aqua_catch_receipt_officer,aqua.catch.receipt officer,model_aqua_catch_re
 access_aqua_catch_receipt_manager,aqua.catch.receipt manager,model_aqua_catch_receipt,group_aqua_procurement_manager,1,1,1,1
 access_aqua_catch_receipt_line_officer,aqua.catch.receipt.line officer,model_aqua_catch_receipt_line,group_aqua_procurement_officer,1,1,1,0
 access_aqua_catch_receipt_line_manager,aqua.catch.receipt.line manager,model_aqua_catch_receipt_line,group_aqua_procurement_manager,1,1,1,1
+access_aqua_catch_receipt_delivery_officer,aqua.catch.receipt.delivery officer,model_aqua_catch_receipt_delivery,group_aqua_procurement_officer,1,0,0,0
+access_aqua_catch_receipt_delivery_manager,aqua.catch.receipt.delivery manager,model_aqua_catch_receipt_delivery,group_aqua_procurement_manager,1,1,1,1
 
 access_aqua_quality_test_inspector,aqua.quality.test inspector,model_aqua_quality_test,group_aqua_qc_inspector,1,1,1,0
 access_aqua_quality_test_manager,aqua.quality.test manager,model_aqua_quality_test,group_aqua_qc_manager,1,1,1,1
