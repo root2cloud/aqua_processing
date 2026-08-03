@@ -121,8 +121,18 @@
         <field name="model">stock.picking</field>
         <field name="inherit_id" ref="stock.view_picking_form"/>
         <field name="arch" type="xml">
+            <!-- FIX: this used to render on EVERY transfer of every operation type, including
+                 the later "Aqua Processing: Quality Control" and Storage legs of a 3-step
+                 receiving route, so the same Gross/Tare/Net Weight and Shrimp Counting entered
+                 at the gate (Receipt) appeared to repeat, uneditable-looking and out of place,
+                 on the Quality Control transfer too (see AQP/QC/00019). Weighment/Shrimp
+                 Counting is a one-time, gate-only measurement, so it's now shown only on the
+                 actual Receiving transfer (picking_type_id.code == 'incoming'). The Quality
+                 Control step gets its own, dedicated Raw Material Quality Check section instead;
+                 see the xpath below. -->
             <xpath expr="//notebook" position="before">
-                <group col="2">
+                <field name="aqua_is_qc_step" invisible="1"/>
+                <group col="2" invisible="aqua_is_qc_step">
                     <group string="Weighment">
                         <field name="aqua_gross_weight"/>
                         <field name="aqua_tare_weight"/>
@@ -135,6 +145,20 @@
                         <field name="aqua_shrimp_count" readonly="1"/>
                     </group>
                 </group>
+            </xpath>
+            <!-- Quality Control step: smart button straight to the Raw Material checklist
+                 (Vehicle/Transport, Documentation, Temperature, Sensory, Foreign Matter, Count
+                 Verification, Chemical Residue, Microbiology, Decision) instead of the Weighment
+                 fields that don't belong on this screen. -->
+            <xpath expr="//div[hasclass('oe_button_box')]" position="inside">
+                <button name="action_open_aqua_quality_test" type="object"
+                        class="oe_stat_button" icon="fa-flask"
+                        invisible="not aqua_is_qc_step">
+                    <div class="o_stat_info">
+                        <span class="o_stat_value"><field name="aqua_quality_test_count"/></span>
+                        <span class="o_stat_text">Quality Check</span>
+                    </div>
+                </button>
             </xpath>
         </field>
     </record>

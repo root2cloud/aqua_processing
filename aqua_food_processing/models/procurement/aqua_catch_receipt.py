@@ -668,6 +668,72 @@ class StockPicking(models.Model):
             rec.aqua_avg_body_weight = (rec.aqua_sample_weight * 1000.0 / rec.aqua_sample_count) if rec.aqua_sample_count else 0.0
             rec.aqua_shrimp_count = (1000.0 / rec.aqua_avg_body_weight) if rec.aqua_avg_body_weight else 0.0
 
+    # ------------------------------------------------------------------
+    # Raw Material quality checkpoint lives on the "Aqua Processing:
+    # Quality Control" internal transfer (the middle leg of a 3-step
+    # Receive -> Quality Control -> Store route) -- that's the screen the
+    # shrimp is physically in front of the inspector on. catch_receipt_id
+    # here is matched off the picking's Source Document (its `origin`,
+    # e.g. "P00044"), which every picking chained from the same Purchase
+    # Order shares -- Receipt, QC transfer and Storage transfer alike --
+    # so this works without needing a fixed picking-type xmlid (the 3-step
+    # route itself is ordinary Inventory/Warehouse configuration, not
+    # something this module creates).
+    # ------------------------------------------------------------------
+    aqua_catch_receipt_id = fields.Many2one('aqua.catch.receipt', string='Catch Receipt',
+        compute='_compute_aqua_catch_receipt', search='_search_aqua_catch_receipt')
+    aqua_is_qc_step = fields.Boolean(string='Is Aqua QC Step', compute='_compute_aqua_catch_receipt')
+    aqua_quality_test_ids = fields.One2many('aqua.quality.test', 'qc_picking_id', string='Quality Tests')
+    aqua_quality_test_count = fields.Integer(compute='_compute_aqua_quality_test_count')
+
+    def _compute_aqua_catch_receipt(self):
+        for rec in self:
+            receipt = False
+            if rec.origin:
+                receipt = self.env['aqua.catch.receipt'].search([
+                    ('purchase_order_id.name', '=', rec.origin),
+                    ('company_id', '=', rec.company_id.id),
+                ], limit=1)
+            rec.aqua_catch_receipt_id = receipt.id if receipt else False
+            # FIX: this used to also require bool(receipt) -- i.e. a matching aqua.catch.receipt
+            # record had to exist for the button/checklist to show at all. A Purchase Order can
+            # perfectly well be created without ever going through a Catch Receipt record (the
+            # receipt is optional, purchase_order_id is what everything else keys off), and in
+            # that case aqua_is_qc_step silently came back False: no Quality Check button on the
+            # QC transfer, AND the Weighment/Shrimp Counting group (invisible="aqua_is_qc_step")
+            # wrongly reappeared there too, since "hide when True" degrades to "always show" when
+            # the flag never becomes True. Whether this is the Quality Control step is purely a
+            # property of the TRANSFER itself (its own operation type), not of whether a Catch
+            # Receipt happens to exist for it -- so it no longer depends on `receipt` at all.
+            ptype_name = (rec.picking_type_id.name or '').lower()
+            rec.aqua_is_qc_step = rec.picking_type_id.code == 'internal' and 'quality' in ptype_name
+
+    def _search_aqua_catch_receipt(self, operator, value):
+        receipts = self.env['aqua.catch.receipt'].search([('purchase_order_id', '!=', False)])
+        po_names = receipts.mapped('purchase_order_id.name')
+        return [('origin', operator, po_names)] if po_names else [('id', '=', 0)]
+
+    def _compute_aqua_quality_test_count(self):
+        for rec in self:
+            rec.aqua_quality_test_count = len(rec.aqua_quality_test_ids)
+
+    def action_open_aqua_quality_test(self):
+        """Opens this transfer's Raw Material quality test, creating one on the fly
+        (pre-filled with the Catch Receipt) the first time it's clicked."""
+        self.ensure_one()
+        test = self.aqua_quality_test_ids[:1]
+        if not test:
+            test = self.env['aqua.quality.test'].create({
+                'test_stage': 'raw_material',
+                'catch_receipt_id': self.aqua_catch_receipt_id.id,
+                'qc_picking_id': self.id,
+            })
+        return {
+            'type': 'ir.actions.act_window', 'name': 'Raw Material Quality Test',
+            'res_model': 'aqua.quality.test', 'view_mode': 'form',
+            'res_id': test.id,
+        }
+
 
 # ----------------------------------------------------------------------
 # color fields below: the many2many_tags widget on batch_ids/lot_ids (see

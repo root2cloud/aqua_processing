@@ -7,10 +7,16 @@
             <list decoration-danger="result_state=='fail'" decoration-success="result_state=='pass'"
                   decoration-warning="result_state=='hold'">
                 <field name="name"/>
+                <field name="test_date"/>
                 <field name="test_stage"/>
                 <field name="catch_receipt_id"/>
-                <field name="processing_order_id"/>
-                <field name="histamine_ppm"/>
+                <field name="qc_picking_id"/>
+                <field name="core_temp_c"/>
+                <field name="antibiotic_result"/>
+                <field name="intake_decision" widget="badge"
+                       decoration-danger="intake_decision=='reject'"
+                       decoration-warning="intake_decision=='downgrade'"
+                       decoration-success="intake_decision=='accept'"/>
                 <field name="result_state" widget="badge"/>
             </list>
         </field>
@@ -42,13 +48,18 @@
                         </button>
                     </div>
                     <div class="oe_title"><h1><field name="name" readonly="1"/></h1></div>
+                    <widget name="web_ribbon" title="Rejected" bg_color="text-bg-danger"
+                            invisible="intake_decision != 'reject'"/>
+                    <widget name="web_ribbon" title="Downgraded" bg_color="text-bg-warning"
+                            invisible="intake_decision != 'downgrade'"/>
                     <group>
                         <group>
                             <field name="test_date"/>
                             <field name="test_stage"/>
                             <field name="catch_receipt_id"/>
-                            <field name="processing_order_id"/>
-                            <field name="pack_order_id"/>
+                            <field name="qc_picking_id" invisible="test_stage != 'raw_material'"/>
+                            <field name="processing_order_id" invisible="test_stage != 'in_process'"/>
+                            <field name="pack_order_id" invisible="test_stage != 'final'"/>
                         </group>
                         <group>
                             <field name="certificate_id" readonly="1"/>
@@ -56,24 +67,79 @@
                         </group>
                     </group>
                     <notebook>
-                        <page string="Sensory">
+                        <page string="Transport &amp; Documentation" invisible="test_stage != 'raw_material'">
+                            <group>
+                                <group string="Vehicle / Transport">
+                                    <field name="vehicle_cold_chain_maintained"/>
+                                    <field name="transit_temp_c"/>
+                                    <field name="vehicle_hygiene_ok"/>
+                                </group>
+                                <group string="Documentation">
+                                    <field name="catch_certificate_verified"/>
+                                    <field name="vendor_count_declaration_verified"/>
+                                    <field name="farm_certification_verified"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Sensory Evaluation" invisible="test_stage != 'raw_material'">
+                            <group>
+                                <group string="Temperature on Arrival">
+                                    <field name="core_temp_c"/>
+                                </group>
+                                <group string="Organoleptic Checks">
+                                    <field name="shell_color_normal"/>
+                                    <field name="odor_normal"/>
+                                    <field name="texture_firm"/>
+                                    <field name="shell_adherence_tight"/>
+                                    <field name="eyes_intact"/>
+                                    <field name="melanosis_observed"/>
+                                </group>
+                            </group>
                             <group>
                                 <field name="sensory_score"/>
                                 <field name="sensory_notes"/>
                             </group>
                         </page>
+                        <page string="Foreign Matter &amp; Count" invisible="test_stage != 'raw_material'">
+                            <group>
+                                <group string="Physical / Foreign Matter">
+                                    <field name="foreign_matter_found"/>
+                                    <field name="foreign_matter_notes" invisible="not foreign_matter_found"/>
+                                </group>
+                                <group string="Count &amp; Size Verification">
+                                    <field name="vendor_shrimp_count"/>
+                                    <field name="actual_shrimp_count"/>
+                                    <field name="count_variance_pct"/>
+                                </group>
+                            </group>
+                        </page>
                         <page string="Chemical">
                             <group>
-                                <field name="histamine_ppm"/>
-                                <field name="ph_value"/>
-                                <field name="moisture_percentage"/>
+                                <group string="Residue Screening" invisible="test_stage != 'raw_material'">
+                                    <field name="antibiotic_result"/>
+                                    <field name="sulphite_result"/>
+                                    <field name="phosphate_stpp_pct"/>
+                                </group>
+                                <group string="General">
+                                    <field name="histamine_ppm"/>
+                                    <field name="ph_value"/>
+                                    <field name="moisture_percentage"/>
+                                </group>
                             </group>
                         </page>
                         <page string="Microbiological">
                             <group>
+                                <field name="microbiology_sampled"/>
                                 <field name="total_plate_count"/>
                                 <field name="e_coli_count"/>
                                 <field name="salmonella_detected"/>
+                            </group>
+                        </page>
+                        <page string="Decision" invisible="test_stage != 'raw_material'">
+                            <group>
+                                <field name="intake_decision" widget="radio"/>
+                                <field name="rejected_quantity" invisible="intake_decision not in ('reject', 'downgrade')"/>
+                                <field name="decision_notes"/>
                             </group>
                         </page>
                     </notebook>
@@ -83,9 +149,40 @@
         </field>
     </record>
 
+    <record id="view_aqua_quality_test_search" model="ir.ui.view">
+        <field name="name">aqua.quality.test.search</field>
+        <field name="model">aqua.quality.test</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="catch_receipt_id"/>
+                <field name="qc_picking_id"/>
+                <filter string="Raw Material (Receiving)" name="stage_raw_material" domain="[('test_stage','=','raw_material')]"/>
+                <filter string="In-Process" name="stage_in_process" domain="[('test_stage','=','in_process')]"/>
+                <filter string="Final / Pre-Shipment" name="stage_final" domain="[('test_stage','=','final')]"/>
+                <separator/>
+                <filter string="Accepted" name="decision_accept" domain="[('intake_decision','=','accept')]"/>
+                <filter string="Rejected" name="decision_reject" domain="[('intake_decision','=','reject')]"/>
+                <filter string="Downgraded" name="decision_downgrade" domain="[('intake_decision','=','downgrade')]"/>
+                <separator/>
+                <filter string="Pending" name="state_pending" domain="[('result_state','=','pending')]"/>
+                <filter string="Pass" name="state_pass" domain="[('result_state','=','pass')]"/>
+                <filter string="Fail" name="state_fail" domain="[('result_state','=','fail')]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Stage" name="group_stage" context="{'group_by': 'test_stage'}"/>
+                    <filter string="Decision" name="group_decision" context="{'group_by': 'intake_decision'}"/>
+                    <filter string="Result" name="group_result" context="{'group_by': 'result_state'}"/>
+                    <filter string="Catch Receipt" name="group_receipt" context="{'group_by': 'catch_receipt_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
     <record id="action_aqua_quality_test" model="ir.actions.act_window">
         <field name="name">Quality Tests</field>
         <field name="res_model">aqua.quality.test</field>
         <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_stage_raw_material': 1}</field>
+        <field name="search_view_id" ref="view_aqua_quality_test_search"/>
     </record>
 </odoo>
