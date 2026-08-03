@@ -81,20 +81,20 @@
                         <page string="Deliveries" name="deliveries">
                             <field name="delivery_ids">
                                 <list editable="bottom" decoration-muted="state in ('draft','cancel')" decoration-success="state=='done'">
-                                    <field name="sequence" string="Delivery #" readonly="1"/>
-                                    <field name="picking_id" string="Transfer" readonly="1"/>
-                                    <field name="backorder_of_id" string="Backorder Of" readonly="1"/>
-                                    <field name="batch_id" string="Batch" readonly="1"/>
-                                    <field name="lot_number" string="Lot/Serial Number" readonly="1"/>
-                                    <field name="quantity" string="Qty Received (kg)" sum="Total" readonly="1"/>
-                                    <field name="state" widget="badge" readonly="1"/>
-                                    <field name="gross_weight" string="Gross Wt (kg)"/>
-                                    <field name="tare_weight" string="Tare Wt (kg)"/>
-                                    <field name="net_weight" string="Net Wt (kg)"/>
-                                    <field name="sample_weight" string="Sample Wt (kg)"/>
-                                    <field name="sample_count" string="Shrimp Counted"/>
-                                    <field name="avg_body_weight" string="Avg Body Wt (g)" readonly="1"/>
-                                    <field name="shrimp_count" string="Count/kg" readonly="1"/>
+                                    <field name="sequence" string="Delivery #" readonly="1" optional="show"/>
+                                    <field name="picking_id" string="Transfer" readonly="1" optional="show"/>
+                                    <field name="backorder_of_id" string="Backorder Of" readonly="1" optional="show"/>
+                                    <field name="batch_id" string="Batch" readonly="1" optional="show"/>
+                                    <field name="lot_number" string="Lot/Serial Number" readonly="1" optional="show"/>
+                                    <field name="quantity" string="Qty Received (kg)" sum="Total" readonly="1" optional="show"/>
+                                    <field name="state" widget="badge" readonly="1" optional="show"/>
+                                    <field name="gross_weight" string="Gross Wt (kg)" optional="show"/>
+                                    <field name="tare_weight" string="Tare Wt (kg)" optional="show"/>
+                                    <field name="net_weight" string="Net Wt (kg)" optional="show"/>
+                                    <field name="sample_weight" string="Sample Wt (kg)" optional="show"/>
+                                    <field name="sample_count" string="Shrimp Counted" optional="show"/>
+                                    <field name="avg_body_weight" string="Avg Body Wt (g)" readonly="1" optional="show"/>
+                                    <field name="shrimp_count" string="Count/kg" readonly="1" optional="show"/>
                                 </list>
                             </field>
                         </page>
