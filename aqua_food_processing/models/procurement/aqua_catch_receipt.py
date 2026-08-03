@@ -623,6 +623,62 @@ class StockPicking(models.Model):
     _inherit = 'stock.picking'
 
     # ------------------------------------------------------------------
+    # FIX: a Catch Receipt's Deliveries tab (delivery_ids) only ever got
+    # a new row via action_sync_deliveries(), which itself was only
+    # triggered on the Catch Receipt's own create()/write() of
+    # purchase_order_id, or by manually clicking "Update Deliveries".
+    # Nothing hooked into new stock.picking creation -- so when a partial
+    # receipt was validated with "Create Backorder" (e.g. 2,500 kg now,
+    # 2,500 kg later), the resulting second incoming transfer never made
+    # it into the Deliveries tab on its own: Purchase correctly showed 2
+    # Receipts, batch_number/lot_number (which read picking_ids directly)
+    # correctly showed both batches/lots, but Delivery Count and Total
+    # Received silently stayed stuck at the first delivery only, unless
+    # someone remembered to click "Update Deliveries" by hand.
+    #
+    # This override calls action_sync_deliveries() on the matching Catch
+    # Receipt(s) right after any new incoming picking is created, so a
+    # backorder/new delivery is picked up automatically -- the manual
+    # "Update Deliveries" button still exists for anything created before
+    # this fix, or for other edge cases, but is no longer required for
+    # the normal partial-delivery flow.
+    #
+    # FIX 2: create() alone is NOT enough for the "Create Backorder" flow
+    # specifically. Odoo's own _create_backorder() creates the backorder
+    # picking FIRST, with zero moves attached yet, and only afterwards
+    # reassigns the remaining incomplete moves onto it. purchase.order.
+    # picking_ids is itself computed off those moves -- so at the exact
+    # moment create() fires for the backorder, it doesn't show up in
+    # purchase_order_id.picking_ids yet, action_sync_deliveries() runs
+    # but finds nothing new, and nothing re-triggers it once the moves
+    # are actually attached a moment later. That's why a partial receipt
+    # backordered via "Create Backorder" (the normal Inventory flow,
+    # as opposed to a manually-added extra Receipt) was still missing
+    # from the Deliveries tab even with the create() hook above.
+    #
+    # _create_backorder() is overridden here too, running the sync AFTER
+    # super() has fully created the backorder(s) and moved the remaining
+    # moves onto them -- at that point purchase_order_id.picking_ids
+    # correctly includes the new picking, so it's picked up.
+    # ------------------------------------------------------------------
+    @api.model_create_multi
+    def create(self, vals_list):
+        pickings = super().create(vals_list)
+        incoming = pickings.filtered(lambda p: p.picking_type_id.code == 'incoming')
+        receipts = incoming.mapped('aqua_catch_receipt_id')
+        if receipts:
+            receipts.action_sync_deliveries()
+        return pickings
+
+    def _create_backorder(self, backorder_moves=None):
+        backorders = super()._create_backorder(backorder_moves=backorder_moves)
+        incoming = backorders.filtered(lambda p: p.picking_type_id.code == 'incoming')
+        receipts = incoming.mapped('aqua_catch_receipt_id')
+        if receipts:
+            receipts.action_sync_deliveries()
+        return backorders
+
+    # ------------------------------------------------------------------
     # Same fields/formulas as aqua.catch.receipt's header Weighment and
     # Shrimp Counting -- placed here too so they're right there on the
     # Incoming Transfer screen for EVERY delivery (not only the first),
