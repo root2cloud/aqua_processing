@@ -106,16 +106,25 @@ class AquaCatchReceipt(models.Model):
     # ------------------------------------------------------------------
     batch_number = fields.Char(string='Batch Number', compute='_compute_batch_number',
         store=True, tracking=True,
-        help='Mirrors the name of the Batch Transfer (stock.picking.batch) of the FIRST '
-             'delivery only, kept for backward compatibility (e.g. "BATCH/00007"). If the '
-             'catch arrives in more than one delivery, see the "Deliveries" tab below for '
-             'every delivery\'s own batch -- this field alone will not reflect later ones.')
+        help='Mirrors the names of every delivery\'s Batch Transfer (stock.picking.batch), '
+             'comma-separated in delivery order (e.g. "BATCH/00034, BATCH/00035, BATCH/00036, '
+             'BATCH/00037" for a 4-delivery receipt). See the "Deliveries" tab for which batch '
+             'belongs to which specific delivery.')
+    # Same data as batch_number above, but a real Many2many instead of a comma-joined Char --
+    # so the list/form views can render it as compact, colored tag chips (widget=
+    # "many2many_tags") instead of one long, easily-truncated string. A Char field can't use
+    # that widget, which is why both forms exist side by side.
+    batch_ids = fields.Many2many('stock.picking.batch', string='Batches',
+        compute='_compute_batch_number', store=True)
 
-    @api.depends('purchase_order_id.picking_ids.batch_id.name')
+    @api.depends('purchase_order_id.picking_ids.batch_id.name', 'purchase_order_id.picking_ids.scheduled_date')
     def _compute_batch_number(self):
         for rec in self:
-            batch = rec.purchase_order_id.picking_ids.sorted('id').batch_id[:1]
-            rec.batch_number = batch.name or False
+            pickings = rec.purchase_order_id.picking_ids.filtered(
+                lambda p: p.picking_type_id.code == 'incoming').sorted('scheduled_date')
+            names = [b for b in pickings.mapped('batch_id.name') if b]
+            rec.batch_number = ', '.join(names) or False
+            rec.batch_ids = [(6, 0, pickings.batch_id.ids)]
 
     # ------------------------------------------------------------------
     # NOTE on receipt_date vs. these two: receipt_date stays a separate,
@@ -147,18 +156,33 @@ class AquaCatchReceipt(models.Model):
 
     lot_number = fields.Char(string='Lot/Serial Number', compute='_compute_lot_number',
         store=True, tracking=True,
-        help='Mirrors the Lot/Serial Number of the FIRST delivery only, kept for backward '
-             'compatibility (e.g. existing list-view columns/filters). When the vendor brings '
-             'the catch in more than one delivery, see the "Deliveries" tab below for the full '
-             'breakdown -- this field alone will not reflect later deliveries.')
+        help='Mirrors the Lot/Serial Number of every delivery, comma-separated in delivery '
+             'order (e.g. "sayugs, sdga, sdkyusa, dsayugsa" for a 4-delivery receipt). See the '
+             '"Deliveries" tab for which lot belongs to which specific delivery.')
+    # Same data as lot_number above, but a real Many2many for tag-chip display -- see the
+    # comment on batch_ids above for why both a Char and a Many2many exist side by side.
+    lot_ids = fields.Many2many('stock.lot', string='Lots/Serials',
+        compute='_compute_lot_number', store=True)
 
-    @api.depends('purchase_order_id.picking_ids.move_line_ids.lot_id.name', 'product_id', 'species_id')
+    @api.depends('purchase_order_id.picking_ids.move_line_ids.lot_id.name',
+                 'purchase_order_id.picking_ids.scheduled_date', 'product_id', 'species_id')
     def _compute_lot_number(self):
         for rec in self:
             product = rec.product_id or rec._get_product(rec.species_id, raise_if_missing=False)
-            move_lines = rec.purchase_order_id.picking_ids.sorted('id').move_line_ids.filtered(
-                lambda ml: product and ml.product_id == product and ml.lot_id)
-            rec.lot_number = move_lines[:1].lot_id.name or False
+            pickings = rec.purchase_order_id.picking_ids.filtered(
+                lambda p: p.picking_type_id.code == 'incoming').sorted('scheduled_date')
+            lots = self.env['stock.lot']
+            names = []
+            for picking in pickings:
+                move_lines = picking.move_line_ids.filtered(
+                    lambda ml: product and ml.product_id == product and ml.lot_id)
+                names += [n for n in move_lines.mapped('lot_id.name') if n]
+                lots |= move_lines.lot_id
+            # de-dupe while preserving order
+            seen = set()
+            ordered = [n for n in names if not (n in seen or seen.add(n))]
+            rec.lot_number = ', '.join(ordered) or False
+            rec.lot_ids = [(6, 0, lots.ids)]
 
     # ------------------------------------------------------------------
     # Deliveries: a single PO/Catch Receipt is frequently fulfilled by the
@@ -643,3 +667,34 @@ class StockPicking(models.Model):
         for rec in self:
             rec.aqua_avg_body_weight = (rec.aqua_sample_weight * 1000.0 / rec.aqua_sample_count) if rec.aqua_sample_count else 0.0
             rec.aqua_shrimp_count = (1000.0 / rec.aqua_avg_body_weight) if rec.aqua_avg_body_weight else 0.0
+
+
+# ----------------------------------------------------------------------
+# color fields below: the many2many_tags widget on batch_ids/lot_ids (see
+# aqua.catch.receipt above) only colors each tag differently if its
+# model has a 'color' field to pick from -- same mechanism CRM tags,
+# Project tags, etc. use. Neither stock.picking.batch nor stock.lot ships
+# with one, so without this the tags all render as flat, uncolored grey
+# pills. This just derives a color index (0-10, Odoo's standard tag
+# palette size) from the record's own id, so each batch/lot consistently
+# gets its own color rather than a random one that changes on every
+# screen refresh.
+# ----------------------------------------------------------------------
+class StockPickingBatch(models.Model):
+    _inherit = 'stock.picking.batch'
+
+    color = fields.Integer(string='Color', compute='_compute_color')
+
+    def _compute_color(self):
+        for rec in self:
+            rec.color = (rec.id or 0) % 11
+
+
+class StockLot(models.Model):
+    _inherit = 'stock.lot'
+
+    color = fields.Integer(string='Color', compute='_compute_color')
+
+    def _compute_color(self):
+        for rec in self:
+            rec.color = (rec.id or 0) % 11
