@@ -14,9 +14,14 @@
                 <field name="ordered_qty" optional="hide"/>
                 <field name="total_received"/>
                 <field name="delivery_count"/>
+                <field name="batch_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
+                <field name="lot_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
                 <field name="batch_number" optional="hide"/>
                 <field name="lot_number" optional="hide"/>
-                <field name="state" widget="badge"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'completed'"
+                       decoration-info="state == 'open'"
+                       decoration-danger="state == 'cancelled'"/>
             </list>
         </field>
     </record>
