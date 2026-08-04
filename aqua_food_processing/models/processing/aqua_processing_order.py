@@ -74,6 +74,70 @@ class AquaProcessingOrder(models.Model):
             rec.quality_test_count = len(rec.quality_test_ids)
             rec.pack_order_count = len(rec.pack_order_ids)
 
+    # ------------------------------------------------------------------
+    # AUTO COST SHARE: cost_share % on each byproduct line is derived
+    # from quantity x sale price, normalized to 100% across all byproduct
+    # lines. This replaces manual entry of Cost Share (%).
+    # ------------------------------------------------------------------
+    def _get_byproduct_cost_share_values(self):
+        """Returns {move: value} for each non-done byproduct move, using
+        that move's current quantity x its product's sale price."""
+        self.ensure_one()
+        byproduct_moves = self.move_byproduct_ids.filtered(
+            lambda m: m.state not in ('done', 'cancel')
+        )
+        values = {}
+        for move in byproduct_moves:
+            qty = move.product_uom_qty or move.quantity or 0.0
+            price = move.product_id.lst_price or 0.0
+            values[move] = qty * price
+        return values
+
+    def _auto_compute_byproduct_cost_share(self):
+        """Write cost_share on byproduct moves based on relative sale
+        value. Skips (leaves untouched) if no product has a sale price,
+        so we never silently zero out a manually-entered value.
+
+        Rounding each line's share to 2 decimals independently can push
+        the total slightly above 100.00 (e.g. six lines each rounded up
+        by 0.005 -> total 100.01), which Odoo's own constraint on total
+        byproduct cost share rejects with "cannot exceed 100". To avoid
+        that, every line except the last is rounded normally, and the
+        last line is set to whatever share is left over so the total is
+        always exactly 100.00.
+        """
+        for rec in self:
+            values = rec._get_byproduct_cost_share_values()
+            if not values:
+                continue
+            total_value = sum(values.values())
+            if total_value <= 0:
+                continue
+
+            moves = list(values.keys())
+            running_total = 0.0
+            for move in moves[:-1]:
+                share = round((values[move] / total_value) * 100.0, 2)
+                move.cost_share = share
+                running_total += share
+
+            last_move = moves[-1]
+            last_share = round(100.0 - running_total, 2)
+            # Guard against float noise producing a tiny negative value
+            last_move.cost_share = max(last_share, 0.0)
+
+    @api.onchange('move_byproduct_ids')
+    def _onchange_byproduct_recompute_cost_share(self):
+        """Live preview: recompute cost share % as soon as quantities are
+        edited on the By-Products tab, before Mark as Done is ever clicked.
+        Purely a UI convenience -- the same calc runs again (and wins) on
+        button_mark_done in case anything changed after this preview."""
+        self._auto_compute_byproduct_cost_share()
+
+    def button_mark_done(self):
+        self._auto_compute_byproduct_cost_share()
+        return super().button_mark_done()
+
     def action_done(self):
         # Delegates to native MRP "Mark as Done"; aqua stage should already be packing_ready
         return super().button_mark_done() if hasattr(super(), 'button_mark_done') else True
