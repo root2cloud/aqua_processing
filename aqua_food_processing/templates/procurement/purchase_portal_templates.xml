@@ -4,7 +4,7 @@
               name="Purchase Order Portal Content: Shrimp Count"
               inherit_id="purchase.purchase_order_portal_content">
 
-        <xpath expr="//th[@class='text-end' and text()='Quantity']" position="after">
+        <xpath expr="//th[hasclass('text-end') and text()='Quantity']" position="after">
             <th t-if="order.state == 'sent'" class="text-end">Shrimp Count</th>
         </xpath>
 
