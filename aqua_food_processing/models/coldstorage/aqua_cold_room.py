@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from odoo import api, fields, models
 from odoo.exceptions import UserError
 
@@ -104,6 +106,50 @@ class AquaColdRoom(models.Model):
             'res_model': 'aqua.blast.freeze.cycle', 'view_mode': 'list,form',
             'domain': [('cold_room_id', '=', self.id)],
         }
+
+    def _cron_check_excursions(self):
+        """Daily digest, run by ir_cron_aqua_cold_room_excursion_check (see data/aqua_cron.xml).
+
+        AquaTemperatureLog._check_temperature() already flags/logs each individual excursion
+        in real time (is_excursion + a chatter post on the room, at the moment it's recorded).
+        This method was referenced by that cron from day one but never actually implemented --
+        the cron's code guarded the call with hasattr(), which silently swallowed the missing
+        method until safe_eval's sandbox (which doesn't expose hasattr) turned that into a hard
+        NameError instead. This rolls the last 24h of excursions per room into one digest post
+        + activity, so a manager sees "3 excursions overnight in Cold Room A" instead of having
+        to piece it together from individual chatter messages.
+        """
+        since = fields.Datetime.now() - timedelta(days=1)
+        manager_group = self.env.ref('aqua_food_processing.group_aqua_coldstorage_manager', raise_if_not_found=False)
+        responsible = manager_group.users[:1] if manager_group and manager_group.users else self.env.user
+
+        for room in self.search([]):
+            excursions = room.temperature_log_ids.filtered(
+                lambda log: log.is_excursion and log.log_datetime and log.log_datetime >= since
+            ).sorted('log_datetime')
+            if not excursions:
+                continue
+
+            lines = '\n'.join(
+                f'- {log.log_datetime}: {log.temperature}°C '
+                f'(expected {room.min_temperature}°C to {room.max_temperature}°C)'
+                for log in excursions
+            )
+            room.message_post(
+                body=(
+                    f'Daily excursion digest: {len(excursions)} reading(s) out of range in the '
+                    f'last 24 hours.\n{lines}'
+                ),
+            )
+            room.activity_schedule(
+                'mail.mail_activity_data_todo',
+                summary='Cold Room Temperature Excursions',
+                note=(
+                    f'{len(excursions)} temperature excursion(s) recorded on {room.display_name} '
+                    f'in the last 24 hours. Review and take corrective action.'
+                ),
+                user_id=responsible.id,
+            )
 
 
 class AquaTemperatureLog(models.Model):

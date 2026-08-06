@@ -4,7 +4,7 @@
         <field name="name">Aqua: Cold Room Temperature Excursion Digest</field>
         <field name="model_id" ref="model_aqua_cold_room"/>
         <field name="state">code</field>
-        <field name="code">model._cron_check_excursions() if hasattr(model, '_cron_check_excursions') else None</field>
+        <field name="code">model._cron_check_excursions()</field>
         <field name="interval_number">1</field>
         <field name="interval_type">days</field>
         <field name="active">True</field>
