@@ -223,7 +223,6 @@ class AquaQualityTest(models.Model):
                 vals['intake_decision'] = 'accept'
             rec.write(vals)
             rec._check_certificate_eligible()
-            rec._auto_validate_qc_picking()
 
     def action_fail(self):
         for rec in self:
@@ -231,56 +230,6 @@ class AquaQualityTest(models.Model):
             if rec.test_stage == 'raw_material' and not rec.intake_decision:
                 vals['intake_decision'] = 'reject'
             rec.write(vals)
-
-    # ------------------------------------------------------------------
-    # Per your request: moving a Raw Material test to Pass (with an
-    # Accept decision) should validate its QC Transfer for you, instead
-    # of leaving the inspector to separately go find that transfer and
-    # click Validate by hand. Only fires for raw_material tests that are
-    # linked to a QC Transfer (qc_picking_id), still in a validatable
-    # state, and whose Intake Decision is Accept -- a Fail/Reject or
-    # Downgrade never auto-validates, since that load needs a human
-    # decision on the transfer itself (partial accept, return, etc.).
-    #
-    # button_validate() can itself return an action (a wizard) instead of
-    # completing outright -- most commonly stock.backorder.confirmation
-    # when the done quantity doesn't cover full demand, or
-    # stock.immediate.transfer when quantities weren't pre-filled on the
-    # move lines. Both are resolved automatically here in the common
-    # case (full quantity already recorded via Weighment, so "no
-    # backorder needed" / "process the full amount") since raising that
-    # wizard back at the inspector on the Quality Test form -- a
-    # different screen entirely -- would have nowhere to render it. If
-    # anything genuinely unexpected comes back, this logs it on the
-    # transfer's chatter and leaves the picking exactly as-is rather than
-    # silently failing or blocking the Pass action.
-    # ------------------------------------------------------------------
-    def _auto_validate_qc_picking(self):
-        self.ensure_one()
-        picking = self.qc_picking_id
-        if not picking or self.test_stage != 'raw_material' or self.intake_decision != 'accept':
-            return
-        if picking.state in ('done', 'cancel'):
-            return
-        try:
-            result = picking.button_validate()
-        except UserError as exc:
-            picking.message_post(body='Auto-validation from Quality Test %s failed: %s' % (self.name, exc))
-            return
-        if isinstance(result, dict) and result.get('res_model'):
-            if result['res_model'] == 'stock.backorder.confirmation':
-                wizard = self.env['stock.backorder.confirmation'].with_context(
-                    result.get('context', {})).create({})
-                wizard.process()
-            elif result['res_model'] == 'stock.immediate.transfer':
-                wizard = self.env['stock.immediate.transfer'].with_context(
-                    result.get('context', {})).create({})
-                wizard.process()
-            else:
-                picking.message_post(
-                    body='Quality Test %s passed, but %s needs manual input before it can be '
-                         'validated -- please complete Validate on this transfer yourself.'
-                         % (self.name, result['res_model']))
 
     def action_hold(self):
         self.write({'result_state': 'hold'})
