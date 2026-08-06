@@ -26,7 +26,7 @@
     'depends': [
         'base', 'mail', 'contacts', 'product', 'stock', 'purchase', 'mrp',
         'sale', 'sale_management', 'account', 'maintenance', 'barcodes',
-        'hr', 'l10n_in',
+        'hr', 'l10n_in', 'quality', 'quality_control',
     ],
     'data': [
         # security
@@ -51,7 +51,7 @@
         # processing
         'views/processing/aqua_processing_order_views.xml',
         # quality
-        'views/quality/aqua_quality_test_views.xml',
+        'views/quality/quality_check_views.xml',
         'views/quality/aqua_certificate_of_analysis_views.xml',
         'wizard/quality/aqua_issue_coa_wizard_views.xml',
         # coldstorage
