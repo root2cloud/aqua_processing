@@ -1,5 +1,16 @@
 from odoo import fields, models
 
+# A quality.check only counts towards the Aqua dashboard if it's actually part of the Aqua
+# lifecycle (raised against a Catch Receipt's picking, a Processing Order, or a Pack Order).
+# Without this filter the KPIs would include every quality.check in the database, including
+# ones from completely unrelated stock operations.
+AQUA_QC_DOMAIN = [
+    '|', '|',
+    ('aqua_catch_receipt_id', '!=', False),
+    ('aqua_processing_order_id', '!=', False),
+    ('aqua_pack_order_id', '!=', False),
+]
+
 
 class AquaDashboard(models.TransientModel):
     _name = 'aqua.dashboard'
@@ -8,7 +19,7 @@ class AquaDashboard(models.TransientModel):
     def get_dashboard_data(self, company_id=None):
         domain = [('company_id', '=', company_id)] if company_id else []
         Receipt = self.env['aqua.catch.receipt']
-        QC = self.env['aqua.quality.test']
+        QC = self.env['quality.check']
         Shipment = self.env['aqua.shipment']
         ColdRoom = self.env['aqua.cold.room']
         Production = self.env['mrp.production']
@@ -16,8 +27,8 @@ class AquaDashboard(models.TransientModel):
         # --- KPI cards ---
         total_receipts = Receipt.search_count(domain)
         accepted_receipts = Receipt.search_count(domain + [('state', '=', 'accepted')])
-        qc_total = QC.search_count([])
-        qc_pass = QC.search_count([('result_state', '=', 'pass')])
+        qc_total = QC.search_count(AQUA_QC_DOMAIN)
+        qc_pass = QC.search_count(AQUA_QC_DOMAIN + [('quality_state', '=', 'pass')])
         qc_pass_rate = (qc_pass / qc_total * 100.0) if qc_total else 0.0
 
         shipments_dispatched = Shipment.search_count([('state', 'in', ('dispatched', 'delivered'))])
@@ -47,12 +58,14 @@ class AquaDashboard(models.TransientModel):
             'value': g['species_id_count'],
         } for g in species_groups]
 
-        # --- QC pass/fail/hold/pending breakdown (donut) ---
-        qc_groups = QC.read_group([], ['id'], ['result_state'])
-        state_labels = {'pending': 'Pending', 'pass': 'Pass', 'fail': 'Fail', 'hold': 'Hold'}
+        # --- QC pass/fail/to-do breakdown (donut) ---
+        # Native quality.check only has none/pass/fail (no "hold" state -- see aqua_on_hold on
+        # quality_check.py for the Aqua-specific hold flag, which sits alongside this status).
+        qc_groups = QC.read_group(AQUA_QC_DOMAIN, ['id'], ['quality_state'])
+        state_labels = {'none': 'To Do', 'pass': 'Pass', 'fail': 'Fail'}
         qc_breakdown = [{
-            'label': state_labels.get(g['result_state'], g['result_state'] or 'Unknown'),
-            'value': g['result_state_count'],
+            'label': state_labels.get(g['quality_state'], g['quality_state'] or 'Unknown'),
+            'value': g['quality_state_count'],
         } for g in qc_groups]
 
         # --- Shipment status breakdown (donut) ---
