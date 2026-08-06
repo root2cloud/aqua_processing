@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ================= FORM ================= -->
+    <record id="view_quality_check_form_aqua_inherit" model="ir.ui.view">
+        <field name="name">quality.check.view.form.aqua.inherit</field>
+        <field name="model">quality.check</field>
+        <field name="inherit_id" ref="quality_control.quality_check_view_form"/>
+        <field name="arch" type="xml">
+            <!-- Hold / Remove Hold, next to the native Pass/Fail/statusbar -->
+            <xpath expr="//field[@name='quality_state']" position="before">
+                <button name="action_aqua_hold" type="object" string="Hold"
+                        invisible="aqua_on_hold or quality_state != 'none'"/>
+                <button name="action_aqua_reset_hold" type="object" string="Remove Hold"
+                        invisible="not aqua_on_hold"/>
+            </xpath>
+
+            <!-- Certificate of Analysis smart button -->
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_view_certificate" type="object" class="oe_stat_button"
+                        icon="fa-certificate" invisible="not certificate_id">
+                    <div class="o_stat_info">
+                        <span class="o_stat_text">Certificate</span>
+                    </div>
+                </button>
+            </xpath>
+
+            <!-- New notebook page with the full Aqua checklist -->
+            <xpath expr="//page[@name='notes']" position="after">
+                <page string="Aqua QC Details" name="aqua_qc_details">
+                    <widget name="web_ribbon" title="Rejected" bg_color="text-bg-danger"
+                            invisible="aqua_intake_decision != 'reject'"/>
+                    <widget name="web_ribbon" title="Downgraded" bg_color="text-bg-warning"
+                            invisible="aqua_intake_decision != 'downgrade'"/>
+                    <widget name="web_ribbon" title="On Hold" bg_color="text-bg-warning"
+                            invisible="not aqua_on_hold"/>
+
+                    <group>
+                        <group string="Aqua Lifecycle">
+                            <field name="aqua_test_stage"/>
+                            <field name="aqua_catch_receipt_id" readonly="1"
+                                   invisible="aqua_test_stage != 'raw_material'"/>
+                            <field name="aqua_processing_order_id"
+                                   invisible="aqua_test_stage != 'in_process'"/>
+                            <field name="aqua_pack_order_id"
+                                   invisible="aqua_test_stage != 'final'"/>
+                        </group>
+                        <group string="Certificate">
+                            <field name="certificate_id" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <group invisible="aqua_test_stage != 'raw_material'">
+                        <group string="Vehicle / Transport">
+                            <field name="aqua_vehicle_cold_chain_maintained"/>
+                            <field name="aqua_transit_temp_c"/>
+                            <field name="aqua_vehicle_hygiene_ok"/>
+                        </group>
+                        <group string="Documentation">
+                            <field name="aqua_catch_certificate_verified"/>
+                            <field name="aqua_vendor_count_declaration_verified"/>
+                            <field name="aqua_farm_certification_verified"/>
+                        </group>
+                    </group>
+
+                    <group invisible="aqua_test_stage != 'raw_material'">
+                        <group string="Temperature on Arrival">
+                            <field name="aqua_core_temp_c"/>
+                        </group>
+                        <group string="Organoleptic Checks">
+                            <field name="aqua_shell_color_normal"/>
+                            <field name="aqua_odor_normal"/>
+                            <field name="aqua_texture_firm"/>
+                            <field name="aqua_shell_adherence_tight"/>
+                            <field name="aqua_eyes_intact"/>
+                            <field name="aqua_melanosis_observed"/>
+                        </group>
+                    </group>
+                    <group invisible="aqua_test_stage != 'raw_material'">
+                        <field name="aqua_sensory_score"/>
+                        <field name="aqua_sensory_notes"/>
+                    </group>
+
+                    <group invisible="aqua_test_stage != 'raw_material'">
+                        <group string="Physical / Foreign Matter">
+                            <field name="aqua_foreign_matter_found"/>
+                            <field name="aqua_foreign_matter_notes" invisible="not aqua_foreign_matter_found"/>
+                        </group>
+                        <group string="Count &amp; Size Verification">
+                            <field name="aqua_vendor_shrimp_count"/>
+                            <field name="aqua_actual_shrimp_count"/>
+                            <field name="aqua_count_variance_pct"/>
+                        </group>
+                    </group>
+
+                    <group>
+                        <group string="Residue Screening" invisible="aqua_test_stage != 'raw_material'">
+                            <field name="aqua_antibiotic_result"/>
+                            <field name="aqua_sulphite_result"/>
+                            <field name="aqua_phosphate_stpp_pct"/>
+                        </group>
+                        <group string="Chemical (General)">
+                            <field name="aqua_histamine_ppm"/>
+                            <field name="aqua_ph_value"/>
+                            <field name="aqua_moisture_percentage"/>
+                        </group>
+                    </group>
+
+                    <group string="Microbiological">
+                        <field name="aqua_microbiology_sampled"/>
+                        <field name="aqua_total_plate_count"/>
+                        <field name="aqua_e_coli_count"/>
+                        <field name="aqua_salmonella_detected"/>
+                    </group>
+
+                    <group string="Decision" invisible="aqua_test_stage != 'raw_material'">
+                        <field name="aqua_intake_decision" widget="radio"/>
+                        <field name="aqua_rejected_quantity"
+                               invisible="aqua_intake_decision not in ('reject', 'downgrade')"/>
+                        <field name="aqua_decision_notes"/>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ================= LIST ================= -->
+    <record id="view_quality_check_list_aqua_inherit" model="ir.ui.view">
+        <field name="name">quality.check.view.list.aqua.inherit</field>
+        <field name="model">quality.check</field>
+        <field name="inherit_id" ref="quality_control.quality_check_view_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='quality_state']" position="before">
+                <field name="aqua_test_stage" optional="hide"/>
+                <field name="aqua_intake_decision" optional="hide" widget="badge"
+                       decoration-danger="aqua_intake_decision=='reject'"
+                       decoration-warning="aqua_intake_decision=='downgrade'"
+                       decoration-success="aqua_intake_decision=='accept'"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ================= SEARCH ================= -->
+    <record id="view_quality_check_search_aqua_inherit" model="ir.ui.view">
+        <field name="name">quality.check.view.search.aqua.inherit</field>
+        <field name="model">quality.check</field>
+        <field name="inherit_id" ref="quality_control.quality_check_view_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//filter[@name='control_date']" position="after">
+                <separator/>
+                <filter string="Raw Material (Receiving)" name="aqua_stage_raw_material"
+                        domain="[('aqua_test_stage','=','raw_material')]"/>
+                <filter string="In-Process" name="aqua_stage_in_process"
+                        domain="[('aqua_test_stage','=','in_process')]"/>
+                <filter string="Final / Pre-Shipment" name="aqua_stage_final"
+                        domain="[('aqua_test_stage','=','final')]"/>
+                <separator/>
+                <filter string="Accepted" name="aqua_decision_accept" domain="[('aqua_intake_decision','=','accept')]"/>
+                <filter string="Rejected" name="aqua_decision_reject" domain="[('aqua_intake_decision','=','reject')]"/>
+                <filter string="Downgraded" name="aqua_decision_downgrade" domain="[('aqua_intake_decision','=','downgrade')]"/>
+                <filter string="On Hold" name="aqua_on_hold" domain="[('aqua_on_hold','=',True)]"/>
+            </xpath>
+            <xpath expr="//filter[@name='groupby_team_id']" position="after">
+                <filter string="Aqua Stage" name="groupby_aqua_stage" context="{'group_by': 'aqua_test_stage'}"/>
+                <filter string="Intake Decision" name="groupby_aqua_decision" context="{'group_by': 'aqua_intake_decision'}"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ================= QUICK PASS/FAIL POP-UP WIZARD ================= -->
+    <record id="view_quality_check_wizard_aqua_inherit" model="ir.ui.view">
+        <field name="name">quality.check.wizard.view.form.aqua.inherit</field>
+        <field name="model">quality.check.wizard</field>
+        <field name="inherit_id" ref="quality_control.view_quality_check_wizard"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='additional_note']" position="before">
+                <field name="aqua_test_stage" invisible="1"/>
+                <field name="aqua_catch_receipt_id" invisible="1"/>
+                <group string="Raw Material Intake" invisible="aqua_test_stage != 'raw_material'">
+                    <field name="aqua_core_temp_c"/>
+                    <field name="aqua_intake_decision" widget="radio"/>
+                    <field name="aqua_decision_notes" invisible="aqua_intake_decision == 'accept'"/>
+                </group>
+            </xpath>
+            <xpath expr="//button[@special='cancel']" position="before">
+                <button name="action_open_aqua_details" type="object" class="btn-link"
+                        string="Full Inspection Checklist"
+                        invisible="aqua_test_stage != 'raw_material'"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ================= AQUA-SCOPED ACTION ================= -->
+    <record id="action_aqua_quality_check" model="ir.actions.act_window">
+        <field name="name">Quality Checks</field>
+        <field name="res_model">quality.check</field>
+        <field name="view_mode">list,kanban,form,pivot,graph,activity</field>
+        <field name="domain">['|', '|',
+            ('aqua_catch_receipt_id', '!=', False),
+            ('aqua_processing_order_id', '!=', False),
+            ('aqua_pack_order_id', '!=', False)]
+        </field>
+        <field name="context">{'search_default_aqua_stage_raw_material': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No Aqua quality check found yet</p>
+            <p>
+                Quality Checks are created automatically from Control Points -- e.g. on the
+                "Aqua Processing: Quality Control" internal transfer for Raw Shrimp -- and can
+                be opened either from the Picking's own "Quality Checks" button / smart button,
+                or from here.
+            </p>
+        </field>
+    </record>
+</odoo>
