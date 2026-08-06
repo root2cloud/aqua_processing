@@ -14,13 +14,9 @@
         <field name="padding">4</field>
         <field name="company_id" eval="False"/>
     </record>
-    <record id="seq_aqua_quality_test" model="ir.sequence">
-        <field name="name">Aqua Quality Test</field>
-        <field name="code">aqua.quality.test</field>
-        <field name="prefix">QC/%(year)s/</field>
-        <field name="padding">5</field>
-        <field name="company_id" eval="False"/>
-    </record>
+    <!-- NOTE: the "Aqua Quality Test" sequence (aqua.quality.test) has been removed along
+         with that model. quality.check already has its own sequence, provided by the base
+         quality module (quality.sequence_quality_check). -->
     <record id="seq_aqua_certificate_of_analysis" model="ir.sequence">
         <field name="name">Aqua Certificate of Analysis</field>
         <field name="code">aqua.certificate.of.analysis</field>

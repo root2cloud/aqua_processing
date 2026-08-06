@@ -211,7 +211,12 @@ class AquaCatchReceipt(models.Model):
                 rec.state = 'open'
 
     processing_order_ids = fields.One2many('mrp.production', 'catch_receipt_id', string='Processing Orders')
-    quality_test_ids = fields.One2many('aqua.quality.test', 'catch_receipt_id', string='QC Tests')
+    # Kept as "quality_test_ids" / "action_view_quality_tests" (unchanged names) so the smart
+    # button in aqua_catch_receipt_views.xml keeps working unchanged -- only the comodel
+    # changed, from the retired aqua.quality.test to native quality.check (via its new
+    # aqua_catch_receipt_id field, itself derived from picking_id -- see StockPicking below
+    # and quality_check.py).
+    quality_test_ids = fields.One2many('quality.check', 'aqua_catch_receipt_id', string='QC Tests')
 
     processing_order_count = fields.Integer(compute='_compute_counts')
     quality_test_count = fields.Integer(compute='_compute_counts')
@@ -374,9 +379,9 @@ class AquaCatchReceipt(models.Model):
         return {
             'type': 'ir.actions.act_window',
             'name': 'QC Tests',
-            'res_model': 'aqua.quality.test',
+            'res_model': 'quality.check',
             'view_mode': 'list,form',
-            'domain': [('catch_receipt_id', '=', self.id)],
+            'domain': [('aqua_catch_receipt_id', '=', self.id)],
         }
 
 
@@ -495,8 +500,13 @@ class StockPicking(models.Model):
     aqua_catch_receipt_id = fields.Many2one('aqua.catch.receipt', string='Catch Receipt',
         compute='_compute_aqua_catch_receipt', search='_search_aqua_catch_receipt')
     aqua_is_qc_step = fields.Boolean(string='Is Aqua QC Step', compute='_compute_aqua_catch_receipt')
-    aqua_quality_test_ids = fields.One2many('aqua.quality.test', 'qc_picking_id', string='Quality Tests')
-    aqua_quality_test_count = fields.Integer(compute='_compute_aqua_quality_test_count')
+    # NOTE: previously this class also defined aqua_quality_test_ids / aqua_quality_test_count
+    # / action_open_aqua_quality_test(), creating-and-opening a standalone aqua.quality.test
+    # record. That mechanism was never actually wired into any view (dead code) and duplicated
+    # what the native "Quality Checks" smart button (check_ids, from quality_control) already
+    # does against the same picking -- it has been removed. The inspection detail fields it
+    # used to hold now live directly on quality.check (see models/quality/quality_check.py),
+    # reached from this same picking via the native smart button / "Quality Checks" button.
 
     def _compute_aqua_catch_receipt(self):
         for rec in self:
@@ -515,26 +525,6 @@ class StockPicking(models.Model):
         po_names = receipts.mapped('purchase_order_id.name')
         return [('origin', operator, po_names)] if po_names else [('id', '=', 0)]
 
-    def _compute_aqua_quality_test_count(self):
-        for rec in self:
-            rec.aqua_quality_test_count = len(rec.aqua_quality_test_ids)
-
-    def action_open_aqua_quality_test(self):
-        """Opens this transfer's Raw Material quality test, creating one on the fly
-        (pre-filled with the Catch Receipt) the first time it's clicked."""
-        self.ensure_one()
-        test = self.aqua_quality_test_ids[:1]
-        if not test:
-            test = self.env['aqua.quality.test'].create({
-                'test_stage': 'raw_material',
-                'catch_receipt_id': self.aqua_catch_receipt_id.id,
-                'qc_picking_id': self.id,
-            })
-        return {
-            'type': 'ir.actions.act_window', 'name': 'Raw Material Quality Test',
-            'res_model': 'aqua.quality.test', 'view_mode': 'form',
-            'res_id': test.id,
-        }
 
 class StockPickingBatch(models.Model):
     _inherit = 'stock.picking.batch'

@@ -15,7 +15,11 @@ class AquaTraceLink(models.Model):
     pallet_id = fields.Many2one('aqua.pallet', required=True)
     shipment_id = fields.Many2one('aqua.shipment')
 
-    quality_test_ids = fields.Many2many('aqua.quality.test', string='All QC Tests in Lot Lifecycle')
+    # Comodel changed from the retired aqua.quality.test to native quality.check. Field name
+    # kept identical -- no view change needed, and _create_from_pack_order_confirmation below
+    # keeps working unchanged since pack_order.quality_test_ids now itself returns quality.check
+    # records.
+    quality_test_ids = fields.Many2many('quality.check', string='All QC Tests in Lot Lifecycle')
     customer_id = fields.Many2one('res.partner', string='Customer', related='shipment_id.customer_id', store=True)
 
     _sql_constraints = [

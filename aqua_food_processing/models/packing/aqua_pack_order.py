@@ -14,7 +14,11 @@ class AquaPackOrder(models.Model):
     company_id = fields.Many2one('res.company', default=lambda self: self.env.company)
 
     carton_ids = fields.One2many('aqua.carton', 'pack_order_id', string='Cartons')
-    quality_test_ids = fields.One2many('aqua.quality.test', 'pack_order_id', string='QC Tests')
+    # Comodel changed from the retired aqua.quality.test to native quality.check, via its new
+    # aqua_pack_order_id field (see models/quality/quality_check.py). Field name kept identical
+    # so no view changes are needed, and so aqua_trace_link.py's snapshot
+    # (pack_order.quality_test_ids.ids) keeps working unchanged.
+    quality_test_ids = fields.One2many('quality.check', 'aqua_pack_order_id', string='QC Tests')
     weight_tolerance = fields.Float(string='Weight Tolerance (%)', default=2.0)
 
     state = fields.Selection([

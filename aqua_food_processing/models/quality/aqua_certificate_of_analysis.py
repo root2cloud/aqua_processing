@@ -11,7 +11,10 @@ class AquaCertificateOfAnalysis(models.Model):
     name = fields.Char(required=True, copy=False, readonly=True, default='New')
     issue_date = fields.Date(default=fields.Date.context_today)
     certifying_body_id = fields.Many2one('aqua.certifying.body')
-    quality_test_ids = fields.One2many('aqua.quality.test', 'certificate_id', string='Quality Tests')
+    # Kept as "quality_test_ids" (not renamed to quality_check_ids) so the existing form/tag
+    # widget in aqua_certificate_of_analysis_views.xml keeps working unchanged -- only the
+    # comodel changed, from the retired aqua.quality.test to native quality.check.
+    quality_test_ids = fields.One2many('quality.check', 'certificate_id', string='Quality Checks')
     shipment_id = fields.Many2one('aqua.shipment', string='Shipment')
     company_id = fields.Many2one('res.company', default=lambda self: self.env.company)
     snapshot_notes = fields.Text(readonly=True, help='Auto-pulled test results snapshot at creation time')
@@ -29,8 +32,8 @@ class AquaCertificateOfAnalysis(models.Model):
     def _snapshot_test_results(self):
         self.ensure_one()
         lines = []
-        for test in self.quality_test_ids:
-            lines.append(f'{test.name}: {test.result_state} (histamine {test.histamine_ppm} ppm)')
+        for check in self.quality_test_ids:
+            lines.append(f'{check.name}: {check.quality_state} (histamine {check.aqua_histamine_ppm} ppm)')
         self.snapshot_notes = '\n'.join(lines)
 
     def unlink(self):

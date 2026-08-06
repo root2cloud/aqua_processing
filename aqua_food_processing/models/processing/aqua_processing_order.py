@@ -11,7 +11,10 @@ class AquaProcessingOrder(models.Model):
 
     pack_order_ids = fields.One2many('aqua.pack.order', 'processing_order_id', string='Pack Orders')
 
-    quality_test_ids = fields.One2many('aqua.quality.test', 'processing_order_id', string='QC Tests')
+    # Comodel changed from the retired aqua.quality.test to native quality.check, via its new
+    # aqua_processing_order_id field (see models/quality/quality_check.py). Field/method names
+    # kept identical so no view changes are needed.
+    quality_test_ids = fields.One2many('quality.check', 'aqua_processing_order_id', string='QC Tests')
 
     qty_input = fields.Float(
         string='Input Qty (kg)', compute='_compute_qty_input', store=True, readonly=True,
@@ -153,8 +156,8 @@ class AquaProcessingOrder(models.Model):
         self.ensure_one()
         return {
             'type': 'ir.actions.act_window', 'name': 'QC Tests',
-            'res_model': 'aqua.quality.test', 'view_mode': 'list,form',
-            'domain': [('processing_order_id', '=', self.id)],
+            'res_model': 'quality.check', 'view_mode': 'list,form',
+            'domain': [('aqua_processing_order_id', '=', self.id)],
         }
 
     def action_view_source_catch_receipt(self):

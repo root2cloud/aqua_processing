@@ -17,9 +17,15 @@
               action="action_aqua_processing_order" sequence="1"/>
 
     <!-- Quality -->
+    <!-- NOTE: this used to point at a standalone "Quality Tests" menu (aqua.quality.test),
+         a model completely disconnected from the native "Quality Checks" flow already used
+         on the Purchase Order / Picking (Control Points, the Quality Checks smart button, the
+         Pass/Fail pop-up). That parallel model has been retired; all of its inspection fields
+         now live directly on native quality.check (see models/quality/quality_check.py), so
+         this menu now opens that same model instead, scoped to Aqua-linked checks only. -->
     <menuitem id="menu_aqua_quality" name="Quality Control" parent="menu_aqua_root" sequence="30"/>
-    <menuitem id="menu_aqua_quality_test" name="Quality Tests" parent="menu_aqua_quality"
-              action="action_aqua_quality_test" sequence="1"/>
+    <menuitem id="menu_aqua_quality_check" name="Quality Checks" parent="menu_aqua_quality"
+              action="action_aqua_quality_check" sequence="1"/>
     <menuitem id="menu_aqua_coa" name="Certificates of Analysis" parent="menu_aqua_quality"
               action="action_aqua_coa" sequence="2"/>
 
