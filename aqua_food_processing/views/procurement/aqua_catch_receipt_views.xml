@@ -146,20 +146,6 @@
                     </group>
                 </group>
             </xpath>
-            <!-- Quality Control step: smart button straight to the Raw Material checklist
-                 (Vehicle/Transport, Documentation, Temperature, Sensory, Foreign Matter, Count
-                 Verification, Chemical Residue, Microbiology, Decision) instead of the Weighment
-                 fields that don't belong on this screen. -->
-            <xpath expr="//div[hasclass('oe_button_box')]" position="inside">
-                <button name="action_open_aqua_quality_test" type="object"
-                        class="oe_stat_button" icon="fa-flask"
-                        invisible="not aqua_is_qc_step">
-                    <div class="o_stat_info">
-                        <span class="o_stat_value"><field name="aqua_quality_test_count"/></span>
-                        <span class="o_stat_text">Quality Check</span>
-                    </div>
-                </button>
-            </xpath>
         </field>
     </record>
 
