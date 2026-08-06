@@ -126,12 +126,19 @@ class AquaProcessingOrder(models.Model):
             # Guard against float noise producing a tiny negative value
             last_move.cost_share = max(last_share, 0.0)
 
-    @api.onchange('move_byproduct_ids')
+    @api.onchange('move_byproduct_ids', 'move_byproduct_ids.quantity', 'move_byproduct_ids.product_id')
     def _onchange_byproduct_recompute_cost_share(self):
         """Live preview: recompute cost share % as soon as quantities are
         edited on the By-Products tab, before Mark as Done is ever clicked.
         Purely a UI convenience -- the same calc runs again (and wins) on
-        button_mark_done in case anything changed after this preview."""
+        button_mark_done in case anything changed after this preview.
+
+        Note: 'move_byproduct_ids' alone only fires this onchange when a
+        line is added/removed. Editing a value (e.g. Quantity) *inside* an
+        existing line requires the dotted sub-field paths below, otherwise
+        typing a quantity directly on the By-Products tab of the
+        Manufacturing Order form (i.e. not going through a work order)
+        never triggers a recompute."""
         self._auto_compute_byproduct_cost_share()
 
     def button_mark_done(self):
@@ -157,3 +164,43 @@ class AquaProcessingOrder(models.Model):
             'res_model': 'aqua.catch.receipt', 'view_mode': 'form',
             'res_id': self.catch_receipt_id.id,
         }
+
+
+class AquaProcessingOrderMoveLine(models.Model):
+    """Companion hook for AUTO COST SHARE above.
+
+    The onchange on AquaProcessingOrder only fires for edits made live
+    inside an open Manufacturing Order form. Byproduct quantities are more
+    often registered from the Shop Floor's "Detailed Operations" popup
+    (per work order), which writes straight to stock.move.line via RPC --
+    no MO form is open to react to, so that onchange never fires for that
+    path. Hooking create/write here on stock.move.line ensures the cost
+    share is recomputed as soon as a quantity is registered, no matter
+    where it was entered from, without waiting for the whole Manufacturing
+    Order to be marked done."""
+    _inherit = 'stock.move.line'
+
+    def _get_byproduct_productions_to_recompute(self):
+        productions = self.env['mrp.production']
+        for line in self:
+            move = line.move_id
+            production = move.production_id
+            if production and move in production.move_byproduct_ids:
+                productions |= production
+        return productions
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        lines = super().create(vals_list)
+        productions = lines._get_byproduct_productions_to_recompute()
+        if productions:
+            productions._auto_compute_byproduct_cost_share()
+        return lines
+
+    def write(self, vals):
+        res = super().write(vals)
+        if 'quantity' in vals:
+            productions = self._get_byproduct_productions_to_recompute()
+            if productions:
+                productions._auto_compute_byproduct_cost_share()
+        return res
