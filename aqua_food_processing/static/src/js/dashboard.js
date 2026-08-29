@@ -40,6 +40,30 @@ class AquaDashboard extends Component {
             ordered_vs_received: [],
             recent_receipts_table: [],
 
+            total_processing_orders: 0,
+            total_input_qty: 0,
+            avg_yield_pct: 0,
+            avg_byproduct_yield_pct: 0,
+            active_blast_freeze_count: 0,
+            processing_status_breakdown: [],
+            input_qty_by_species: [],
+            byproduct_yield_trend: [],
+            blast_freeze_status: [],
+            recent_processing_table: [],
+
+            qc_total: 0,
+            qc_fail_count: 0,
+            qc_todo_count: 0,
+            qc_hold_count: 0,
+            avg_histamine_ppm: 0,
+            avg_sensory_score: 0,
+            qc_stage_breakdown: [],
+            intake_decision_breakdown: [],
+            residue_screening: { labels: [], antibiotic: [], sulphite: [] },
+            qc_trend: [],
+            rejected_qty_by_species: [],
+            recent_qc_table: [],
+
             drill: {
                 isOpen: false,
                 title: '',
@@ -165,6 +189,88 @@ class AquaDashboard extends Component {
         };
     }
 
+    // ---- Processing chart data getters ----
+
+    get processingStatusChartData() {
+        const rows = this.state.processing_status_breakdown;
+        const COLORS = { Draft: "#CBD5E0", Confirmed: "#D69E2E", "In Progress": "#3182CE", "To Close": "#805AD5", Done: "#38A169", Cancelled: "#C53030" };
+        return {
+            labels: rows.map((x) => x.label),
+            datasets: [{ data: rows.map((x) => x.value), backgroundColor: rows.map((x) => COLORS[x.label] || "#718096") }],
+        };
+    }
+
+    get inputQtyBySpeciesChartData() {
+        const rows = this.state.input_qty_by_species;
+        return {
+            labels: rows.map((x) => x.label),
+            datasets: [{ label: "Input (kg)", data: rows.map((x) => x.value), backgroundColor: "#2C7A7B" }],
+        };
+    }
+
+    get byproductYieldChartData() {
+        const rows = this.state.byproduct_yield_trend;
+        return {
+            labels: rows.map((x) => x.label),
+            datasets: [{ label: "By-product Yield %", data: rows.map((x) => x.value), borderColor: "#D69E2E" }],
+        };
+    }
+
+    get blastFreezeChartData() {
+        const rows = this.state.blast_freeze_status;
+        const COLORS = { Scheduled: "#CBD5E0", Running: "#3182CE", Completed: "#38A169" };
+        return {
+            labels: rows.map((x) => x.label),
+            datasets: [{ data: rows.map((x) => x.value), backgroundColor: rows.map((x) => COLORS[x.label] || "#718096") }],
+        };
+    }
+
+    // ---- Quality Control chart data getters ----
+
+    get qcStageChartData() {
+        const rows = this.state.qc_stage_breakdown;
+        return {
+            labels: rows.map((x) => x.label),
+            datasets: [{ data: rows.map((x) => x.value), backgroundColor: ["#3182CE", "#805AD5", "#38A169"] }],
+        };
+    }
+
+    get intakeDecisionChartData() {
+        const rows = this.state.intake_decision_breakdown;
+        const COLORS = { Accept: "#38A169", Reject: "#C53030", "Downgrade / Conditional": "#D69E2E" };
+        return {
+            labels: rows.map((x) => x.label),
+            datasets: [{ data: rows.map((x) => x.value), backgroundColor: rows.map((x) => COLORS[x.label] || "#718096") }],
+        };
+    }
+
+    get residueScreeningChartData() {
+        const r = this.state.residue_screening;
+        return {
+            labels: r.labels,
+            datasets: [
+                { label: "Antibiotic Residue", data: r.antibiotic, backgroundColor: "#805AD5" },
+                { label: "Sulphite / Preservative", data: r.sulphite, backgroundColor: "#3182CE" },
+            ],
+        };
+    }
+
+    get qcTrendChartData() {
+        const rows = this.state.qc_trend;
+        return {
+            labels: rows.map((x) => x.label),
+            datasets: [{ label: "QC Checks", data: rows.map((x) => x.value), borderColor: "#38A169" }],
+        };
+    }
+
+    get rejectedQtyBySpeciesChartData() {
+        const rows = this.state.rejected_qty_by_species;
+        return {
+            labels: rows.map((x) => x.label),
+            datasets: [{ label: "Rejected (kg)", data: rows.map((x) => x.value), backgroundColor: "#C53030" }],
+        };
+    }
+
     // ---- Drill-down: KPI tile clicks ----
 
     onDrillTotalReceipts() {
@@ -193,6 +299,22 @@ class AquaDashboard extends Component {
 
     onDrillDispatchRate() {
         this._openDrill('on_time_dispatch_rate', null, 'Dispatched / Delivered Shipments');
+    }
+
+    onDrillTotalProcessingOrders() {
+        this._openDrill('total_processing_orders', null, 'All Processing Orders');
+    }
+
+    onDrillQcTotal() {
+        this._openDrill('qc_total', null, 'All Quality Checks');
+    }
+
+    onDrillQcFail() {
+        this._openDrill('qc_fail_count', null, 'Failed Quality Checks');
+    }
+
+    onDrillQcHold() {
+        this._openDrill('qc_hold_count', null, 'On-Hold Quality Checks');
     }
 
     // ---- Drill-down: chart element clicks ----
@@ -253,6 +375,58 @@ class AquaDashboard extends Component {
             type: 'ir.actions.act_window',
             res_model: 'aqua.catch.receipt',
             res_id: receiptId,
+            views: [[false, 'form']],
+            target: 'current',
+        });
+    }
+
+    onProcessingStatusChartClick(ctx) {
+        this._openDrill('processing_status_breakdown', ctx.label, `Processing Orders — ${ctx.label}`);
+    }
+
+    onInputQtyBySpeciesChartClick(ctx) {
+        this._openDrill('input_qty_by_species', ctx.label, `Processing Orders — ${ctx.label}`);
+    }
+
+    onByproductYieldChartClick(ctx) {
+        this._openDrill('byproduct_yield_trend', ctx.label, `Processing Order — ${ctx.label}`);
+    }
+
+    onBlastFreezeChartClick(ctx) {
+        this._openDrill('blast_freeze_status', ctx.label, `Blast Freeze Cycles — ${ctx.label}`);
+    }
+
+    onRecentProcessingRowClick(orderId) {
+        this.action.doAction({
+            type: 'ir.actions.act_window',
+            res_model: 'mrp.production',
+            res_id: orderId,
+            views: [[false, 'form']],
+            target: 'current',
+        });
+    }
+
+    onQcStageChartClick(ctx) {
+        this._openDrill('qc_stage_breakdown', ctx.label, `QC Checks — ${ctx.label}`);
+    }
+
+    onIntakeDecisionChartClick(ctx) {
+        this._openDrill('intake_decision_breakdown', ctx.label, `Raw Material Checks — ${ctx.label}`);
+    }
+
+    onQcTrendChartClick(ctx) {
+        this._openDrill('qc_trend', ctx.label, `Quality Checks — week ${ctx.label}`);
+    }
+
+    onRejectedQtyBySpeciesChartClick(ctx) {
+        this._openDrill('rejected_qty_by_species', ctx.label, `Rejected Quantity — ${ctx.label}`);
+    }
+
+    onRecentQcRowClick(checkId) {
+        this.action.doAction({
+            type: 'ir.actions.act_window',
+            res_model: 'quality.check',
+            res_id: checkId,
             views: [[false, 'form']],
             target: 'current',
         });

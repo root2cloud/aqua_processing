@@ -306,18 +306,102 @@
             </t>
 
             <!-- ══════════════════════ PROCESSING TAB ══════════════════════ -->
+            <!-- Covers the full intake -> yield -> cold storage flow: Catch Receipt ->
+                 Processing Order (input qty, yield %, by-product yield %) -> Blast Freeze
+                 -> Cold Room storage. -->
             <t t-if="isTabActive('processing')">
-                <div class="o_aqua_panel_full">
-                    <t t-if="state.yield_trend.length">
-                        <ChartWidget
-                            title="'Recent Processing Orders — Yield %'"
-                            chartType="'bar'"
-                            data="yieldChartData"
-                            isLoading="state.isLoading"
-                            onElementClick.bind="onYieldChartClick"
-                            exportFilename="'aqua_yield_trend'"/>
-                    </t>
-                    <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Recent Processing Orders — Yield %</div></div><div class="o_aqua_empty">No processing orders recorded yet.</div></div></t>
+                <div class="o_aqua_kpi_row">
+                    <KpiTile
+                        label="'Total Processing Orders'"
+                        value="state.total_processing_orders"
+                        valueFmt="'number'"
+                        icon="'fa-industry'"
+                        color="'#2C7A7B'"
+                        isLoading="state.isLoading"
+                        onDrill.bind="onDrillTotalProcessingOrders"/>
+                    <KpiTile
+                        label="'Total Input (kg)'"
+                        value="state.total_input_qty"
+                        valueFmt="'number'"
+                        icon="'fa-balance-scale'"
+                        color="'#3182CE'"
+                        isLoading="state.isLoading"
+                        onDrill.bind="onDrillTotalProcessingOrders"/>
+                    <KpiTile
+                        label="'Avg Product Yield %'"
+                        value="state.avg_yield_pct"
+                        valueFmt="'pct'"
+                        icon="'fa-percent'"
+                        color="'#805AD5'"
+                        isLoading="state.isLoading"/>
+                    <KpiTile
+                        label="'Avg By-product Yield %'"
+                        value="state.avg_byproduct_yield_pct"
+                        valueFmt="'pct'"
+                        icon="'fa-recycle'"
+                        color="'#D69E2E'"
+                        isLoading="state.isLoading"/>
+                    <KpiTile
+                        label="'Active Blast Freeze Cycles'"
+                        value="state.active_blast_freeze_count"
+                        valueFmt="'number'"
+                        icon="'fa-snowflake-o'"
+                        color="'#38A169'"
+                        isLoading="state.isLoading"/>
+                </div>
+
+                <div class="o_aqua_chart_row">
+                    <div class="o_aqua_panel_wide">
+                        <t t-if="state.yield_trend.length">
+                            <ChartWidget
+                                title="'Recent Processing Orders — Yield %'"
+                                chartType="'bar'"
+                                data="yieldChartData"
+                                isLoading="state.isLoading"
+                                onElementClick.bind="onYieldChartClick"
+                                exportFilename="'aqua_yield_trend'"/>
+                        </t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Recent Processing Orders — Yield %</div></div><div class="o_aqua_empty">No processing orders recorded yet.</div></div></t>
+                    </div>
+                    <div class="o_aqua_panel_narrow">
+                        <t t-if="state.processing_status_breakdown.length">
+                            <ChartWidget
+                                title="'Processing Order Status'"
+                                chartType="'doughnut'"
+                                data="processingStatusChartData"
+                                isLoading="state.isLoading"
+                                onElementClick.bind="onProcessingStatusChartClick"
+                                exportFilename="'aqua_processing_status'"/>
+                        </t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Processing Order Status</div></div><div class="o_aqua_empty">No processing orders recorded yet.</div></div></t>
+                    </div>
+                </div>
+
+                <div class="o_aqua_chart_row">
+                    <div class="o_aqua_panel_wide">
+                        <t t-if="state.input_qty_by_species.length">
+                            <ChartWidget
+                                title="'Input Weight by Species (kg)'"
+                                chartType="'horizontalBar'"
+                                data="inputQtyBySpeciesChartData"
+                                isLoading="state.isLoading"
+                                onElementClick.bind="onInputQtyBySpeciesChartClick"
+                                exportFilename="'aqua_input_qty_by_species'"/>
+                        </t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Input Weight by Species (kg)</div></div><div class="o_aqua_empty">No processing orders recorded yet.</div></div></t>
+                    </div>
+                    <div class="o_aqua_panel_narrow">
+                        <t t-if="state.byproduct_yield_trend.length">
+                            <ChartWidget
+                                title="'By-product Yield % Trend'"
+                                chartType="'line'"
+                                data="byproductYieldChartData"
+                                isLoading="state.isLoading"
+                                onElementClick.bind="onByproductYieldChartClick"
+                                exportFilename="'aqua_byproduct_yield_trend'"/>
+                        </t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">By-product Yield % Trend</div></div><div class="o_aqua_empty">Not enough data yet for a trend line.</div></div></t>
+                    </div>
                 </div>
 
                 <div class="o_aqua_chart_row">
@@ -334,33 +418,89 @@
                         <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Cold Room Utilization</div></div><div class="o_aqua_empty">No cold rooms configured yet.</div></div></t>
                     </div>
                     <div class="o_aqua_panel_narrow">
-                        <div class="aqua-chart-card">
-                            <div class="aqua-chart-card__header">
-                                <div class="aqua-chart-card__title">Cold Room Detail</div>
-                            </div>
-                            <t t-if="state.cold_room_utilization.length">
-                                <table class="o_aqua_table">
-                                    <thead><tr><th>Room</th><th>Capacity (kg)</th><th>Active Lots</th></tr></thead>
-                                    <tbody>
-                                        <t t-foreach="state.cold_room_utilization" t-as="room" t-key="room.name">
-                                            <tr class="o_aqua_table_row_clickable" t-on-click="() => this.onColdRoomChartClick({label: room.name})">
-                                                <td t-esc="room.name"/>
-                                                <td t-esc="room.capacity_kg"/>
-                                                <td t-esc="room.lots"/>
-                                            </tr>
-                                        </t>
-                                    </tbody>
-                                </table>
-                            </t>
-                            <t t-else="">
-                                <div class="o_aqua_empty">No cold rooms configured yet.</div>
-                            </t>
+                        <t t-if="state.blast_freeze_status.length">
+                            <ChartWidget
+                                title="'Blast Freeze Cycle Status'"
+                                chartType="'doughnut'"
+                                data="blastFreezeChartData"
+                                isLoading="state.isLoading"
+                                onElementClick.bind="onBlastFreezeChartClick"
+                                exportFilename="'aqua_blast_freeze_status'"/>
+                        </t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Blast Freeze Cycle Status</div></div><div class="o_aqua_empty">No blast freeze cycles recorded yet.</div></div></t>
+                    </div>
+                </div>
+
+                <div class="o_aqua_panel_full">
+                    <div class="aqua-chart-card">
+                        <div class="aqua-chart-card__header">
+                            <div class="aqua-chart-card__title">Cold Room Detail</div>
                         </div>
+                        <t t-if="state.cold_room_utilization.length">
+                            <table class="o_aqua_table">
+                                <thead><tr><th>Room</th><th>Capacity (kg)</th><th>Active Lots</th><th>Utilization %</th></tr></thead>
+                                <tbody>
+                                    <t t-foreach="state.cold_room_utilization" t-as="room" t-key="room.name">
+                                        <tr class="o_aqua_table_row_clickable" t-on-click="() => this.onColdRoomChartClick({label: room.name})">
+                                            <td t-esc="room.name"/>
+                                            <td t-esc="room.capacity_kg"/>
+                                            <td t-esc="room.lots"/>
+                                            <td t-esc="room.pct"/>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </t>
+                        <t t-else="">
+                            <div class="o_aqua_empty">No cold rooms configured yet.</div>
+                        </t>
+                    </div>
+                </div>
+
+                <div class="o_aqua_panel_full">
+                    <div class="aqua-chart-card">
+                        <div class="aqua-chart-card__header">
+                            <div class="aqua-chart-card__title">Recent Processing Orders — Intake to Yield</div>
+                        </div>
+                        <t t-if="state.recent_processing_table.length">
+                            <table class="o_aqua_table">
+                                <thead>
+                                    <tr>
+                                        <th>Order</th>
+                                        <th>Species</th>
+                                        <th>Catch Receipt</th>
+                                        <th>Input (kg)</th>
+                                        <th>Yield %</th>
+                                        <th>By-product Yield %</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="state.recent_processing_table" t-as="row" t-key="row.id">
+                                        <tr class="o_aqua_table_row_clickable" t-on-click="() => this.onRecentProcessingRowClick(row.id)">
+                                            <td t-esc="row.name"/>
+                                            <td t-esc="row.species"/>
+                                            <td t-esc="row.catch_receipt"/>
+                                            <td t-esc="row.qty_input"/>
+                                            <td t-esc="row.yield_percentage"/>
+                                            <td t-esc="row.byproduct_yield_percentage"/>
+                                            <td t-esc="row.state"/>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </t>
+                        <t t-else="">
+                            <div class="o_aqua_empty">No processing orders recorded yet.</div>
+                        </t>
                     </div>
                 </div>
             </t>
 
             <!-- ══════════════════════ QUALITY CONTROL TAB ══════════════════════ -->
+            <!-- Covers the full inspection checklist lifecycle: Raw Material (Receiving)
+                 -> In-Process -> Final / Pre-Shipment, including residue screening and
+                 intake decisions. -->
             <t t-if="isTabActive('quality')">
                 <div class="o_aqua_kpi_row">
                     <KpiTile
@@ -371,10 +511,48 @@
                         color="'#38A169'"
                         isLoading="state.isLoading"
                         onDrill.bind="onDrillQcPassRate"/>
+                    <KpiTile
+                        label="'Total Checks'"
+                        value="state.qc_total"
+                        valueFmt="'number'"
+                        icon="'fa-clipboard'"
+                        color="'#2C7A7B'"
+                        isLoading="state.isLoading"
+                        onDrill.bind="onDrillQcTotal"/>
+                    <KpiTile
+                        label="'Failed Checks'"
+                        value="state.qc_fail_count"
+                        valueFmt="'number'"
+                        icon="'fa-times-circle'"
+                        color="'#C53030'"
+                        isLoading="state.isLoading"
+                        onDrill.bind="onDrillQcFail"/>
+                    <KpiTile
+                        label="'On Hold'"
+                        value="state.qc_hold_count"
+                        valueFmt="'number'"
+                        icon="'fa-pause-circle'"
+                        color="'#D69E2E'"
+                        isLoading="state.isLoading"
+                        onDrill.bind="onDrillQcHold"/>
+                    <KpiTile
+                        label="'Avg Histamine (ppm)'"
+                        value="state.avg_histamine_ppm"
+                        valueFmt="'number'"
+                        icon="'fa-vial'"
+                        color="'#805AD5'"
+                        isLoading="state.isLoading"/>
+                    <KpiTile
+                        label="'Avg Sensory Score (0-10)'"
+                        value="state.avg_sensory_score"
+                        valueFmt="'number'"
+                        icon="'fa-star'"
+                        color="'#3182CE'"
+                        isLoading="state.isLoading"/>
                 </div>
 
                 <div class="o_aqua_chart_row">
-                    <div class="o_aqua_panel_full">
+                    <div class="o_aqua_panel_narrow">
                         <t t-if="state.qc_breakdown.length">
                             <ChartWidget
                                 title="'QC Result Breakdown'"
@@ -385,6 +563,110 @@
                                 exportFilename="'aqua_qc_breakdown'"/>
                         </t>
                         <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">QC Result Breakdown</div></div><div class="o_aqua_empty">No QC tests recorded yet.</div></div></t>
+                    </div>
+                    <div class="o_aqua_panel_narrow">
+                        <t t-if="state.qc_stage_breakdown.length">
+                            <ChartWidget
+                                title="'Checks by Lifecycle Stage'"
+                                chartType="'doughnut'"
+                                data="qcStageChartData"
+                                isLoading="state.isLoading"
+                                onElementClick.bind="onQcStageChartClick"
+                                exportFilename="'aqua_qc_stage_breakdown'"/>
+                        </t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Checks by Lifecycle Stage</div></div><div class="o_aqua_empty">No QC tests recorded yet.</div></div></t>
+                    </div>
+                    <div class="o_aqua_panel_narrow">
+                        <t t-if="state.intake_decision_breakdown.length">
+                            <ChartWidget
+                                title="'Intake Decision (Raw Material)'"
+                                chartType="'doughnut'"
+                                data="intakeDecisionChartData"
+                                isLoading="state.isLoading"
+                                onElementClick.bind="onIntakeDecisionChartClick"
+                                exportFilename="'aqua_intake_decision'"/>
+                        </t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Intake Decision (Raw Material)</div></div><div class="o_aqua_empty">No intake decisions recorded yet.</div></div></t>
+                    </div>
+                </div>
+
+                <div class="o_aqua_chart_row">
+                    <div class="o_aqua_panel_wide">
+                        <t t-if="state.qc_trend.length">
+                            <ChartWidget
+                                title="'Weekly QC Checks Trend'"
+                                chartType="'line'"
+                                data="qcTrendChartData"
+                                isLoading="state.isLoading"
+                                onElementClick.bind="onQcTrendChartClick"
+                                exportFilename="'aqua_qc_trend'"/>
+                        </t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Weekly QC Checks Trend</div></div><div class="o_aqua_empty">Not enough data yet for a trend line.</div></div></t>
+                    </div>
+                    <div class="o_aqua_panel_wide">
+                        <t t-if="state.residue_screening.labels.length">
+                            <ChartWidget
+                                title="'Residue Screening Results'"
+                                chartType="'bar'"
+                                data="residueScreeningChartData"
+                                isLoading="state.isLoading"
+                                exportFilename="'aqua_residue_screening'"/>
+                        </t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Residue Screening Results</div></div><div class="o_aqua_empty">No residue screening data yet.</div></div></t>
+                    </div>
+                </div>
+
+                <div class="o_aqua_chart_row">
+                    <div class="o_aqua_panel_full">
+                        <t t-if="state.rejected_qty_by_species.length">
+                            <ChartWidget
+                                title="'Rejected Quantity by Species (kg)'"
+                                chartType="'horizontalBar'"
+                                data="rejectedQtyBySpeciesChartData"
+                                isLoading="state.isLoading"
+                                onElementClick.bind="onRejectedQtyBySpeciesChartClick"
+                                exportFilename="'aqua_rejected_qty_by_species'"/>
+                        </t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Rejected Quantity by Species (kg)</div></div><div class="o_aqua_empty">No rejected raw material recorded yet.</div></div></t>
+                    </div>
+                </div>
+
+                <div class="o_aqua_panel_full">
+                    <div class="aqua-chart-card">
+                        <div class="aqua-chart-card__header">
+                            <div class="aqua-chart-card__title">Recent Quality Checks</div>
+                        </div>
+                        <t t-if="state.recent_qc_table.length">
+                            <table class="o_aqua_table">
+                                <thead>
+                                    <tr>
+                                        <th>Check</th>
+                                        <th>Stage</th>
+                                        <th>Result</th>
+                                        <th>Decision</th>
+                                        <th>Histamine (ppm)</th>
+                                        <th>Core Temp (°C)</th>
+                                        <th>On Hold</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="state.recent_qc_table" t-as="row" t-key="row.id">
+                                        <tr class="o_aqua_table_row_clickable" t-on-click="() => this.onRecentQcRowClick(row.id)">
+                                            <td t-esc="row.name"/>
+                                            <td t-esc="row.stage"/>
+                                            <td t-esc="row.result"/>
+                                            <td t-esc="row.decision"/>
+                                            <td t-esc="row.histamine_ppm"/>
+                                            <td t-esc="row.core_temp_c"/>
+                                            <td t-esc="row.on_hold ? 'Yes' : 'No'"/>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </t>
+                        <t t-else="">
+                            <div class="o_aqua_empty">No quality checks recorded yet.</div>
+                        </t>
                     </div>
                 </div>
             </t>
