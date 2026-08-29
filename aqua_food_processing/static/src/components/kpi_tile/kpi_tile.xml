@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates xml:space="preserve">
+
+<t t-name="aqua_food_processing.KpiTile">
+  <div class="aqua-kpi-tile" t-att-style="'--aqua-kpi-accent:' + props.color + ';'" t-on-click="onClick">
+
+    <t t-if="props.isLoading">
+      <div class="aqua-kpi-tile__loading">
+        <span class="aqua-spinner"/>
+      </div>
+    </t>
+
+    <div class="aqua-kpi-tile__icon" t-attf-style="background:{{props.color}}22;color:{{props.color}};">
+      <i t-attf-class="fa {{props.icon}}"/>
+    </div>
+
+    <div class="aqua-kpi-tile__body">
+      <div class="aqua-kpi-tile__value"><t t-esc="formattedValue"/></div>
+      <div class="aqua-kpi-tile__label"><t t-esc="props.label"/></div>
+    </div>
+
+    <t t-if="props.sparklineData and props.sparklineData.length > 1">
+      <canvas t-ref="sparklineCanvas"
+              class="aqua-kpi-tile__sparkline"
+              width="80" height="34"/>
+    </t>
+
+  </div>
+</t>
+
+</templates>

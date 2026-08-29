@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates xml:space="preserve">
+
+<t t-name="aqua_food_processing.DrillPanel">
+  <t t-if="props.isOpen">
+
+    <div class="aqua-drill-overlay" t-on-click="onBackdropClick">
+      <div class="aqua-drill-panel">
+
+        <div class="aqua-drill-panel__header">
+          <div class="aqua-drill-panel__title"><t t-esc="props.title"/></div>
+          <button class="aqua-drill-panel__export-btn" t-on-click="exportToCSV" title="Export to CSV">↓ CSV</button>
+          <button class="aqua-drill-panel__close" t-on-click="props.onClose">×</button>
+        </div>
+
+        <div class="aqua-drill-panel__body">
+
+          <t t-if="props.isLoading">
+            <div class="aqua-loading-overlay">
+              <span class="aqua-spinner"/>
+            </div>
+          </t>
+
+          <t t-elif="props.records.length > 0">
+            <table class="aqua-drill-table" style="width:100%;">
+              <thead>
+                <tr>
+                  <t t-foreach="props.columns" t-as="col" t-key="col.field">
+                    <th><t t-esc="col.label"/></th>
+                  </t>
+                  <th style="width:52px;"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <t t-foreach="props.records" t-as="rec" t-key="rec.id || rec_index">
+                  <tr>
+                    <t t-foreach="props.columns" t-as="col" t-key="col.field">
+                      <td>
+                        <t t-if="col.fmt === 'status'">
+                          <span class="aqua-badge"><t t-esc="rec[col.field] || '—'"/></span>
+                        </t>
+                        <t t-else="">
+                          <t t-esc="_formatCell(rec[col.field], col.fmt)"/>
+                        </t>
+                      </td>
+                    </t>
+                    <td style="text-align:center;">
+                      <t t-if="props.model and rec.id">
+                        <button class="aqua-drill-panel__open-form-btn"
+                                t-on-click="() => this.openFormView(rec)"
+                                title="Open in Odoo">↗</button>
+                      </t>
+                    </td>
+                  </tr>
+                </t>
+              </tbody>
+            </table>
+          </t>
+
+          <t t-else="">
+            <div style="text-align:center;color:#a0aec0;padding:40px 0;">
+              <div style="font-size:32px;margin-bottom:8px;">✓</div>
+              <div style="font-size:14px;">No records to display</div>
+            </div>
+          </t>
+
+        </div>
+      </div>
+    </div>
+
+  </t>
+</t>
+
+</templates>
