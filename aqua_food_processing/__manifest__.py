@@ -27,6 +27,7 @@
         'base', 'mail', 'contacts', 'product', 'stock', 'purchase', 'mrp',
         'sale', 'sale_management', 'account', 'maintenance', 'barcodes',
         'hr', 'l10n_in', 'quality', 'quality_control',
+        'mrp_workorder', 'quality_control_worksheet',
     ],
     'data': [
         # security

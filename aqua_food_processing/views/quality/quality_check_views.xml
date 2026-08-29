@@ -210,4 +210,15 @@
             </p>
         </field>
     </record>
+
+    <!-- Aqua Food Processing: builds/refreshes the per-operation Shop
+         Floor Quality Worksheets (Cleaning, Peeling, Deveining,
+         Freezing(IQF), Grading, Packing). Unlike post_init_hook (which
+         only runs on a brand-new install), a <function> call with no
+         explicit id/noupdate runs on every -u aqua_food_processing, so
+         this also (re)builds it on an already-installed database. See
+         QualityPoint._aqua_setup_operation_worksheets() in
+         models/quality/quality_check.py for the logic; it is
+         idempotent, so re-running it on every upgrade is safe. -->
+    <function model="quality.point" name="_aqua_setup_operation_worksheets" eval="[]"/>
 </odoo>

@@ -1,5 +1,10 @@
+import logging
+
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError, ValidationError
+
+_logger = logging.getLogger(__name__)
+
 
 HISTAMINE_THRESHOLD_PPM = 200.0  # regulatory ceiling, configurable per company in future
 CORE_TEMP_MAX_C = 4.0  # max acceptable core temperature of chilled raw shrimp on arrival
@@ -250,3 +255,305 @@ class QualityCheck(models.Model):
             'res_model': 'aqua.certificate.of.analysis', 'view_mode': 'form',
             'res_id': self.certificate_id.id,
         }
+
+
+# ---------------------------------------------------------------------------
+# Shop Floor Quality Worksheets, one checklist per Work Order operation.
+#
+# Problem this solves: the Grading Station had a Control Point ("Grading
+# Quality", QCP00012) whose Test Type was Pass - Fail with an empty `note`
+# field, so the Shop Floor popup showed nothing but the Fail / Pass / Next
+# buttons. Odoo's native way to show a real, structured checklist
+# (checkboxes, numeric readings, a grade, remarks) on that popup is the
+# "Worksheet" Test Type: it opens a small form (backed by its own
+# auto-generated model, x_quality_check_worksheet_template_<id>) before the
+# operator validates.
+#
+# _aqua_setup_operation_worksheets() below wires that up for all six Work
+# Order operations already present in the routing: Cleaning, Peeling,
+# Deveining, Freezing(IQF), Grading, Packing. It is idempotent - safe to run
+# again on every `-u aqua_food_processing` - it will not duplicate
+# templates, fields or Control Points that already exist. It is triggered
+# by the <function> call at the bottom of
+# views/quality/quality_check_views.xml, which (unlike post_init_hook) runs
+# on both a brand new install AND every subsequent module upgrade, which is
+# what we need since aqua_food_processing is already installed.
+# ---------------------------------------------------------------------------
+
+# ttype follows ir.model.fields conventions: boolean, float, char, text,
+# selection, integer. 4th tuple item is a selection string, or None.
+AQUA_OPERATION_WORKSHEETS = [
+    {
+        "workcenter_name": "Cleaning & Washing Station",
+        "operation_name": "Cleaning",
+        "point_title": "Washing & Hygiene Check",
+        "fields": [
+            ("x_dirt_removed", "boolean", "Dirt / Mud / Slime Fully Removed", None),
+            ("x_chlorine_ppm", "float", "Wash Water Chlorine (ppm)", None),
+            ("x_water_temp_c", "float", "Wash Water Temp (\u00b0C)", None),
+            ("x_shell_color_normal", "boolean", "Shell Colour Normal", None),
+            ("x_melanosis_observed", "boolean", "Melanosis / Black Spot Observed", None),
+            ("x_core_temp_c", "float", "Product Core Temp (\u00b0C)", None),
+            ("x_remarks", "text", "Remarks", None),
+        ],
+    },
+    {
+        "workcenter_name": "Peeling Station",
+        "operation_name": "Peeling",
+        "point_title": "Peeling Quality Check",
+        "fields": [
+            ("x_peel_type", "selection", "Peel Type Achieved",
+             "[('hlso','HLSO - Headless Shell-On'),('pud','PUD - Peeled Undeveined'),"
+             "('pdto','PDTO - Peeled Deveined Tail-On'),('pd','PD - Peeled Deveined')]"),
+            ("x_shell_fragments_found", "boolean", "Shell Fragments / Legs Found", None),
+            ("x_meat_damage", "boolean", "Torn / Crushed Meat", None),
+            ("x_hygiene_ok", "boolean", "Gloves / Masks / Hygiene Followed", None),
+            ("x_product_temp_c", "float", "Product Temp (\u00b0C)", None),
+            ("x_remarks", "text", "Remarks", None),
+        ],
+    },
+    {
+        "workcenter_name": "Deveining Station",
+        "operation_name": "Deveining",
+        "point_title": "Deveining Completeness Check",
+        "fields": [
+            ("x_vein_removed", "boolean", "Intestinal Vein Fully Removed", None),
+            ("x_cuts_damage", "boolean", "Cuts / Tears From Deveining Tool", None),
+            ("x_rewashed", "boolean", "Re-washed After Deveining (1\u20133 ppm chlorine)", None),
+            ("x_sample_qty_checked", "integer", "Sample Qty Checked (pcs)", None),
+            ("x_remarks", "text", "Remarks", None),
+        ],
+    },
+    {
+        "workcenter_name": "Freezing Station",
+        "operation_name": "Freezing(IQF)",
+        "point_title": "Freezing Process Check",
+        "fields": [
+            ("x_tunnel_temp_c", "float", "IQF Tunnel / Plate Freezer Temp (\u00b0C)", None),
+            ("x_freeze_time_min", "float", "Freeze Time (minutes)", None),
+            ("x_core_temp_c", "float", "Product Core Temp After Freeze (\u00b0C)", None),
+            ("x_stpp_pct", "float", "STPP / Phosphate Dip Concentration (%)", None),
+            ("x_glaze_pct", "float", "Glaze % Applied", None),
+            ("x_clumping_observed", "boolean", "Clumping / Not Individually Frozen", None),
+            ("x_remarks", "text", "Remarks", None),
+        ],
+    },
+    {
+        "workcenter_name": "Grading Station",
+        "operation_name": "Grading",
+        "point_title": "Grading Quality",
+        "fields": [
+            ("x_grade_declared", "char", "Declared Grade (count/kg, e.g. 21/25)", None),
+            ("x_size_uniform", "boolean", "Size Uniform Within Lot", None),
+            ("x_count_verified", "boolean", "Count per kg Verified", None),
+            ("x_net_weight_kg", "float", "Net Weight After Dripping (kg)", None),
+            ("x_reject_qty_kg", "float", "Rejected / Downgraded Qty (kg)", None),
+            ("x_remarks", "text", "Remarks", None),
+        ],
+    },
+    {
+        "workcenter_name": "Packing Station",
+        "operation_name": "Packing",
+        "point_title": "Metal Detection & Pack Check",
+        "fields": [
+            ("x_metal_detector_passed", "boolean", "Passed Metal Detector", None),
+            ("x_label_correct", "boolean", "Carton Label Correct (name/size/batch/date)", None),
+            ("x_seal_intact", "boolean", "Seal Integrity OK", None),
+            ("x_pack_temp_c", "float", "Product Temp Before Palletizing (\u00b0C)", None),
+            ("x_net_weight_kg", "float", "Pack Net Weight (kg)", None),
+            ("x_remarks", "text", "Remarks", None),
+        ],
+    },
+]
+
+
+def _aqua_build_worksheet_arch(field_specs):
+    """Return a form arch (string) listing the checklist fields, then the
+    built-in Passed / Comments fields, in the same shape Studio would
+    generate for a Worksheet template."""
+    field_lines = "".join(
+        '                        <field name="%s"%s/>\n' % (
+            name,
+            ' widget="radio"' if ttype == "selection" else "",
+        )
+        for name, ttype, _label, _sel in field_specs
+    )
+    return """<form create="false" js_class="worksheet_validation">
+    <sheet>
+        <h1 invisible="context.get('studio') or context.get('default_x_quality_check_id')">
+            <field name="x_quality_check_id"/>
+        </h1>
+        <group>
+            <group string="Checklist">
+%s            </group>
+            <group string="Result">
+                <field name="x_passed"/>
+                <field name="x_comments"/>
+            </group>
+        </group>
+    </sheet>
+</form>""" % field_lines
+
+
+def _aqua_get_or_create_worksheet_template(env, title):
+    """One worksheet.template == one dedicated model. Re-used by name so
+    this can run more than once without creating duplicate models."""
+    Template = env["worksheet.template"].sudo()
+    template = Template.search([
+        ("name", "=", title), ("res_model", "=", "quality.check"),
+    ], limit=1)
+    if template:
+        return template
+    # create() on worksheet.template auto-generates the model, default
+    # fields (x_quality_check_id, x_comments, x_passed) and default views.
+    return Template.create({"name": title, "res_model": "quality.check"})
+
+
+def _aqua_add_missing_worksheet_fields(env, model, field_specs):
+    Fields = env["ir.model.fields"].sudo()
+    existing = set(Fields.search([("model_id", "=", model.id)]).mapped("name"))
+    to_create = []
+    for name, ttype, label, selection in field_specs:
+        if name in existing:
+            continue
+        vals = {
+            "name": name,
+            "ttype": ttype,
+            "field_description": label,
+            "model_id": model.id,
+        }
+        if selection:
+            vals["selection"] = selection
+        to_create.append(vals)
+    if to_create:
+        Fields.create(to_create)
+
+
+def _aqua_update_worksheet_form_view(env, model, field_specs):
+    View = env["ir.ui.view"].sudo()
+    form_view = View.search([("model", "=", model.model), ("type", "=", "form")], limit=1)
+    arch = _aqua_build_worksheet_arch(field_specs)
+    if form_view:
+        form_view.write({"arch": arch})
+    return form_view
+
+
+def _aqua_find_operation(env, workcenter_name, operation_name):
+    Routing = env["mrp.routing.workcenter"].sudo()
+    return Routing.search([
+        ("workcenter_id.name", "=", workcenter_name),
+        ("name", "=", operation_name),
+    ], limit=1)
+
+
+def _aqua_get_worksheet_test_type(env):
+    TestType = env["quality.point.test_type"].sudo()
+    test_type = TestType.search([("technical_name", "=", "worksheet")], limit=1)
+    if not test_type:
+        _logger.warning(
+            "aqua_food_processing: 'worksheet' quality.point.test_type not found - "
+            "is quality_control_worksheet installed?"
+        )
+    return test_type
+
+
+def _aqua_get_company_and_team(env):
+    company = env["res.company"].sudo().search([("name", "=", "Aqua Processing")], limit=1)
+    company = company or env.company
+    team = env["quality.alert.team"].sudo().search([("company_id", "=", company.id)], limit=1)
+    team = team or env["quality.alert.team"].sudo().search([], limit=1)
+    return company, team
+
+
+def _aqua_get_manufacturing_picking_type(env, company):
+    # quality.point.picking_type_ids is required=True; the Shop Floor
+    # operation checks all hang off the plant's Manufacturing operation
+    # type (code 'mrp_operation'), same one already used by "Grading
+    # Quality" / QCP00012.
+    PickingType = env["stock.picking.type"].sudo()
+    picking_type = PickingType.search([
+        ("code", "=", "mrp_operation"), ("company_id", "=", company.id),
+    ], limit=1)
+    if not picking_type:
+        picking_type = PickingType.search([("code", "=", "mrp_operation")], limit=1)
+    return picking_type
+
+
+def _aqua_setup_operation_worksheets_impl(env):
+    test_type = _aqua_get_worksheet_test_type(env)
+    if not test_type:
+        return
+    company, team = _aqua_get_company_and_team(env)
+    picking_type = _aqua_get_manufacturing_picking_type(env, company)
+    Point = env["quality.point"].sudo()
+
+    for spec in AQUA_OPERATION_WORKSHEETS:
+        operation = _aqua_find_operation(env, spec["workcenter_name"], spec["operation_name"])
+        if not operation:
+            _logger.warning(
+                "aqua_food_processing: operation '%s' on work center '%s' not found - skipping.",
+                spec["operation_name"], spec["workcenter_name"],
+            )
+            continue
+
+        # Reuse an existing Control Point on this operation (e.g. the
+        # already-present "Grading Quality") instead of creating a duplicate.
+        point = Point.search([
+            ("operation_id", "=", operation.id),
+            ("title", "=", spec["point_title"]),
+        ], limit=1)
+
+        template = _aqua_get_or_create_worksheet_template(env, spec["point_title"])
+        _aqua_add_missing_worksheet_fields(env, template.model_id, spec["fields"])
+        _aqua_update_worksheet_form_view(env, template.model_id, spec["fields"])
+        template._generate_qweb_report_template()
+
+        success_domain = "[('x_passed', '=', True)]"
+
+        if point:
+            point.write({
+                "test_type_id": test_type.id,
+                "worksheet_template_id": template.id,
+                "worksheet_success_conditions": success_domain,
+                "source_document": "operation",
+                # A leftover non-empty `note` (even just an empty-looking
+                # "<div><br></div>") stops the Shop Floor tablet from
+                # jumping straight to the worksheet checklist the way it
+                # does for every other operation - it shows an extra
+                # confirmation popup with a "Fill in worksheet" button
+                # first instead. Clear it so all 6 operations behave the
+                # same way.
+                "note": False,
+            })
+            _logger.info("aqua_food_processing: updated existing Control Point '%s'.", point.name)
+        else:
+            Point.create({
+                "title": spec["point_title"],
+                "operation_id": operation.id,
+                "test_type_id": test_type.id,
+                "worksheet_template_id": template.id,
+                "worksheet_success_conditions": success_domain,
+                "source_document": "operation",
+                "company_id": company.id,
+                "team_id": team.id if team else False,
+                "test_report_type": "pdf",
+                "picking_type_ids": [(6, 0, picking_type.ids)] if picking_type else False,
+                "note": False,
+            })
+            _logger.info(
+                "aqua_food_processing: created Control Point '%s' on operation '%s'.",
+                spec["point_title"], spec["operation_name"],
+            )
+
+
+class QualityPoint(models.Model):
+    """Entry point so the Shop Floor worksheet checklists above can be
+    (re)built from a <function> call in
+    views/quality/quality_check_views.xml on every module install/upgrade.
+    Safe to call repeatedly: it only creates what is missing.
+    """
+    _inherit = 'quality.point'
+
+    @api.model
+    def _aqua_setup_operation_worksheets(self):
+        _aqua_setup_operation_worksheets_impl(self.env)
