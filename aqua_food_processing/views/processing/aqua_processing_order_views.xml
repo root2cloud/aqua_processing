@@ -12,7 +12,7 @@
                 </button>
             </xpath>
             <xpath expr="//sheet" position="inside">
-                <group string="Aqua Processing" invisible="not catch_receipt_id and not qty_input">
+                <group string="Aqua Processing">
                     <group>
                         <field name="catch_receipt_id"/>
                         <field name="species_id" readonly="1"/>
@@ -58,7 +58,5 @@
         <field name="name">Processing Orders</field>
         <field name="res_model">mrp.production</field>
         <field name="view_mode">list,form</field>
-        <field name="domain">[('catch_receipt_id', '!=', False)]</field>
-        <field name="context">{'default_catch_receipt_id': True}</field>
     </record>
 </odoo>
