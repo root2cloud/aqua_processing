@@ -6,18 +6,22 @@ import { Component, onMounted, useState } from "@odoo/owl";
 import { KpiTile } from "../components/kpi_tile/kpi_tile";
 import { ChartWidget } from "../components/chart_widget/chart_widget";
 import { DrillPanel } from "../components/drill_panel/drill_panel";
+import { FilterBar } from "../components/filter_bar/filter_bar";
 
 class AquaDashboard extends Component {
     static template = "aqua_food_processing.DashboardMain";
-    static components = { KpiTile, ChartWidget, DrillPanel };
+    static components = { KpiTile, ChartWidget, DrillPanel, FilterBar };
 
     setup() {
         this.orm = useService("orm");
         this.action = useService("action");
         this.notification = useService("notification");
+        this.filters = { period: 'ytd', compare: 'none', customFrom: '', customTo: '' };
         this.state = useState({
             isLoading: true,
             activeTab: 'overview',
+            comparison_pct: {},
+            comparison_label: '',
             total_receipts: 0,
             accepted_receipts: 0,
             cancelled_receipts: 0,
@@ -40,10 +44,21 @@ class AquaDashboard extends Component {
             ordered_vs_received: [],
             recent_receipts_table: [],
 
+            total_stock_on_hand: 0,
+            stock_value: 0,
+            current_stock_by_product: [],
+            current_stock_by_location: [],
+            purchase_to_stock_funnel: [],
+            daily_weight_trend: [],
+            purchase_spend_trend: [],
+            avg_price_per_kg_trend: [],
+
             total_processing_orders: 0,
             total_input_qty: 0,
             avg_yield_pct: 0,
             avg_byproduct_yield_pct: 0,
+            wip_stock_kg: 0,
+            wip_stock_by_product: [],
             active_blast_freeze_count: 0,
             processing_status_breakdown: [],
             input_qty_by_species: [],
@@ -55,6 +70,13 @@ class AquaDashboard extends Component {
             qc_fail_count: 0,
             qc_todo_count: 0,
             qc_hold_count: 0,
+            iqc_total: 0,
+            iqc_pass_rate: 0,
+            ipqc_total: 0,
+            ipqc_pass_rate: 0,
+            final_qc_total: 0,
+            final_qc_pass_rate: 0,
+            ipqc_by_operation_chart: { labels: [], pass: [], fail: [] },
             avg_histamine_ppm: 0,
             avg_sensory_score: 0,
             qc_stage_breakdown: [],
@@ -76,6 +98,19 @@ class AquaDashboard extends Component {
         onMounted(() => this.loadData());
     }
 
+    // ---- Shared UI helper: status label -> badge color class ----
+    badgeClass(label) {
+        const GREEN = ['Completed', 'Done', 'Passed', 'Pass', 'Accept', 'Delivered'];
+        const RED = ['Cancelled', 'Failed', 'Fail', 'Reject', 'Detected'];
+        const AMBER = ['Open', 'Waiting', 'Draft', 'To Do', 'Downgrade / Conditional', 'Pending'];
+        const BLUE = ['Confirmed', 'In Progress', 'Ready', 'Booked', 'Stuffed', 'Scheduled', 'Running'];
+        if (GREEN.includes(label)) return 'aqua-badge--green';
+        if (RED.includes(label)) return 'aqua-badge--red';
+        if (AMBER.includes(label)) return 'aqua-badge--amber';
+        if (BLUE.includes(label)) return 'aqua-badge--blue';
+        return 'aqua-badge--gray';
+    }
+
     // ---- Tabs: Overview / Procurement / Processing / Quality Control ----
     setActiveTab(tabName) {
         this.state.activeTab = tabName;
@@ -85,10 +120,25 @@ class AquaDashboard extends Component {
         return this.state.activeTab === tabName;
     }
 
+    // ---- Filter bar: period + comparison (no branch/company -- single plant) ----
+    onFilterChange(filters) {
+        this.filters = filters;
+        this.loadData();
+    }
+
+    onRefresh() {
+        this.loadData();
+    }
+
     async loadData() {
         this.state.isLoading = true;
         this._dashboardIds = await this.orm.create("aqua.dashboard", [{}]);
-        const data = await this.orm.call("aqua.dashboard", "get_dashboard_data", [this._dashboardIds]);
+        const data = await this.orm.call("aqua.dashboard", "get_dashboard_data", [this._dashboardIds], {
+            period: this.filters.period,
+            compare: this.filters.compare,
+            date_from: this.filters.period === 'custom' ? this.filters.customFrom : false,
+            date_to: this.filters.period === 'custom' ? this.filters.customTo : false,
+        });
         Object.assign(this.state, data);
         this.state.isLoading = false;
     }
@@ -99,6 +149,12 @@ class AquaDashboard extends Component {
     // series just for a KPI tile decoration.
     get receiptsSparkline() {
         return this.state.receipt_trend.map((x) => x.value);
+    }
+
+    // Daily received-weight series, reused as the sparkline behind the
+    // "Current Stock On Hand" KPI tile so it visually shows recent intake momentum.
+    get stockSparkline() {
+        return this.state.daily_weight_trend.map((x) => x.value);
     }
 
     // ---- Chart.js data getters, {label, value} lists -> {labels, datasets} ----
@@ -189,6 +245,60 @@ class AquaDashboard extends Component {
         };
     }
 
+    // ---- Live Inventory (current stock) chart data getters ----
+
+    get currentStockByProductChartData() {
+        const rows = this.state.current_stock_by_product;
+        return {
+            labels: rows.map((x) => x.label),
+            datasets: [{ label: "On Hand (kg)", data: rows.map((x) => x.value), backgroundColor: "#38A169" }],
+        };
+    }
+
+    get currentStockByLocationChartData() {
+        const rows = this.state.current_stock_by_location;
+        return {
+            labels: rows.map((x) => x.label),
+            datasets: [{ label: "On Hand (kg)", data: rows.map((x) => x.value), backgroundColor: "#3182CE" }],
+        };
+    }
+
+    get purchaseToStockFunnelChartData() {
+        const rows = this.state.purchase_to_stock_funnel;
+        return {
+            labels: rows.map((x) => x.label),
+            datasets: [{
+                label: "kg",
+                data: rows.map((x) => x.value),
+                backgroundColor: ["#CBD5E0", "#3182CE", "#38A169"],
+            }],
+        };
+    }
+
+    get dailyWeightTrendChartData() {
+        const rows = this.state.daily_weight_trend;
+        return {
+            labels: rows.map((x) => x.label),
+            datasets: [{ label: "Received (kg)", data: rows.map((x) => x.value), borderColor: "#2C7A7B" }],
+        };
+    }
+
+    get purchaseSpendTrendChartData() {
+        const rows = this.state.purchase_spend_trend;
+        return {
+            labels: rows.map((x) => x.label),
+            datasets: [{ label: "Spend", data: rows.map((x) => x.value), borderColor: "#805AD5" }],
+        };
+    }
+
+    get avgPriceTrendChartData() {
+        const rows = this.state.avg_price_per_kg_trend;
+        return {
+            labels: rows.map((x) => x.label),
+            datasets: [{ label: "Avg Price / kg", data: rows.map((x) => x.value), borderColor: "#D69E2E" }],
+        };
+    }
+
     // ---- Processing chart data getters ----
 
     get processingStatusChartData() {
@@ -205,6 +315,14 @@ class AquaDashboard extends Component {
         return {
             labels: rows.map((x) => x.label),
             datasets: [{ label: "Input (kg)", data: rows.map((x) => x.value), backgroundColor: "#2C7A7B" }],
+        };
+    }
+
+    get wipStockByProductChartData() {
+        const rows = this.state.wip_stock_by_product;
+        return {
+            labels: rows.map((x) => x.label),
+            datasets: [{ label: "Staged for Processing (kg)", data: rows.map((x) => x.value), backgroundColor: "#805AD5" }],
         };
     }
 
@@ -232,6 +350,17 @@ class AquaDashboard extends Component {
         return {
             labels: rows.map((x) => x.label),
             datasets: [{ data: rows.map((x) => x.value), backgroundColor: ["#3182CE", "#805AD5", "#38A169"] }],
+        };
+    }
+
+    get ipqcByOperationChartData() {
+        const r = this.state.ipqc_by_operation_chart;
+        return {
+            labels: r.labels,
+            datasets: [
+                { label: "Pass", data: r.pass, backgroundColor: "#38A169" },
+                { label: "Fail", data: r.fail, backgroundColor: "#C53030" },
+            ],
         };
     }
 
@@ -293,6 +422,14 @@ class AquaDashboard extends Component {
         this._openDrill('total_purchase_spend', null, 'Confirmed Purchase Orders');
     }
 
+    onDrillTotalStockOnHand() {
+        this._openDrill('total_stock_on_hand', null, "Current Stock On Hand");
+    }
+
+    onDrillStockValue() {
+        this._openDrill('stock_value', null, "Current Stock Value");
+    }
+
     onDrillQcPassRate() {
         this._openDrill('qc_pass_rate', null, 'Passed QC Checks');
     }
@@ -305,6 +442,10 @@ class AquaDashboard extends Component {
         this._openDrill('total_processing_orders', null, 'All Processing Orders');
     }
 
+    onDrillWipStock() {
+        this._openDrill('wip_stock_kg', null, 'Raw Material Staged for Processing');
+    }
+
     onDrillQcTotal() {
         this._openDrill('qc_total', null, 'All Quality Checks');
     }
@@ -315,6 +456,22 @@ class AquaDashboard extends Component {
 
     onDrillQcHold() {
         this._openDrill('qc_hold_count', null, 'On-Hold Quality Checks');
+    }
+
+    onDrillIqcTotal() {
+        this._openDrill('iqc_total', null, 'IQC — Incoming Quality Checks');
+    }
+
+    onDrillIpqcTotal() {
+        this._openDrill('ipqc_total', null, 'IPQC — In-Process Quality Checks');
+    }
+
+    onDrillFinalQcTotal() {
+        this._openDrill('final_qc_total', null, 'Final QC — Pre-Shipment Checks');
+    }
+
+    onIpqcByOperationChartClick(ctx) {
+        this._openDrill('ipqc_by_operation_chart', ctx.label, `IPQC — ${ctx.label}`);
     }
 
     // ---- Drill-down: chart element clicks ----
@@ -370,6 +527,40 @@ class AquaDashboard extends Component {
         this._openDrill('ordered_vs_received', ctx.label, `Catch Receipt — ${ctx.label}`);
     }
 
+    onCurrentStockByProductChartClick(ctx) {
+        this._openDrill('current_stock_by_product', ctx.label, `Current Stock — ${ctx.label}`);
+    }
+
+    onCurrentStockByLocationChartClick(ctx) {
+        this._openDrill('current_stock_by_location', ctx.label, `Current Stock — ${ctx.label}`);
+    }
+
+    onPurchaseToStockFunnelChartClick(ctx) {
+        this._openDrill('purchase_to_stock_funnel', ctx.label, `Purchase to Stock — ${ctx.label}`);
+    }
+
+    onDailyWeightTrendChartClick(ctx) {
+        this._openDrill('daily_weight_trend', ctx.label, `Catch Receipts — ${ctx.label}`);
+    }
+
+    onPurchaseSpendTrendChartClick(ctx) {
+        this._openDrill('purchase_spend_trend', ctx.label, `Purchase Orders — week ${ctx.label}`);
+    }
+
+    onAvgPriceTrendChartClick(ctx) {
+        this._openDrill('avg_price_per_kg_trend', ctx.label, `Catch Receipts — week ${ctx.label}`);
+    }
+
+    onRecentDeliveryRowClick(pickingId) {
+        this.action.doAction({
+            type: 'ir.actions.act_window',
+            res_model: 'stock.picking',
+            res_id: pickingId,
+            views: [[false, 'form']],
+            target: 'current',
+        });
+    }
+
     onRecentReceiptRowClick(receiptId) {
         this.action.doAction({
             type: 'ir.actions.act_window',
@@ -386,6 +577,10 @@ class AquaDashboard extends Component {
 
     onInputQtyBySpeciesChartClick(ctx) {
         this._openDrill('input_qty_by_species', ctx.label, `Processing Orders — ${ctx.label}`);
+    }
+
+    onWipStockByProductChartClick(ctx) {
+        this._openDrill('wip_stock_by_product', ctx.label, `Staged for Processing — ${ctx.label}`);
     }
 
     onByproductYieldChartClick(ctx) {

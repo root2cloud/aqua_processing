@@ -3,7 +3,13 @@
     <t t-name="aqua_food_processing.DashboardMain">
         <div class="o_aqua_dashboard">
             <div class="o_aqua_header">
-                <h2><i class="fa fa-anchor mr-2"/> Aqua Processing </h2>
+                <div class="o_aqua_header__row">
+                    <div class="o_aqua_header__title">
+                        <i class="fa fa-anchor"/>
+                        <h2>Aqua Processing</h2>
+                    </div>
+                    <FilterBar onFilterChange.bind="onFilterChange" onRefresh.bind="onRefresh" isLoading="state.isLoading"/>
+                </div>
             </div>
 
             <!-- TAB BAR -->
@@ -36,6 +42,7 @@
 
             <!-- ══════════════════════ OVERVIEW TAB ══════════════════════ -->
             <t t-if="isTabActive('overview')">
+                <div class="o_aqua_section_label">At a Glance — One Number per Department</div>
                 <div class="o_aqua_kpi_row">
                     <KpiTile
                         label="'Total Catch Receipts'"
@@ -45,15 +52,27 @@
                         color="'#2C7A7B'"
                         sparklineData="receiptsSparkline"
                         isLoading="state.isLoading"
+                        changePct="state.comparison_pct.total_receipts"
+                        compareLabel="state.comparison_label"
                         onDrill.bind="onDrillTotalReceipts"/>
                     <KpiTile
-                        label="'Accepted Receipts'"
-                        value="state.accepted_receipts"
+                        label="'Current Stock On Hand (kg)'"
+                        value="state.total_stock_on_hand"
                         valueFmt="'number'"
-                        icon="'fa-check-circle'"
+                        icon="'fa-cubes'"
                         color="'#3182CE'"
+                        sparklineData="stockSparkline"
                         isLoading="state.isLoading"
-                        onDrill.bind="onDrillAcceptedReceipts"/>
+                        onDrill.bind="onDrillTotalStockOnHand"/>
+                    <KpiTile
+                        label="'Avg Product Yield %'"
+                        value="state.avg_yield_pct"
+                        valueFmt="'pct'"
+                        icon="'fa-industry'"
+                        color="'#805AD5'"
+                        isLoading="state.isLoading"
+                        changePct="state.comparison_pct.avg_yield_pct"
+                        compareLabel="state.comparison_label"/>
                     <KpiTile
                         label="'QC Pass Rate'"
                         value="state.qc_pass_rate"
@@ -61,29 +80,40 @@
                         icon="'fa-flask'"
                         color="'#38A169'"
                         isLoading="state.isLoading"
+                        changePct="state.comparison_pct.qc_pass_rate"
+                        compareLabel="state.comparison_label"
                         onDrill.bind="onDrillQcPassRate"/>
+                    <KpiTile
+                        label="'QC On Hold'"
+                        value="state.qc_hold_count"
+                        valueFmt="'number'"
+                        icon="'fa-pause-circle'"
+                        color="'#D69E2E'"
+                        isLoading="state.isLoading"
+                        onDrill.bind="onDrillQcHold"/>
                     <KpiTile
                         label="'On-time Dispatch Rate'"
                         value="state.on_time_dispatch_rate"
                         valueFmt="'pct'"
                         icon="'fa-ship'"
-                        color="'#D69E2E'"
+                        color="'#C53030'"
                         isLoading="state.isLoading"
                         onDrill.bind="onDrillDispatchRate"/>
                 </div>
 
+                <div class="o_aqua_section_label">Trends &amp; Breakdown</div>
                 <div class="o_aqua_chart_row">
                     <div class="o_aqua_panel_wide">
-                        <t t-if="state.receipts_by_species.length">
+                        <t t-if="state.purchase_to_stock_funnel.length">
                             <ChartWidget
-                                title="'Receipts by Species'"
-                                chartType="'horizontalBar'"
-                                data="speciesChartData"
+                                title="'Purchase-to-Stock Flow (kg)'"
+                                chartType="'bar'"
+                                data="purchaseToStockFunnelChartData"
                                 isLoading="state.isLoading"
-                                onElementClick.bind="onSpeciesChartClick"
-                                exportFilename="'aqua_receipts_by_species'"/>
+                                onElementClick.bind="onPurchaseToStockFunnelChartClick"
+                                exportFilename="'aqua_purchase_to_stock_funnel'"/>
                         </t>
-                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Receipts by Species</div></div><div class="o_aqua_empty">No catch receipts recorded yet.</div></div></t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Purchase-to-Stock Flow (kg)</div></div><div class="o_aqua_empty">No catch receipts recorded yet.</div></div></t>
                     </div>
                     <div class="o_aqua_panel_narrow">
                         <t t-if="state.qc_breakdown.length">
@@ -125,12 +155,43 @@
                         <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Weekly Receipt Trend</div></div><div class="o_aqua_empty">Not enough data yet for a trend line.</div></div></t>
                     </div>
                 </div>
+
+                <!-- One headline chart per department, matching the KPI row above:
+                     Processing's yield story and Quality's IQC/IPQC/Final split, both
+                     otherwise only visible if you click into that tab. -->
+                <div class="o_aqua_chart_row">
+                    <div class="o_aqua_panel_wide">
+                        <t t-if="state.yield_trend.length">
+                            <ChartWidget
+                                title="'Recent Processing Orders — Yield %'"
+                                chartType="'bar'"
+                                data="yieldChartData"
+                                isLoading="state.isLoading"
+                                onElementClick.bind="onYieldChartClick"
+                                exportFilename="'aqua_yield_trend'"/>
+                        </t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Recent Processing Orders — Yield %</div></div><div class="o_aqua_empty">No processing orders recorded yet.</div></div></t>
+                    </div>
+                    <div class="o_aqua_panel_narrow">
+                        <t t-if="state.qc_stage_breakdown.length">
+                            <ChartWidget
+                                title="'Checks by Stage — IQC / IPQC / Final'"
+                                chartType="'doughnut'"
+                                data="qcStageChartData"
+                                isLoading="state.isLoading"
+                                onElementClick.bind="onQcStageChartClick"
+                                exportFilename="'aqua_qc_stage_breakdown'"/>
+                        </t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Checks by Stage — IQC / IPQC / Final</div></div><div class="o_aqua_empty">No QC tests recorded yet.</div></div></t>
+                    </div>
+                </div>
             </t>
 
             <!-- ══════════════════════ PROCUREMENT TAB ══════════════════════ -->
             <!-- Covers the full purchase -> storage flow: Purchase Order -> Catch
                  Receipt -> Deliveries -> weight reconciliation -> vendor performance. -->
             <t t-if="isTabActive('procurement')">
+                <div class="o_aqua_section_label">Purchase Activity</div>
                 <div class="o_aqua_kpi_row">
                     <KpiTile
                         label="'Total Catch Receipts'"
@@ -140,6 +201,8 @@
                         color="'#2C7A7B'"
                         sparklineData="receiptsSparkline"
                         isLoading="state.isLoading"
+                        changePct="state.comparison_pct.total_receipts"
+                        compareLabel="state.comparison_label"
                         onDrill.bind="onDrillTotalReceipts"/>
                     <KpiTile
                         label="'Completed Receipts'"
@@ -164,14 +227,28 @@
                         icon="'fa-balance-scale'"
                         color="'#3182CE'"
                         isLoading="state.isLoading"
+                        changePct="state.comparison_pct.total_weight_received"
+                        compareLabel="state.comparison_label"
                         onDrill.bind="onDrillTotalWeightReceived"/>
                     <KpiTile
-                        label="'Total Purchase Spend'"
+                        label="'Total Purchase Spend (₹)'"
                         value="state.total_purchase_spend"
                         valueFmt="'number'"
                         icon="'fa-money'"
                         color="'#805AD5'"
                         isLoading="state.isLoading"
+                        changePct="state.comparison_pct.total_purchase_spend"
+                        compareLabel="state.comparison_label"
+                        onDrill.bind="onDrillTotalPurchaseSpend"/>
+                    <KpiTile
+                        label="'Avg Price / kg (₹)'"
+                        value="state.avg_price_per_kg"
+                        valueFmt="'number'"
+                        icon="'fa-inr'"
+                        color="'#D69E2E'"
+                        isLoading="state.isLoading"
+                        changePct="state.comparison_pct.avg_price_per_kg"
+                        compareLabel="state.comparison_label"
                         onDrill.bind="onDrillTotalPurchaseSpend"/>
                     <KpiTile
                         label="'Active Vendors'"
@@ -182,30 +259,110 @@
                         isLoading="state.isLoading"/>
                 </div>
 
+                <!-- Live Inventory: current stock position, read straight off stock.quant:
+                     what actually made it through Receiving, QC, and Storage, and is sitting
+                     on hand right now. Manufacturing work-in-progress (Pre-/Post-Production)
+                     is deliberately excluded here; that belongs on the Processing tab. -->
+                <div class="o_aqua_section_label">Live Inventory (Current Stock)</div>
+                <div class="o_aqua_kpi_row">
+                    <KpiTile
+                        label="'Current Stock On Hand (kg)'"
+                        value="state.total_stock_on_hand"
+                        valueFmt="'number'"
+                        icon="'fa-cubes'"
+                        color="'#38A169'"
+                        sparklineData="stockSparkline"
+                        isLoading="state.isLoading"
+                        onDrill.bind="onDrillTotalStockOnHand"/>
+                    <KpiTile
+                        label="'Stock Value (₹)'"
+                        value="state.stock_value"
+                        valueFmt="'number'"
+                        icon="'fa-inr'"
+                        color="'#2C7A7B'"
+                        isLoading="state.isLoading"
+                        onDrill.bind="onDrillStockValue"/>
+                </div>
+
                 <div class="o_aqua_chart_row">
                     <div class="o_aqua_panel_wide">
-                        <t t-if="state.receipts_by_species.length">
+                        <t t-if="state.current_stock_by_product.length">
                             <ChartWidget
-                                title="'Receipts by Species'"
+                                title="'Current Stock by Product (kg)'"
                                 chartType="'horizontalBar'"
-                                data="speciesChartData"
+                                data="currentStockByProductChartData"
                                 isLoading="state.isLoading"
-                                onElementClick.bind="onSpeciesChartClick"
-                                exportFilename="'aqua_receipts_by_species'"/>
+                                onElementClick.bind="onCurrentStockByProductChartClick"
+                                exportFilename="'aqua_stock_by_product'"/>
                         </t>
-                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Receipts by Species</div></div><div class="o_aqua_empty">No catch receipts recorded yet.</div></div></t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Current Stock by Product (kg)</div></div><div class="o_aqua_empty">No stock on hand yet.</div></div></t>
                     </div>
                     <div class="o_aqua_panel_narrow">
-                        <t t-if="state.receipt_trend.length">
+                        <t t-if="state.current_stock_by_location.length">
                             <ChartWidget
-                                title="'Weekly Receipt Trend'"
-                                chartType="'line'"
-                                data="receiptTrendChartData"
+                                title="'Stock by Location — Pipeline (kg)'"
+                                chartType="'horizontalBar'"
+                                data="currentStockByLocationChartData"
                                 isLoading="state.isLoading"
-                                onElementClick.bind="onReceiptTrendChartClick"
-                                exportFilename="'aqua_receipt_trend'"/>
+                                onElementClick.bind="onCurrentStockByLocationChartClick"
+                                exportFilename="'aqua_stock_by_location'"/>
                         </t>
-                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Weekly Receipt Trend</div></div><div class="o_aqua_empty">Not enough data yet for a trend line.</div></div></t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Stock by Location — Pipeline (kg)</div></div><div class="o_aqua_empty">No stock on hand yet.</div></div></t>
+                    </div>
+                </div>
+
+                <div class="o_aqua_chart_row">
+                    <div class="o_aqua_panel_narrow">
+                        <t t-if="state.purchase_to_stock_funnel.length">
+                            <ChartWidget
+                                title="'Purchase-to-Stock Flow (kg)'"
+                                chartType="'bar'"
+                                data="purchaseToStockFunnelChartData"
+                                isLoading="state.isLoading"
+                                onElementClick.bind="onPurchaseToStockFunnelChartClick"
+                                exportFilename="'aqua_purchase_to_stock_funnel'"/>
+                        </t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Purchase-to-Stock Flow (kg)</div></div><div class="o_aqua_empty">No catch receipts recorded yet.</div></div></t>
+                    </div>
+                    <div class="o_aqua_panel_wide">
+                        <t t-if="state.daily_weight_trend.length">
+                            <ChartWidget
+                                title="'Daily Weight Received (kg)'"
+                                chartType="'line'"
+                                data="dailyWeightTrendChartData"
+                                isLoading="state.isLoading"
+                                onElementClick.bind="onDailyWeightTrendChartClick"
+                                exportFilename="'aqua_daily_weight_received'"/>
+                        </t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Daily Weight Received (kg)</div></div><div class="o_aqua_empty">Not enough data yet for a trend line.</div></div></t>
+                    </div>
+                </div>
+
+                <div class="o_aqua_section_label">Cost &amp; Vendor Performance</div>
+                <div class="o_aqua_chart_row">
+                    <div class="o_aqua_panel_wide">
+                        <t t-if="state.purchase_spend_trend.length">
+                            <ChartWidget
+                                title="'Purchase Spend Trend (Weekly, ₹)'"
+                                chartType="'line'"
+                                data="purchaseSpendTrendChartData"
+                                isLoading="state.isLoading"
+                                onElementClick.bind="onPurchaseSpendTrendChartClick"
+                                exportFilename="'aqua_purchase_spend_trend'"/>
+                        </t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Purchase Spend Trend (Weekly, ₹)</div></div><div class="o_aqua_empty">No confirmed purchase orders yet.</div></div></t>
+                    </div>
+                    <div class="o_aqua_panel_wide">
+                        <t t-if="state.avg_price_per_kg_trend.length">
+                            <ChartWidget
+                                title="'Avg Price / kg Trend (Weekly, ₹)'"
+                                chartType="'line'"
+                                data="avgPriceTrendChartData"
+                                isLoading="state.isLoading"
+                                onElementClick.bind="onAvgPriceTrendChartClick"
+                                exportFilename="'aqua_avg_price_trend'"/>
+                        </t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Avg Price / kg Trend (Weekly, ₹)</div></div><div class="o_aqua_empty">Not enough data yet for a trend line.</div></div></t>
                     </div>
                 </div>
 
@@ -225,14 +382,14 @@
                     <div class="o_aqua_panel_wide">
                         <t t-if="state.spend_by_vendor.length">
                             <ChartWidget
-                                title="'Purchase Spend by Vendor'"
+                                title="'Purchase Spend by Vendor (₹)'"
                                 chartType="'horizontalBar'"
                                 data="spendByVendorChartData"
                                 isLoading="state.isLoading"
                                 onElementClick.bind="onSpendByVendorChartClick"
                                 exportFilename="'aqua_spend_by_vendor'"/>
                         </t>
-                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Purchase Spend by Vendor</div></div><div class="o_aqua_empty">No confirmed purchase orders yet.</div></div></t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Purchase Spend by Vendor (₹)</div></div><div class="o_aqua_empty">No confirmed purchase orders yet.</div></div></t>
                     </div>
                 </div>
 
@@ -263,10 +420,15 @@
                     </div>
                 </div>
 
+                <div class="o_aqua_section_label">Traceability</div>
+                <!-- One row per delivery: the actual granularity of "what happened",
+                     carrying the purchase context (Vendor/PO/Species/Ordered) alongside the
+                     delivery detail (Batch/Lot/Backorder/Qty/Status), instead of two separate
+                     tables that both keyed on Receipt and repeated most of the same story. -->
                 <div class="o_aqua_panel_full">
                     <div class="aqua-chart-card">
                         <div class="aqua-chart-card__header">
-                            <div class="aqua-chart-card__title">Recent Catch Receipts — Purchase to Storage</div>
+                            <div class="aqua-chart-card__title">Catch Receipts</div>
                         </div>
                         <t t-if="state.recent_receipts_table.length">
                             <table class="o_aqua_table">
@@ -277,22 +439,30 @@
                                         <th>PO</th>
                                         <th>Species</th>
                                         <th>Ordered (kg)</th>
-                                        <th>Net Weight (kg)</th>
-                                        <th>Total Received (kg)</th>
-                                        <th>Status</th>
+                                        <th>Transfer</th>
+                                        <th>Batch</th>
+                                        <th>Lot/Serial</th>
+                                        <th>Backorder Of</th>
+                                        <th>Qty Received (kg)</th>
+                                        <th>Receipt Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <t t-foreach="state.recent_receipts_table" t-as="row" t-key="row.id">
-                                        <tr class="o_aqua_table_row_clickable" t-on-click="() => this.onRecentReceiptRowClick(row.id)">
-                                            <td t-esc="row.name"/>
+                                        <tr class="o_aqua_table_row_clickable" t-on-click="() => this.onRecentDeliveryRowClick(row.picking_id)">
+                                            <td>
+                                                <a href="#" t-on-click.stop.prevent="() => this.onRecentReceiptRowClick(row.receipt_id)" t-esc="row.receipt"/>
+                                            </td>
                                             <td t-esc="row.vendor"/>
                                             <td t-esc="row.po"/>
                                             <td t-esc="row.species"/>
                                             <td t-esc="row.ordered_qty"/>
-                                            <td t-esc="row.net_weight"/>
-                                            <td t-esc="row.total_received"/>
-                                            <td t-esc="row.state"/>
+                                            <td t-esc="row.transfer"/>
+                                            <td t-esc="row.batch"/>
+                                            <td t-esc="row.lot_number"/>
+                                            <td t-esc="row.backorder_of"/>
+                                            <td t-esc="row.quantity"/>
+                                            <td><span t-att-class="'aqua-badge ' + badgeClass(row.receipt_state)" t-esc="row.receipt_state"/></td>
                                         </tr>
                                     </t>
                                 </tbody>
@@ -304,6 +474,7 @@
                     </div>
                 </div>
             </t>
+
 
             <!-- ══════════════════════ PROCESSING TAB ══════════════════════ -->
             <!-- Covers the full intake -> yield -> cold storage flow: Catch Receipt ->
@@ -318,6 +489,8 @@
                         icon="'fa-industry'"
                         color="'#2C7A7B'"
                         isLoading="state.isLoading"
+                        changePct="state.comparison_pct.total_processing_orders"
+                        compareLabel="state.comparison_label"
                         onDrill.bind="onDrillTotalProcessingOrders"/>
                     <KpiTile
                         label="'Total Input (kg)'"
@@ -326,6 +499,8 @@
                         icon="'fa-balance-scale'"
                         color="'#3182CE'"
                         isLoading="state.isLoading"
+                        changePct="state.comparison_pct.total_input_qty"
+                        compareLabel="state.comparison_label"
                         onDrill.bind="onDrillTotalProcessingOrders"/>
                     <KpiTile
                         label="'Avg Product Yield %'"
@@ -333,7 +508,9 @@
                         valueFmt="'pct'"
                         icon="'fa-percent'"
                         color="'#805AD5'"
-                        isLoading="state.isLoading"/>
+                        isLoading="state.isLoading"
+                        changePct="state.comparison_pct.avg_yield_pct"
+                        compareLabel="state.comparison_label"/>
                     <KpiTile
                         label="'Avg By-product Yield %'"
                         value="state.avg_byproduct_yield_pct"
@@ -348,6 +525,33 @@
                         icon="'fa-snowflake-o'"
                         color="'#38A169'"
                         isLoading="state.isLoading"/>
+                    <KpiTile
+                        label="'Staged for Processing (kg)'"
+                        value="state.wip_stock_kg"
+                        valueFmt="'number'"
+                        icon="'fa-cube'"
+                        color="'#805AD5'"
+                        isLoading="state.isLoading"
+                        onDrill.bind="onDrillWipStock"/>
+                </div>
+
+                <!-- Raw material already pulled from Storage into Pre-/Post-Production for an
+                     active Processing Order, but not yet consumed into output. This is the
+                     "AQP/Pre-Production" figure Procurement's Live Inventory used to show by
+                     mistake; it belongs here, next to the orders actually consuming it. -->
+                <div class="o_aqua_chart_row">
+                    <div class="o_aqua_panel_full">
+                        <t t-if="state.wip_stock_by_product.length">
+                            <ChartWidget
+                                title="'Staged for Processing (WIP) by Product (kg)'"
+                                chartType="'horizontalBar'"
+                                data="wipStockByProductChartData"
+                                isLoading="state.isLoading"
+                                onElementClick.bind="onWipStockByProductChartClick"
+                                exportFilename="'aqua_wip_stock_by_product'"/>
+                        </t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Staged for Processing (WIP) by Product (kg)</div></div><div class="o_aqua_empty">Nothing currently staged for processing.</div></div></t>
+                    </div>
                 </div>
 
                 <div class="o_aqua_chart_row">
@@ -472,6 +676,7 @@
                                         <th>Input (kg)</th>
                                         <th>Yield %</th>
                                         <th>By-product Yield %</th>
+                                        <th>IPQC</th>
                                         <th>Status</th>
                                     </tr>
                                 </thead>
@@ -484,7 +689,8 @@
                                             <td t-esc="row.qty_input"/>
                                             <td t-esc="row.yield_percentage"/>
                                             <td t-esc="row.byproduct_yield_percentage"/>
-                                            <td t-esc="row.state"/>
+                                            <td><span t-att-class="'aqua-badge ' + badgeClass(row.ipqc_status)" t-esc="row.ipqc_status"/></td>
+                                            <td><span t-att-class="'aqua-badge ' + badgeClass(row.state)" t-esc="row.state"/></td>
                                         </tr>
                                     </t>
                                 </tbody>
@@ -498,10 +704,14 @@
             </t>
 
             <!-- ══════════════════════ QUALITY CONTROL TAB ══════════════════════ -->
-            <!-- Covers the full inspection checklist lifecycle: Raw Material (Receiving)
-                 -> In-Process -> Final / Pre-Shipment, including residue screening and
-                 intake decisions. -->
+            <!-- Two real gates plus a final check before it leaves the plant: IQC (Incoming,
+                 at Receiving ; see the Procurement tab for the purchase side of the same
+                 gate) -> IPQC (In-Process, on the shop floor during manufacturing, one check
+                 per station: Cleaning/Peeling/Deveining/Freezing/Grading/Packing) -> Final QC
+                 (Pre-Shipment). Each gets its own numbers below instead of one blended
+                 "QC Pass Rate" that can't tell you which stage is actually failing. -->
             <t t-if="isTabActive('quality')">
+                <div class="o_aqua_section_label">Overall</div>
                 <div class="o_aqua_kpi_row">
                     <KpiTile
                         label="'QC Pass Rate'"
@@ -510,6 +720,8 @@
                         icon="'fa-flask'"
                         color="'#38A169'"
                         isLoading="state.isLoading"
+                        changePct="state.comparison_pct.qc_pass_rate"
+                        compareLabel="state.comparison_label"
                         onDrill.bind="onDrillQcPassRate"/>
                     <KpiTile
                         label="'Total Checks'"
@@ -518,6 +730,8 @@
                         icon="'fa-clipboard'"
                         color="'#2C7A7B'"
                         isLoading="state.isLoading"
+                        changePct="state.comparison_pct.qc_total"
+                        compareLabel="state.comparison_label"
                         onDrill.bind="onDrillQcTotal"/>
                     <KpiTile
                         label="'Failed Checks'"
@@ -535,20 +749,6 @@
                         color="'#D69E2E'"
                         isLoading="state.isLoading"
                         onDrill.bind="onDrillQcHold"/>
-                    <KpiTile
-                        label="'Avg Histamine (ppm)'"
-                        value="state.avg_histamine_ppm"
-                        valueFmt="'number'"
-                        icon="'fa-vial'"
-                        color="'#805AD5'"
-                        isLoading="state.isLoading"/>
-                    <KpiTile
-                        label="'Avg Sensory Score (0-10)'"
-                        value="state.avg_sensory_score"
-                        valueFmt="'number'"
-                        icon="'fa-star'"
-                        color="'#3182CE'"
-                        isLoading="state.isLoading"/>
                 </div>
 
                 <div class="o_aqua_chart_row">
@@ -567,31 +767,16 @@
                     <div class="o_aqua_panel_narrow">
                         <t t-if="state.qc_stage_breakdown.length">
                             <ChartWidget
-                                title="'Checks by Lifecycle Stage'"
+                                title="'Checks by Stage — IQC / IPQC / Final'"
                                 chartType="'doughnut'"
                                 data="qcStageChartData"
                                 isLoading="state.isLoading"
                                 onElementClick.bind="onQcStageChartClick"
                                 exportFilename="'aqua_qc_stage_breakdown'"/>
                         </t>
-                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Checks by Lifecycle Stage</div></div><div class="o_aqua_empty">No QC tests recorded yet.</div></div></t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Checks by Stage — IQC / IPQC / Final</div></div><div class="o_aqua_empty">No QC tests recorded yet.</div></div></t>
                     </div>
                     <div class="o_aqua_panel_narrow">
-                        <t t-if="state.intake_decision_breakdown.length">
-                            <ChartWidget
-                                title="'Intake Decision (Raw Material)'"
-                                chartType="'doughnut'"
-                                data="intakeDecisionChartData"
-                                isLoading="state.isLoading"
-                                onElementClick.bind="onIntakeDecisionChartClick"
-                                exportFilename="'aqua_intake_decision'"/>
-                        </t>
-                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Intake Decision (Raw Material)</div></div><div class="o_aqua_empty">No intake decisions recorded yet.</div></div></t>
-                    </div>
-                </div>
-
-                <div class="o_aqua_chart_row">
-                    <div class="o_aqua_panel_wide">
                         <t t-if="state.qc_trend.length">
                             <ChartWidget
                                 title="'Weekly QC Checks Trend'"
@@ -603,16 +788,69 @@
                         </t>
                         <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Weekly QC Checks Trend</div></div><div class="o_aqua_empty">Not enough data yet for a trend line.</div></div></t>
                     </div>
+                </div>
+
+                <!-- IQC ; gate inspection at the plant on arrival, before raw material moves
+                     from Input to Quality Control to Storage (see the Procurement tab). -->
+                <div class="o_aqua_section_label">IQC — Incoming (Receiving)</div>
+                <div class="o_aqua_kpi_row">
+                    <KpiTile
+                        label="'IQC Checks'"
+                        value="state.iqc_total"
+                        valueFmt="'number'"
+                        icon="'fa-truck'"
+                        color="'#2C7A7B'"
+                        isLoading="state.isLoading"
+                        onDrill.bind="onDrillIqcTotal"/>
+                    <KpiTile
+                        label="'IQC Pass Rate'"
+                        value="state.iqc_pass_rate"
+                        valueFmt="'pct'"
+                        icon="'fa-flask'"
+                        color="'#38A169'"
+                        isLoading="state.isLoading"
+                        changePct="state.comparison_pct.iqc_pass_rate"
+                        compareLabel="state.comparison_label"
+                        onDrill.bind="onDrillIqcTotal"/>
+                    <KpiTile
+                        label="'Avg Histamine (ppm)'"
+                        value="state.avg_histamine_ppm"
+                        valueFmt="'number'"
+                        icon="'fa-vial'"
+                        color="'#805AD5'"
+                        isLoading="state.isLoading"/>
+                    <KpiTile
+                        label="'Avg Sensory Score (0-10)'"
+                        value="state.avg_sensory_score"
+                        valueFmt="'number'"
+                        icon="'fa-star'"
+                        color="'#3182CE'"
+                        isLoading="state.isLoading"/>
+                </div>
+
+                <div class="o_aqua_chart_row">
+                    <div class="o_aqua_panel_narrow">
+                        <t t-if="state.intake_decision_breakdown.length">
+                            <ChartWidget
+                                title="'Intake Decision (IQC)'"
+                                chartType="'doughnut'"
+                                data="intakeDecisionChartData"
+                                isLoading="state.isLoading"
+                                onElementClick.bind="onIntakeDecisionChartClick"
+                                exportFilename="'aqua_intake_decision'"/>
+                        </t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Intake Decision (IQC)</div></div><div class="o_aqua_empty">No intake decisions recorded yet.</div></div></t>
+                    </div>
                     <div class="o_aqua_panel_wide">
                         <t t-if="state.residue_screening.labels.length">
                             <ChartWidget
-                                title="'Residue Screening Results'"
+                                title="'Residue Screening Results (IQC)'"
                                 chartType="'bar'"
                                 data="residueScreeningChartData"
                                 isLoading="state.isLoading"
                                 exportFilename="'aqua_residue_screening'"/>
                         </t>
-                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Residue Screening Results</div></div><div class="o_aqua_empty">No residue screening data yet.</div></div></t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Residue Screening Results (IQC)</div></div><div class="o_aqua_empty">No residue screening data yet.</div></div></t>
                     </div>
                 </div>
 
@@ -620,17 +858,80 @@
                     <div class="o_aqua_panel_full">
                         <t t-if="state.rejected_qty_by_species.length">
                             <ChartWidget
-                                title="'Rejected Quantity by Species (kg)'"
+                                title="'Rejected Quantity by Species (kg, IQC)'"
                                 chartType="'horizontalBar'"
                                 data="rejectedQtyBySpeciesChartData"
                                 isLoading="state.isLoading"
                                 onElementClick.bind="onRejectedQtyBySpeciesChartClick"
                                 exportFilename="'aqua_rejected_qty_by_species'"/>
                         </t>
-                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Rejected Quantity by Species (kg)</div></div><div class="o_aqua_empty">No rejected raw material recorded yet.</div></div></t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Rejected Quantity by Species (kg, IQC)</div></div><div class="o_aqua_empty">No rejected raw material recorded yet.</div></div></t>
                     </div>
                 </div>
 
+                <!-- IPQC ; one check per shop-floor station (Cleaning, Peeling, Deveining,
+                     Freezing(IQF), Grading, Packing), raised against the Work Order and
+                     linked to its Processing Order (see quality_check.py
+                     _aqua_auto_link_in_process for how these get onto this dashboard). -->
+                <div class="o_aqua_section_label">IPQC — In-Process (Manufacturing)</div>
+                <div class="o_aqua_kpi_row">
+                    <KpiTile
+                        label="'IPQC Checks'"
+                        value="state.ipqc_total"
+                        valueFmt="'number'"
+                        icon="'fa-industry'"
+                        color="'#2C7A7B'"
+                        isLoading="state.isLoading"
+                        onDrill.bind="onDrillIpqcTotal"/>
+                    <KpiTile
+                        label="'IPQC Pass Rate'"
+                        value="state.ipqc_pass_rate"
+                        valueFmt="'pct'"
+                        icon="'fa-flask'"
+                        color="'#38A169'"
+                        isLoading="state.isLoading"
+                        changePct="state.comparison_pct.ipqc_pass_rate"
+                        compareLabel="state.comparison_label"
+                        onDrill.bind="onDrillIpqcTotal"/>
+                </div>
+
+                <div class="o_aqua_chart_row">
+                    <div class="o_aqua_panel_full">
+                        <t t-if="state.ipqc_by_operation_chart.labels.length">
+                            <ChartWidget
+                                title="'IPQC Pass / Fail by Station'"
+                                chartType="'bar'"
+                                data="ipqcByOperationChartData"
+                                isLoading="state.isLoading"
+                                onElementClick.bind="onIpqcByOperationChartClick"
+                                exportFilename="'aqua_ipqc_by_operation'"/>
+                        </t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">IPQC Pass / Fail by Station</div></div><div class="o_aqua_empty">No in-process checks recorded yet.</div></div></t>
+                    </div>
+                </div>
+
+                <!-- Final QC ; last check before a Pack Order ships. -->
+                <div class="o_aqua_section_label">Final QC (Pre-Shipment)</div>
+                <div class="o_aqua_kpi_row">
+                    <KpiTile
+                        label="'Final QC Checks'"
+                        value="state.final_qc_total"
+                        valueFmt="'number'"
+                        icon="'fa-ship'"
+                        color="'#2C7A7B'"
+                        isLoading="state.isLoading"
+                        onDrill.bind="onDrillFinalQcTotal"/>
+                    <KpiTile
+                        label="'Final QC Pass Rate'"
+                        value="state.final_qc_pass_rate"
+                        valueFmt="'pct'"
+                        icon="'fa-flask'"
+                        color="'#38A169'"
+                        isLoading="state.isLoading"
+                        onDrill.bind="onDrillFinalQcTotal"/>
+                </div>
+
+                <div class="o_aqua_section_label">Traceability</div>
                 <div class="o_aqua_panel_full">
                     <div class="aqua-chart-card">
                         <div class="aqua-chart-card__header">
@@ -642,6 +943,8 @@
                                     <tr>
                                         <th>Check</th>
                                         <th>Stage</th>
+                                        <th>Source</th>
+                                        <th>Operation</th>
                                         <th>Result</th>
                                         <th>Decision</th>
                                         <th>Histamine (ppm)</th>
@@ -653,12 +956,14 @@
                                     <t t-foreach="state.recent_qc_table" t-as="row" t-key="row.id">
                                         <tr class="o_aqua_table_row_clickable" t-on-click="() => this.onRecentQcRowClick(row.id)">
                                             <td t-esc="row.name"/>
-                                            <td t-esc="row.stage"/>
-                                            <td t-esc="row.result"/>
+                                            <td><span class="aqua-badge aqua-badge--purple" t-esc="row.stage"/></td>
+                                            <td t-esc="row.source"/>
+                                            <td t-esc="row.operation"/>
+                                            <td><span t-att-class="'aqua-badge ' + badgeClass(row.result)" t-esc="row.result"/></td>
                                             <td t-esc="row.decision"/>
                                             <td t-esc="row.histamine_ppm"/>
                                             <td t-esc="row.core_temp_c"/>
-                                            <td t-esc="row.on_hold ? 'Yes' : 'No'"/>
+                                            <td><span t-att-class="'aqua-badge ' + (row.on_hold ? 'aqua-badge--amber' : 'aqua-badge--gray')" t-esc="row.on_hold ? 'Yes' : 'No'"/></td>
                                         </tr>
                                     </t>
                                 </tbody>

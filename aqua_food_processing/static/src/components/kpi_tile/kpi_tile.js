@@ -18,6 +18,12 @@ export class KpiTile extends Component {
         sparklineData: { type: Array, optional: true },
         isLoading:     { type: Boolean, optional: true },
         onDrill:       { type: Function, optional: true },
+        // Optional period-comparison delta (e.g. +12.4 meaning +12.4% vs the comparison
+        // period chosen in the FilterBar). Omitted entirely -> no comparison line rendered,
+        // so tiles that don't have a meaningful "vs prior period" reading (e.g. a live
+        // snapshot like Stock On Hand) simply don't get one.
+        changePct:     { type: Number, optional: true },
+        compareLabel:  { type: String, optional: true },
     };
 
     // Owl only reads defaults from `static defaultProps`, never from a
@@ -45,15 +51,50 @@ export class KpiTile extends Component {
     get formattedValue() {
         const v = this.props.value;
         if (v === null || v === undefined) return "—";
-        switch (this.props.valueFmt) {
-            case "pct":
-                return `${Number(v).toFixed(1)}%`;
-            case "number":
-            default:
-                return new Intl.NumberFormat("en-IN", {
-                    maximumFractionDigits: 1,
-                }).format(v);
+        if (this.props.valueFmt === "pct") {
+            return `${Number(v).toFixed(1)}%`;
         }
+        return this._formatCompact(v);
+    }
+
+    // The exact, uncompacted value -- shown as a tooltip on the tile so nothing is ever
+    // permanently hidden from the person reading it, even once formattedValue below has
+    // compacted a large number down to "9.85 Cr".
+    get exactValue() {
+        const v = this.props.value;
+        if (v === null || v === undefined) return "";
+        if (this.props.valueFmt === "pct") return `${Number(v).toFixed(2)}%`;
+        return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 }).format(v);
+    }
+
+    // Large values (purchase spend, stock value, ...) rendered in full Indian digit-grouped
+    // form (e.g. "9,85,42,750") are too wide for a fixed-width KPI tile and either overflow
+    // or get ellipsis-truncated mid-number, which is worse than not showing a value at all.
+    // Compact to Lakh / Crore -- the units an Indian business dashboard's audience already
+    // reads spend/stock numbers in -- above 1 lakh, and leave anything smaller exact.
+    _formatCompact(v) {
+        const num = Number(v) || 0;
+        const sign = num < 0 ? "-" : "";
+        const abs = Math.abs(num);
+        if (abs >= 1e7) return `${sign}${(abs / 1e7).toFixed(2)} Cr`;
+        if (abs >= 1e5) return `${sign}${(abs / 1e5).toFixed(2)} L`;
+        return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 1 }).format(num);
+    }
+
+    get hasComparison() {
+        return this.props.changePct !== undefined && this.props.changePct !== null && this.props.compareLabel;
+    }
+
+    get comparisonDirectionClass() {
+        const v = this.props.changePct || 0;
+        if (Math.abs(v) < 0.05) return 'aqua-comparison-note--flat';
+        return v > 0 ? 'aqua-comparison-note--up' : 'aqua-comparison-note--down';
+    }
+
+    get comparisonText() {
+        const v = this.props.changePct || 0;
+        const arrow = Math.abs(v) < 0.05 ? '▬' : (v > 0 ? '▲' : '▼');
+        return `${arrow} ${Math.abs(v).toFixed(1)}% ${this.props.compareLabel}`;
     }
 
     _drawSparkline() {

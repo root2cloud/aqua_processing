@@ -15,8 +15,11 @@
     </div>
 
     <div class="aqua-kpi-tile__body">
-      <div class="aqua-kpi-tile__value"><t t-esc="formattedValue"/></div>
+      <div class="aqua-kpi-tile__value" t-att-title="exactValue"><t t-esc="formattedValue"/></div>
       <div class="aqua-kpi-tile__label"><t t-esc="props.label"/></div>
+      <t t-if="hasComparison">
+        <span t-att-class="'aqua-comparison-note ' + comparisonDirectionClass" t-esc="comparisonText"/>
+      </t>
     </div>
 
     <t t-if="props.sparklineData and props.sparklineData.length > 1">
