@@ -50,20 +50,35 @@ class QualityCheck(models.Model):
         help='Automatically derived from the Picking this check belongs to.')
     aqua_processing_order_id = fields.Many2one(
         'mrp.production', string='Processing Order', check_company=True,
-        help='Set this for an In-Process check that is not raised against a Picking.')
+        help='Auto-filled from the Work Order (see _aqua_auto_link_in_process below) for a '
+             'Shop Floor In-Process check. Can still be set manually for an In-Process check '
+             'that is not raised against a Work Order.')
     aqua_pack_order_id = fields.Many2one(
         'aqua.pack.order', string='Pack Order', check_company=True,
         help='Set this for a Final / Pre-Shipment check that is not raised against a Picking.')
 
+    # The routing operation (Cleaning / Peeling / Deveining / Freezing(IQF) / Grading /
+    # Packing -- see AQUA_OPERATION_WORKSHEETS below) this check's Work Order belongs to, if
+    # any. Lets the Quality Control dashboard break IPQC results down by station without
+    # re-deriving it from workorder_id every time.
+    aqua_operation_name = fields.Char(string='Shop Floor Operation', compute='_compute_aqua_operation_name',
+        store=True, help='The Work Order operation this In-Process check was raised against.')
+
+    @api.depends('workorder_id.operation_id.name')
+    def _compute_aqua_operation_name(self):
+        for rec in self:
+            rec.aqua_operation_name = rec.workorder_id.operation_id.name or False
+
     aqua_test_stage = fields.Selection([
-        ('raw_material', 'Raw Material (Receiving)'),
-        ('in_process', 'In-Process'),
-        ('final', 'Final / Pre-Shipment'),
+        ('raw_material', 'IQC — Incoming (Receiving)'),
+        ('in_process', 'IPQC — In-Process (Manufacturing)'),
+        ('final', 'Final QC (Pre-Shipment)'),
     ], string='Aqua Stage', tracking=True, default='raw_material',
         help='Which stage of the catch-to-customer lifecycle this check belongs to. Drives '
              'which of the Aqua QC Details fields below apply. Defaults to Raw Material '
-             'because that is the only stage currently auto-generated from a Control Point '
-             '(picking_id set); set it manually for In-Process / Final checks.')
+             '(IQC) because that is what a Control Point on a Picking auto-generates; '
+             '_aqua_auto_link_in_process() below switches it to In-Process (IPQC) for a '
+             'Shop Floor check raised against a Work Order instead.')
 
     certificate_id = fields.Many2one('aqua.certificate.of.analysis', string='Certificate of Analysis', copy=False)
 
@@ -218,6 +233,32 @@ class QualityCheck(models.Model):
             )
             if hard_fail:
                 rec.aqua_intake_decision = 'reject'
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        records = super().create(vals_list)
+        records._aqua_auto_link_in_process()
+        return records
+
+    def _aqua_auto_link_in_process(self):
+        """Shop Floor worksheet checks (Cleaning / Peeling / Deveining / Freezing(IQF) /
+        Grading / Packing -- see AQUA_OPERATION_WORKSHEETS below) are raised against a Work
+        Order, not a Picking, so aqua_catch_receipt_id (derived from picking_id) is never set
+        on them. Without this, they fall outside AQUA_QC_DOMAIN entirely and the actual
+        In-Process (IPQC) inspections happening on the plant floor never show up anywhere on
+        the Quality Control dashboard -- silently, since nothing errors.
+
+        Only fills in what's still blank (aqua_processing_order_id) or still at its default
+        (aqua_test_stage), so a manually-entered value is never overwritten.
+        """
+        for rec in self:
+            production = rec.production_id or rec.workorder_id.production_id
+            if not production:
+                continue
+            if not rec.aqua_processing_order_id:
+                rec.aqua_processing_order_id = production.id
+            if rec.aqua_test_stage == 'raw_material' and not rec.picking_id:
+                rec.aqua_test_stage = 'in_process'
 
     def write(self, vals):
         for rec in self:
