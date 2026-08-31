@@ -38,7 +38,6 @@ class AquaDashboard extends Component {
             shipment_breakdown: [],
             receipt_trend: [],
             trend_granularity_label: 'Weekly',
-            yield_trend: [],
             receipt_status_breakdown: [],
             spend_by_vendor: [],
             weight_by_vendor: [],
@@ -56,14 +55,11 @@ class AquaDashboard extends Component {
 
             total_processing_orders: 0,
             total_input_qty: 0,
-            avg_yield_pct: 0,
-            avg_byproduct_yield_pct: 0,
             wip_stock_kg: 0,
             wip_stock_by_product: [],
             active_blast_freeze_count: 0,
             processing_status_breakdown: [],
             input_qty_by_species: [],
-            byproduct_yield_trend: [],
             blast_freeze_status: [],
             recent_processing_table: [],
 
@@ -189,14 +185,6 @@ class AquaDashboard extends Component {
         return {
             labels: rows.map((x) => x.label),
             datasets: [{ label: "Receipts", data: rows.map((x) => x.value), borderColor: "#2C7A7B" }],
-        };
-    }
-
-    get yieldChartData() {
-        const rows = this.state.yield_trend;
-        return {
-            labels: rows.map((x) => x.label),
-            datasets: [{ label: "Yield %", data: rows.map((x) => x.value), borderColor: "#805AD5" }],
         };
     }
 
@@ -340,14 +328,6 @@ class AquaDashboard extends Component {
         return {
             labels: rows.map((x) => x.label),
             datasets: [{ label: "Staged for Processing (kg)", data: rows.map((x) => x.value), backgroundColor: "#805AD5" }],
-        };
-    }
-
-    get byproductYieldChartData() {
-        const rows = this.state.byproduct_yield_trend;
-        return {
-            labels: rows.map((x) => x.label),
-            datasets: [{ label: "By-product Yield %", data: rows.map((x) => x.value), borderColor: "#D69E2E" }],
         };
     }
 
@@ -512,10 +492,6 @@ class AquaDashboard extends Component {
         this._openDrill('receipt_trend', ctx.label, `Catch Receipts — ${ctx.label}`);
     }
 
-    onYieldChartClick(ctx) {
-        this._openDrill('yield_trend', ctx.label, `Processing Order — ${ctx.label}`);
-    }
-
     onColdRoomChartClick(ctx) {
         const room = this.state.cold_room_utilization.find((r) => r.name === ctx.label);
         if (!room) return;
@@ -598,10 +574,6 @@ class AquaDashboard extends Component {
 
     onWipStockByProductChartClick(ctx) {
         this._openDrill('wip_stock_by_product', ctx.label, `Staged for Processing — ${ctx.label}`);
-    }
-
-    onByproductYieldChartClick(ctx) {
-        this._openDrill('byproduct_yield_trend', ctx.label, `Processing Order — ${ctx.label}`);
     }
 
     onBlastFreezeChartClick(ctx) {

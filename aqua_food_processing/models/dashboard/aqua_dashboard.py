@@ -258,12 +258,8 @@ class AquaDashboard(models.TransientModel):
         if dt_from:
             mo_domain += [('create_date', '>=', dt_from), ('create_date', '<=', dt_to)]
         productions = self.env['mrp.production'].search(mo_domain)
-        done_productions = productions.filtered(lambda p: p.state == 'done')
         total_processing_orders = len(productions)
         total_input_qty = sum(productions.mapped('qty_input'))
-        avg_yield_pct = (
-            sum(done_productions.mapped('yield_percentage')) / len(done_productions)
-        ) if done_productions else 0.0
 
         return {
             'total_receipts': total_receipts,
@@ -276,7 +272,6 @@ class AquaDashboard(models.TransientModel):
             'ipqc_pass_rate': ipqc_pass_rate,
             'total_processing_orders': total_processing_orders,
             'total_input_qty': total_input_qty,
-            'avg_yield_pct': avg_yield_pct,
         }
 
     def get_dashboard_data(self, company_id=None, period='ytd', compare='none', date_from=None, date_to=None):
@@ -381,13 +376,6 @@ class AquaDashboard(models.TransientModel):
             row = receipt_buckets.setdefault(sort_key, {'label': label, 'value': 0})
             row['value'] += 1
         receipt_trend = [v for k, v in sorted(receipt_buckets.items())][-12:]
-
-        # --- Average yield % across recent processing orders ---
-        productions = Production.search([], limit=10, order='id desc')
-        yield_trend = [{
-            'label': p.name,
-            'value': round(p.yield_percentage, 1),
-        } for p in reversed(productions)]
 
         # ══════════════════ Procurement: purchase → storage flow ══════════════════
 
@@ -532,7 +520,7 @@ class AquaDashboard(models.TransientModel):
             'state': PICKING_STATE_LABELS.get(d.state, d.state or ''),
         } for d in recent_deliveries]
 
-        # ══════════════════ Processing: intake → yield → cold storage flow ══════════════════
+        # ══════════════════ Processing: intake → cold storage flow ══════════════════
 
         mo_domain = [('company_id', '=', company_id)] if company_id else []
         # Only Aqua processing orders are the ones with a source Catch Receipt.
@@ -541,12 +529,9 @@ class AquaDashboard(models.TransientModel):
             mo_domain_aqua += [('create_date', '>=', dt_from), ('create_date', '<=', dt_to)]
 
         all_productions = Production.search(mo_domain_aqua)
-        done_productions = all_productions.filtered(lambda p: p.state == 'done')
 
         total_processing_orders = len(all_productions)
         total_input_qty = sum(all_productions.mapped('qty_input'))
-        avg_yield_pct = (sum(done_productions.mapped('yield_percentage')) / len(done_productions)) if done_productions else 0.0
-        avg_byproduct_yield_pct = (sum(done_productions.mapped('byproduct_yield_percentage')) / len(done_productions)) if done_productions else 0.0
 
         # --- Raw material staged for Processing (WIP): quantity currently sitting in the
         # warehouse's Pre-/Post-Production locations -- material already committed to a
@@ -579,11 +564,7 @@ class AquaDashboard(models.TransientModel):
             [{'label': k, 'value': round(v, 1)} for k, v in species_input.items()],
             key=lambda x: x['value'], reverse=True)[:8]
 
-        # --- By-product yield trend, last 10 orders (line) ---
         recent_productions = Production.search(mo_domain_aqua, limit=10, order='id desc')
-        byproduct_yield_trend = [{
-            'label': p.name, 'value': round(p.byproduct_yield_percentage, 1),
-        } for p in reversed(recent_productions)]
 
         # --- Blast freeze cycle status (donut) ---
         BlastCycle = self.env['aqua.blast.freeze.cycle']
@@ -594,7 +575,7 @@ class AquaDashboard(models.TransientModel):
         } for g in blast_groups]
         active_blast_freeze_count = BlastCycle.search_count([('state', '=', 'running')])
 
-        # --- Recent Processing Orders table (intake -> yield -> state) ---
+        # --- Recent Processing Orders table (intake -> state) ---
         def _ipqc_status(production):
             checks = production.quality_test_ids.filtered(lambda c: c.aqua_test_stage == 'in_process')
             if not checks:
@@ -611,8 +592,6 @@ class AquaDashboard(models.TransientModel):
             'species': p.species_id.name or '',
             'catch_receipt': p.catch_receipt_id.name or '',
             'qty_input': round(p.qty_input, 1),
-            'yield_percentage': round(p.yield_percentage, 1),
-            'byproduct_yield_percentage': round(p.byproduct_yield_percentage, 1),
             'ipqc_status': _ipqc_status(p),
             'state': MO_STATE_LABELS.get(p.state, p.state),
         } for p in recent_productions]
@@ -750,7 +729,6 @@ class AquaDashboard(models.TransientModel):
                     'ipqc_pass_rate': ipqc_pass_rate,
                     'total_processing_orders': total_processing_orders,
                     'total_input_qty': total_input_qty,
-                    'avg_yield_pct': avg_yield_pct,
                 }
                 for key, cur in current_snapshot.items():
                     prior_val = prior.get(key, 0)
@@ -779,7 +757,6 @@ class AquaDashboard(models.TransientModel):
             'shipment_breakdown': shipment_breakdown,
             'receipt_trend': receipt_trend,
             'trend_granularity_label': trend_granularity_label,
-            'yield_trend': yield_trend,
             'receipt_status_breakdown': receipt_status_breakdown,
             'spend_by_vendor': spend_by_vendor,
             'weight_by_vendor': weight_by_vendor,
@@ -799,14 +776,11 @@ class AquaDashboard(models.TransientModel):
             # Processing tab
             'total_processing_orders': total_processing_orders,
             'total_input_qty': total_input_qty,
-            'avg_yield_pct': avg_yield_pct,
-            'avg_byproduct_yield_pct': avg_byproduct_yield_pct,
             'wip_stock_kg': wip_stock_kg,
             'wip_stock_by_product': wip_stock_by_product,
             'active_blast_freeze_count': active_blast_freeze_count,
             'processing_status_breakdown': processing_status_breakdown,
             'input_qty_by_species': input_qty_by_species,
-            'byproduct_yield_trend': byproduct_yield_trend,
             'blast_freeze_status': blast_freeze_status,
             'recent_processing_table': recent_processing_table,
 
@@ -1016,12 +990,6 @@ class AquaDashboard(models.TransientModel):
                 } for s in shipments],
             }
 
-        if drill_type in ('yield_trend', 'byproduct_yield_trend'):
-            productions = self.env['mrp.production'].search([
-                ('name', '=', filter_value),
-            ], limit=50)
-            return self._drill_processing_records(productions)
-
         if drill_type == 'processing_status_breakdown':
             mo_domain = domain + [('catch_receipt_id', '!=', False)]
             if filter_value:
@@ -1127,7 +1095,6 @@ class AquaDashboard(models.TransientModel):
                 {'field': 'name', 'label': 'Processing Order', 'fmt': 'string'},
                 {'field': 'species', 'label': 'Species', 'fmt': 'string'},
                 {'field': 'qty_input', 'label': 'Input (kg)', 'fmt': 'number'},
-                {'field': 'yield_percentage', 'label': 'Yield %', 'fmt': 'pct'},
                 {'field': 'state', 'label': 'Status', 'fmt': 'status'},
             ],
             'records': [{
@@ -1135,7 +1102,6 @@ class AquaDashboard(models.TransientModel):
                 'name': p.name,
                 'species': p.species_id.name or '',
                 'qty_input': round(p.qty_input, 1),
-                'yield_percentage': round(p.yield_percentage, 1),
                 'state': MO_STATE_LABELS.get(p.state, p.state),
             } for p in productions],
         }

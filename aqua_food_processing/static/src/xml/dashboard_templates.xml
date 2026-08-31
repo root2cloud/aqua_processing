@@ -65,15 +65,6 @@
                         isLoading="state.isLoading"
                         onDrill.bind="onDrillTotalStockOnHand"/>
                     <KpiTile
-                        label="'Avg Product Yield %'"
-                        value="state.avg_yield_pct"
-                        valueFmt="'pct'"
-                        icon="'fa-industry'"
-                        color="'#805AD5'"
-                        isLoading="state.isLoading"
-                        changePct="state.comparison_pct.avg_yield_pct"
-                        compareLabel="state.comparison_label"/>
-                    <KpiTile
                         label="'QC Pass Rate'"
                         value="state.qc_pass_rate"
                         valueFmt="'pct'"
@@ -156,22 +147,9 @@
                     </div>
                 </div>
 
-                <!-- One headline chart per department, matching the KPI row above:
-                     Processing's yield story and Quality's IQC/IPQC/Final split, both
-                     otherwise only visible if you click into that tab. -->
+                <!-- Headline chart matching the KPI row above: Quality's IQC/IPQC/Final
+                     split, otherwise only visible if you click into that tab. -->
                 <div class="o_aqua_chart_row">
-                    <div class="o_aqua_panel_wide">
-                        <t t-if="state.yield_trend.length">
-                            <ChartWidget
-                                title="'Recent Processing Orders — Yield %'"
-                                chartType="'bar'"
-                                data="yieldChartData"
-                                isLoading="state.isLoading"
-                                onElementClick.bind="onYieldChartClick"
-                                exportFilename="'aqua_yield_trend'"/>
-                        </t>
-                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Recent Processing Orders — Yield %</div></div><div class="o_aqua_empty">No processing orders recorded yet.</div></div></t>
-                    </div>
                     <div class="o_aqua_panel_narrow">
                         <t t-if="state.qc_stage_breakdown.length">
                             <ChartWidget
@@ -479,8 +457,8 @@
 
 
             <!-- ══════════════════════ PROCESSING TAB ══════════════════════ -->
-            <!-- Covers the full intake -> yield -> cold storage flow: Catch Receipt ->
-                 Processing Order (input qty, yield %, by-product yield %) -> Blast Freeze
+            <!-- Covers the full intake -> cold storage flow: Catch Receipt ->
+                 Processing Order (input qty) -> Blast Freeze
                  -> Cold Room storage. -->
             <t t-if="isTabActive('processing')">
                 <div class="o_aqua_kpi_row">
@@ -504,22 +482,6 @@
                         changePct="state.comparison_pct.total_input_qty"
                         compareLabel="state.comparison_label"
                         onDrill.bind="onDrillTotalProcessingOrders"/>
-                    <KpiTile
-                        label="'Avg Product Yield %'"
-                        value="state.avg_yield_pct"
-                        valueFmt="'pct'"
-                        icon="'fa-percent'"
-                        color="'#805AD5'"
-                        isLoading="state.isLoading"
-                        changePct="state.comparison_pct.avg_yield_pct"
-                        compareLabel="state.comparison_label"/>
-                    <KpiTile
-                        label="'Avg By-product Yield %'"
-                        value="state.avg_byproduct_yield_pct"
-                        valueFmt="'pct'"
-                        icon="'fa-recycle'"
-                        color="'#D69E2E'"
-                        isLoading="state.isLoading"/>
                     <KpiTile
                         label="'Active Blast Freeze Cycles'"
                         value="state.active_blast_freeze_count"
@@ -557,19 +519,7 @@
                 </div>
 
                 <div class="o_aqua_chart_row">
-                    <div class="o_aqua_panel_wide">
-                        <t t-if="state.yield_trend.length">
-                            <ChartWidget
-                                title="'Recent Processing Orders — Yield %'"
-                                chartType="'bar'"
-                                data="yieldChartData"
-                                isLoading="state.isLoading"
-                                onElementClick.bind="onYieldChartClick"
-                                exportFilename="'aqua_yield_trend'"/>
-                        </t>
-                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Recent Processing Orders — Yield %</div></div><div class="o_aqua_empty">No processing orders recorded yet.</div></div></t>
-                    </div>
-                    <div class="o_aqua_panel_narrow">
+                    <div class="o_aqua_panel_full">
                         <t t-if="state.processing_status_breakdown.length">
                             <ChartWidget
                                 title="'Processing Order Status'"
@@ -584,7 +534,7 @@
                 </div>
 
                 <div class="o_aqua_chart_row">
-                    <div class="o_aqua_panel_wide">
+                    <div class="o_aqua_panel_full">
                         <t t-if="state.input_qty_by_species.length">
                             <ChartWidget
                                 title="'Input Weight by Species (kg)'"
@@ -595,18 +545,6 @@
                                 exportFilename="'aqua_input_qty_by_species'"/>
                         </t>
                         <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Input Weight by Species (kg)</div></div><div class="o_aqua_empty">No processing orders recorded yet.</div></div></t>
-                    </div>
-                    <div class="o_aqua_panel_narrow">
-                        <t t-if="state.byproduct_yield_trend.length">
-                            <ChartWidget
-                                title="'By-product Yield % Trend'"
-                                chartType="'line'"
-                                data="byproductYieldChartData"
-                                isLoading="state.isLoading"
-                                onElementClick.bind="onByproductYieldChartClick"
-                                exportFilename="'aqua_byproduct_yield_trend'"/>
-                        </t>
-                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">By-product Yield % Trend</div></div><div class="o_aqua_empty">Not enough data yet for a trend line.</div></div></t>
                     </div>
                 </div>
 
@@ -668,7 +606,7 @@
                 <div class="o_aqua_panel_full">
                     <div class="aqua-chart-card">
                         <div class="aqua-chart-card__header">
-                            <div class="aqua-chart-card__title">Recent Processing Orders — Intake to Yield</div>
+                            <div class="aqua-chart-card__title">Recent Processing Orders</div>
                         </div>
                         <t t-if="state.recent_processing_table.length">
                             <div class="o_aqua_table_scroll">
@@ -679,8 +617,6 @@
                                         <th>Species</th>
                                         <th>Catch Receipt</th>
                                         <th>Input (kg)</th>
-                                        <th>Yield %</th>
-                                        <th>By-product Yield %</th>
                                         <th>IPQC</th>
                                         <th>Status</th>
                                     </tr>
@@ -692,8 +628,6 @@
                                             <td t-esc="row.species"/>
                                             <td t-esc="row.catch_receipt"/>
                                             <td t-esc="row.qty_input"/>
-                                            <td t-esc="row.yield_percentage"/>
-                                            <td t-esc="row.byproduct_yield_percentage"/>
                                             <td><span t-att-class="'aqua-badge ' + badgeClass(row.ipqc_status)" t-esc="row.ipqc_status"/></td>
                                             <td><span t-att-class="'aqua-badge ' + badgeClass(row.state)" t-esc="row.state"/></td>
                                         </tr>
