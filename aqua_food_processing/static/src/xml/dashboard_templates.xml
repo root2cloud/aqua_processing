@@ -431,6 +431,7 @@
                             <div class="aqua-chart-card__title">Catch Receipts</div>
                         </div>
                         <t t-if="state.recent_receipts_table.length">
+                            <div class="o_aqua_table_scroll">
                             <table class="o_aqua_table">
                                 <thead>
                                     <tr>
@@ -467,6 +468,7 @@
                                     </t>
                                 </tbody>
                             </table>
+                            </div>
                         </t>
                         <t t-else="">
                             <div class="o_aqua_empty">No catch receipts recorded yet.</div>
@@ -641,6 +643,7 @@
                             <div class="aqua-chart-card__title">Cold Room Detail</div>
                         </div>
                         <t t-if="state.cold_room_utilization.length">
+                            <div class="o_aqua_table_scroll">
                             <table class="o_aqua_table">
                                 <thead><tr><th>Room</th><th>Capacity (kg)</th><th>Active Lots</th><th>Utilization %</th></tr></thead>
                                 <tbody>
@@ -654,6 +657,7 @@
                                     </t>
                                 </tbody>
                             </table>
+                            </div>
                         </t>
                         <t t-else="">
                             <div class="o_aqua_empty">No cold rooms configured yet.</div>
@@ -667,6 +671,7 @@
                             <div class="aqua-chart-card__title">Recent Processing Orders — Intake to Yield</div>
                         </div>
                         <t t-if="state.recent_processing_table.length">
+                            <div class="o_aqua_table_scroll">
                             <table class="o_aqua_table">
                                 <thead>
                                     <tr>
@@ -695,6 +700,7 @@
                                     </t>
                                 </tbody>
                             </table>
+                            </div>
                         </t>
                         <t t-else="">
                             <div class="o_aqua_empty">No processing orders recorded yet.</div>
@@ -938,6 +944,7 @@
                             <div class="aqua-chart-card__title">Recent Quality Checks</div>
                         </div>
                         <t t-if="state.recent_qc_table.length">
+                            <div class="o_aqua_table_scroll">
                             <table class="o_aqua_table">
                                 <thead>
                                     <tr>
@@ -968,6 +975,7 @@
                                     </t>
                                 </tbody>
                             </table>
+                            </div>
                         </t>
                         <t t-else="">
                             <div class="o_aqua_empty">No quality checks recorded yet.</div>

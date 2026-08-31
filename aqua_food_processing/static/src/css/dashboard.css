@@ -347,6 +347,16 @@
 /* ── Table ──────────────────────────────────────────────── */
 
 .o_aqua_table { width: 100%; border-collapse: collapse; }
+.o_aqua_table_scroll {
+    max-height: 420px;
+    overflow-y: auto;
+}
+.o_aqua_table_scroll .o_aqua_table thead th {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 1;
+}
 .o_aqua_table th {
     text-align: left;
     font-size: 0.72rem;
