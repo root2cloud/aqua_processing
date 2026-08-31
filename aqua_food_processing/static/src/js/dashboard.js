@@ -288,6 +288,10 @@ class AquaDashboard extends Component {
         return `${this.state.trend_granularity_label} Receipt Trend`;
     }
 
+    get weightReceivedTrendTitle() {
+        return `Weight Received Trend (${this.state.trend_granularity_label}, kg)`;
+    }
+
     get purchaseSpendTrendTitle() {
         return `Purchase Spend Trend (${this.state.trend_granularity_label}, ₹)`;
     }

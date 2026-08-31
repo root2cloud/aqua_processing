@@ -327,14 +327,14 @@
                     <div class="o_aqua_panel_wide">
                         <t t-if="state.daily_weight_trend.length">
                             <ChartWidget
-                                title="'Daily Weight Received (kg)'"
+                                title="weightReceivedTrendTitle"
                                 chartType="'line'"
                                 data="dailyWeightTrendChartData"
                                 isLoading="state.isLoading"
                                 onElementClick.bind="onDailyWeightTrendChartClick"
                                 exportFilename="'aqua_daily_weight_received'"/>
                         </t>
-                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Daily Weight Received (kg)</div></div><div class="o_aqua_empty">Not enough data yet for a trend line.</div></div></t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title" t-esc="weightReceivedTrendTitle"/></div><div class="o_aqua_empty">Not enough data yet for a trend line.</div></div></t>
                     </div>
                 </div>
 

@@ -466,12 +466,16 @@ class AquaDashboard(models.TransientModel):
             {'label': 'In Stock Today', 'value': round(total_stock_on_hand, 1)},
         ]
 
-        # --- Daily weight received, last 14 days with activity (line) ---
-        daily_map = {}
+        # --- Weight received trend, same adaptive bucketing/title as the trend charts below ---
+        weight_trend_buckets = {}
         for r in sorted(receipts_for_weight.filtered('receipt_date'), key=lambda r: r.receipt_date):
-            day_key = r.receipt_date.strftime('%d %b')
-            daily_map[day_key] = daily_map.get(day_key, 0.0) + r.net_weight
-        daily_weight_trend = [{'label': k, 'value': round(v, 1)} for k, v in list(daily_map.items())[-14:]]
+            sort_key, label = bucket_fn(r.receipt_date)
+            row = weight_trend_buckets.setdefault(sort_key, {'label': label, 'value': 0.0})
+            row['value'] += r.net_weight
+        daily_weight_trend = [
+            {'label': v['label'], 'value': round(v['value'], 1)}
+            for k, v in sorted(weight_trend_buckets.items())
+        ][-12:]
 
         # --- Purchase spend trend (line), same adaptive bucketing as receipt_trend above ---
         po_buckets = {}
@@ -928,7 +932,7 @@ class AquaDashboard(models.TransientModel):
 
         if drill_type == 'daily_weight_trend':
             recs = self.env['aqua.catch.receipt'].search(domain + [('receipt_date', '!=', False)])
-            recs = recs.filtered(lambda r: r.receipt_date.strftime('%d %b') == filter_value)
+            recs = recs.filtered(lambda r: self._trend_bucket_matches(r.receipt_date, filter_value))
             return self._drill_receipts_records(recs)
 
         if drill_type == 'avg_price_per_kg_trend':
