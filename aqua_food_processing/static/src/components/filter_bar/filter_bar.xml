@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="aqua_food_processing.FilterBar">
+  <div class="aqua-filter-bar">
+
+    <select class="aqua-filter-bar__select" t-on-change="onPeriodChange" title="Period">
+      <t t-foreach="periodOptions" t-as="opt" t-key="opt.value">
+        <option t-att-value="opt.value" t-att-selected="state.period === opt.value">
+          <t t-esc="opt.label"/>
+        </option>
+      </t>
+    </select>
+
+    <t t-if="state.period === 'custom'">
+      <input type="date" class="aqua-filter-bar__date" t-att-value="state.customFrom"
+             t-on-change="onCustomFromChange" title="From"/>
+      <input type="date" class="aqua-filter-bar__date" t-att-value="state.customTo"
+             t-on-change="onCustomToChange" title="To"/>
+    </t>
+
+    <select class="aqua-filter-bar__select" t-on-change="onCompareChange" title="Compare to">
+      <t t-foreach="compareOptions" t-as="opt" t-key="opt.value">
+        <option t-att-value="opt.value" t-att-selected="state.compare === opt.value">
+          <t t-esc="opt.label"/>
+        </option>
+      </t>
+    </select>
+
+  </div>
+</t>
+
+</templates>
