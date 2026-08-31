@@ -44,7 +44,12 @@
                 <field name="species_id" optional="show"/>
                 <field name="product_id" string="Stage Output" optional="show"/>
                 <field name="qty_input" optional="show"/>
-                <field name="state"/>
+                <field name="state" widget="badge"
+                       decoration-muted="state == 'draft'"
+                       decoration-info="state in ('confirmed', 'progress')"
+                       decoration-warning="state == 'to_close'"
+                       decoration-success="state == 'done'"
+                       decoration-danger="state == 'cancel'"/>
             </list>
         </field>
     </record>
