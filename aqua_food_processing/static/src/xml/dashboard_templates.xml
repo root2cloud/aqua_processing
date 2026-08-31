@@ -145,14 +145,14 @@
                     <div class="o_aqua_panel_wide">
                         <t t-if="state.receipt_trend.length">
                             <ChartWidget
-                                title="'Weekly Receipt Trend'"
+                                title="receiptTrendTitle"
                                 chartType="'line'"
                                 data="receiptTrendChartData"
                                 isLoading="state.isLoading"
                                 onElementClick.bind="onReceiptTrendChartClick"
                                 exportFilename="'aqua_receipt_trend'"/>
                         </t>
-                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Weekly Receipt Trend</div></div><div class="o_aqua_empty">Not enough data yet for a trend line.</div></div></t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title" t-esc="receiptTrendTitle"/></div><div class="o_aqua_empty">Not enough data yet for a trend line.</div></div></t>
                     </div>
                 </div>
 
@@ -343,26 +343,26 @@
                     <div class="o_aqua_panel_wide">
                         <t t-if="state.purchase_spend_trend.length">
                             <ChartWidget
-                                title="'Purchase Spend Trend (Weekly, ₹)'"
+                                title="purchaseSpendTrendTitle"
                                 chartType="'line'"
                                 data="purchaseSpendTrendChartData"
                                 isLoading="state.isLoading"
                                 onElementClick.bind="onPurchaseSpendTrendChartClick"
                                 exportFilename="'aqua_purchase_spend_trend'"/>
                         </t>
-                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Purchase Spend Trend (Weekly, ₹)</div></div><div class="o_aqua_empty">No confirmed purchase orders yet.</div></div></t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title" t-esc="purchaseSpendTrendTitle"/></div><div class="o_aqua_empty">No confirmed purchase orders yet.</div></div></t>
                     </div>
                     <div class="o_aqua_panel_wide">
                         <t t-if="state.avg_price_per_kg_trend.length">
                             <ChartWidget
-                                title="'Avg Price / kg Trend (Weekly, ₹)'"
+                                title="avgPriceTrendTitle"
                                 chartType="'line'"
                                 data="avgPriceTrendChartData"
                                 isLoading="state.isLoading"
                                 onElementClick.bind="onAvgPriceTrendChartClick"
                                 exportFilename="'aqua_avg_price_trend'"/>
                         </t>
-                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Avg Price / kg Trend (Weekly, ₹)</div></div><div class="o_aqua_empty">Not enough data yet for a trend line.</div></div></t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title" t-esc="avgPriceTrendTitle"/></div><div class="o_aqua_empty">Not enough data yet for a trend line.</div></div></t>
                     </div>
                 </div>
 

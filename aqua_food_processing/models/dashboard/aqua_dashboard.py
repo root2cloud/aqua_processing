@@ -16,6 +16,19 @@ AQUA_QC_DOMAIN = [
 ]
 
 QC_STATE_LABELS = {'none': 'To Do', 'pass': 'Pass', 'fail': 'Fail'}
+
+# Display name for each FilterBar period, used in the trend chart titles (e.g. "This
+# Quarter Receipt Trend") -- deliberately the period's own name, not the bucket size
+# used to group its data points (see _trend_granularity).
+TREND_PERIOD_LABELS = {
+    'today': 'Today',
+    'week': 'This Week',
+    'month': 'This Month',
+    'quarter': 'This Quarter',
+    'ytd': 'YTD',
+    'all': 'All Time',
+    'custom': 'Custom Range',
+}
 QC_LABEL_TO_STATE = {v: k for k, v in QC_STATE_LABELS.items()}
 
 SHIPMENT_STATE_LABELS = {'booked': 'Booked', 'stuffed': 'Stuffed', 'dispatched': 'Dispatched', 'delivered': 'Delivered'}
@@ -146,6 +159,57 @@ class AquaDashboard(models.TransientModel):
         if not start_date or not end_date:
             return None, None
         return datetime.combine(start_date, time.min), datetime.combine(end_date, time.max)
+
+    def _trend_granularity(self, period, start_date, end_date):
+        """Pick a bucket size for the trend line charts (Receipt / Purchase Spend / Avg
+        Price per kg) to match the FilterBar's active period, by name rather than by
+        measuring the date span: Today buckets by day, This Week by week, and This
+        Month/This Quarter/Year to Date/All Time by month. A Custom range has no period
+        name to key off, so it falls back to sizing itself off the actual span.
+        Returns (bucket_fn, period_label) where bucket_fn(dt) -> (sort_key, display_label)
+        and period_label is the FilterBar period's own name (e.g. 'This Quarter', 'YTD') --
+        used as-is in the chart titles, regardless of what bucket size was picked above."""
+        def day_bucket(dt):
+            return dt.strftime('%Y-%m-%d'), dt.strftime('%d %b')
+
+        def week_bucket(dt):
+            monday = dt.date() - timedelta(days=dt.weekday()) if hasattr(dt, 'date') else dt - timedelta(days=dt.weekday())
+            return monday.strftime('%Y-%m-%d'), 'Week of ' + monday.strftime('%d %b')
+
+        def month_bucket(dt):
+            return dt.strftime('%Y-%m'), dt.strftime('%b %Y')
+
+        period_label = TREND_PERIOD_LABELS.get(period, 'Custom Range')
+
+        if period == 'today':
+            return day_bucket, period_label
+        if period in ('week', 'quarter'):
+            return week_bucket, period_label
+        if period in ('month', 'ytd', 'all'):
+            return month_bucket, period_label
+
+        # 'custom' (or anything unrecognized): no fixed name to key off, so size the
+        # buckets off the actual selected range instead (title still just says 'Custom Range').
+        span_days = (end_date - start_date).days if (start_date and end_date) else None
+        if span_days is not None and span_days <= 14:
+            return day_bucket, period_label
+        if span_days is not None and span_days <= 120:
+            return week_bucket, period_label
+        return month_bucket, period_label
+
+    def _trend_bucket_matches(self, dt, filter_value):
+        """Drill-through match for the three trend charts above: recomputes all three
+        possible bucket labels for dt (day/week/month) and checks filter_value against
+        each, since get_drill_records() (deliberately -- see its docstring) isn't told
+        which granularity was on screen when the point was clicked."""
+        if not dt or not filter_value:
+            return False
+        if dt.strftime('%d %b') == filter_value:
+            return True
+        monday = dt.date() - timedelta(days=dt.weekday()) if hasattr(dt, 'date') else dt - timedelta(days=dt.weekday())
+        if 'Week of ' + monday.strftime('%d %b') == filter_value:
+            return True
+        return dt.strftime('%b %Y') == filter_value
 
     def _pass_rate(self, QC, domain):
         total = QC.search_count(domain)
@@ -308,14 +372,15 @@ class AquaDashboard(models.TransientModel):
             'value': g['state_count'],
         } for g in ship_groups]
 
-        # --- Weekly receipt trend, last 8 weeks (line chart) ---
+        # --- Receipt trend (line chart), bucketed to match the FilterBar's active period ---
+        bucket_fn, trend_granularity_label = self._trend_granularity(period, start_date, end_date)
         receipts = Receipt.search(domain + [('receipt_date', '!=', False)], order='receipt_date')
-        weekly = {}
+        receipt_buckets = {}
         for r in receipts:
-            week_key = r.receipt_date.strftime('%Y-W%W')
-            weekly[week_key] = weekly.get(week_key, 0) + 1
-        weekly_sorted = sorted(weekly.items())[-8:]
-        receipt_trend = [{'label': k, 'value': v} for k, v in weekly_sorted]
+            sort_key, label = bucket_fn(r.receipt_date)
+            row = receipt_buckets.setdefault(sort_key, {'label': label, 'value': 0})
+            row['value'] += 1
+        receipt_trend = [v for k, v in sorted(receipt_buckets.items())][-12:]
 
         # --- Average yield % across recent processing orders ---
         productions = Production.search([], limit=10, order='id desc')
@@ -408,26 +473,31 @@ class AquaDashboard(models.TransientModel):
             daily_map[day_key] = daily_map.get(day_key, 0.0) + r.net_weight
         daily_weight_trend = [{'label': k, 'value': round(v, 1)} for k, v in list(daily_map.items())[-14:]]
 
-        # --- Purchase spend, last 8 weeks (line) ---
-        po_weekly = {}
+        # --- Purchase spend trend (line), same adaptive bucketing as receipt_trend above ---
+        po_buckets = {}
         for po in sorted(purchase_orders.filtered(lambda p: p.date_approve or p.date_order),
                           key=lambda p: p.date_approve or p.date_order):
             d = po.date_approve or po.date_order
-            week_key = d.strftime('%Y-W%W')
-            po_weekly[week_key] = po_weekly.get(week_key, 0.0) + po.amount_total
-        purchase_spend_trend = [{'label': k, 'value': round(v, 2)} for k, v in list(po_weekly.items())[-8:]]
+            sort_key, label = bucket_fn(d)
+            row = po_buckets.setdefault(sort_key, {'label': label, 'value': 0.0})
+            row['value'] += po.amount_total
+        purchase_spend_trend = [
+            {'label': v['label'], 'value': round(v['value'], 2)}
+            for k, v in sorted(po_buckets.items())
+        ][-12:]
 
-        # --- Avg price per kg, last 8 weeks (line) -- spend-weighted, so it tracks the real
-        # cost trend management pays for raw material, week over week (weeks with a PO but no
-        # matching weight received that week, or vice versa, are skipped -- nothing to divide). ---
-        weekly_weight = {}
+        # --- Avg price per kg trend (line) -- spend-weighted, so it tracks the real cost
+        # trend management pays for raw material, bucket over bucket (buckets with a PO but
+        # no matching weight received, or vice versa, are skipped -- nothing to divide). ---
+        weight_buckets = {}
         for r in receipts_for_weight.filtered('receipt_date'):
-            week_key = r.receipt_date.strftime('%Y-W%W')
-            weekly_weight[week_key] = weekly_weight.get(week_key, 0.0) + r.net_weight
-        avg_price_weeks = sorted(set(po_weekly) & set(weekly_weight))[-8:]
+            sort_key, label = bucket_fn(r.receipt_date)
+            row = weight_buckets.setdefault(sort_key, {'label': label, 'value': 0.0})
+            row['value'] += r.net_weight
+        avg_price_keys = sorted(set(po_buckets) & set(weight_buckets))[-12:]
         avg_price_per_kg_trend = [
-            {'label': wk, 'value': round(po_weekly[wk] / weekly_weight[wk], 2)}
-            for wk in avg_price_weeks if weekly_weight[wk]
+            {'label': po_buckets[k]['label'], 'value': round(po_buckets[k]['value'] / weight_buckets[k]['value'], 2)}
+            for k in avg_price_keys if weight_buckets[k]['value']
         ]
 
         # --- Recent Catch Receipts — Purchase to Storage: one row per delivery (the real
@@ -704,6 +774,7 @@ class AquaDashboard(models.TransientModel):
             'qc_breakdown': qc_breakdown,
             'shipment_breakdown': shipment_breakdown,
             'receipt_trend': receipt_trend,
+            'trend_granularity_label': trend_granularity_label,
             'yield_trend': yield_trend,
             'receipt_status_breakdown': receipt_status_breakdown,
             'spend_by_vendor': spend_by_vendor,
@@ -862,7 +933,7 @@ class AquaDashboard(models.TransientModel):
 
         if drill_type == 'avg_price_per_kg_trend':
             recs = self.env['aqua.catch.receipt'].search(domain + [('receipt_date', '!=', False)])
-            recs = recs.filtered(lambda r: r.receipt_date.strftime('%Y-W%W') == filter_value)
+            recs = recs.filtered(lambda r: self._trend_bucket_matches(r.receipt_date, filter_value))
             return self._drill_receipts_records(recs)
 
         if drill_type == 'purchase_spend_trend':
@@ -872,7 +943,7 @@ class AquaDashboard(models.TransientModel):
             pos = self.env['purchase.order'].search(po_domain)
             pos = pos.filtered(
                 lambda p: (p.date_approve or p.date_order)
-                and (p.date_approve or p.date_order).strftime('%Y-W%W') == filter_value)
+                and self._trend_bucket_matches(p.date_approve or p.date_order, filter_value))
             return {
                 'model': 'purchase.order',
                 'columns': [
@@ -892,7 +963,7 @@ class AquaDashboard(models.TransientModel):
 
         if drill_type == 'receipt_trend':
             recs = self.env['aqua.catch.receipt'].search(domain + [('receipt_date', '!=', False)])
-            recs = recs.filtered(lambda r: r.receipt_date.strftime('%Y-W%W') == filter_value)
+            recs = recs.filtered(lambda r: self._trend_bucket_matches(r.receipt_date, filter_value))
             return self._drill_receipts_records(recs)
 
         if drill_type in ('qc_pass_rate', 'qc_breakdown'):

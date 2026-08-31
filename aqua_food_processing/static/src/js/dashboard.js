@@ -37,6 +37,7 @@ class AquaDashboard extends Component {
             qc_breakdown: [],
             shipment_breakdown: [],
             receipt_trend: [],
+            trend_granularity_label: 'Weekly',
             yield_trend: [],
             receipt_status_breakdown: [],
             spend_by_vendor: [],
@@ -283,6 +284,18 @@ class AquaDashboard extends Component {
         };
     }
 
+    get receiptTrendTitle() {
+        return `${this.state.trend_granularity_label} Receipt Trend`;
+    }
+
+    get purchaseSpendTrendTitle() {
+        return `Purchase Spend Trend (${this.state.trend_granularity_label}, ₹)`;
+    }
+
+    get avgPriceTrendTitle() {
+        return `Avg Price / kg Trend (${this.state.trend_granularity_label}, ₹)`;
+    }
+
     get purchaseSpendTrendChartData() {
         const rows = this.state.purchase_spend_trend;
         return {
@@ -492,7 +505,7 @@ class AquaDashboard extends Component {
     }
 
     onReceiptTrendChartClick(ctx) {
-        this._openDrill('receipt_trend', ctx.label, `Catch Receipts — week ${ctx.label}`);
+        this._openDrill('receipt_trend', ctx.label, `Catch Receipts — ${ctx.label}`);
     }
 
     onYieldChartClick(ctx) {
@@ -544,11 +557,11 @@ class AquaDashboard extends Component {
     }
 
     onPurchaseSpendTrendChartClick(ctx) {
-        this._openDrill('purchase_spend_trend', ctx.label, `Purchase Orders — week ${ctx.label}`);
+        this._openDrill('purchase_spend_trend', ctx.label, `Purchase Orders — ${ctx.label}`);
     }
 
     onAvgPriceTrendChartClick(ctx) {
-        this._openDrill('avg_price_per_kg_trend', ctx.label, `Catch Receipts — week ${ctx.label}`);
+        this._openDrill('avg_price_per_kg_trend', ctx.label, `Catch Receipts — ${ctx.label}`);
     }
 
     onRecentDeliveryRowClick(pickingId) {
