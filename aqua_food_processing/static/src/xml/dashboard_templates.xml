@@ -719,14 +719,14 @@
                     <div class="o_aqua_panel_narrow">
                         <t t-if="state.qc_trend.length">
                             <ChartWidget
-                                title="'Weekly QC Checks Trend'"
+                                title="qcTrendTitle"
                                 chartType="'line'"
                                 data="qcTrendChartData"
                                 isLoading="state.isLoading"
                                 onElementClick.bind="onQcTrendChartClick"
                                 exportFilename="'aqua_qc_trend'"/>
                         </t>
-                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Weekly QC Checks Trend</div></div><div class="o_aqua_empty">Not enough data yet for a trend line.</div></div></t>
+                        <t t-else=""><div class="aqua-chart-card"><div class="aqua-chart-card__header"><div class="aqua-chart-card__title" t-esc="qcTrendTitle"/></div><div class="o_aqua_empty">Not enough data yet for a trend line.</div></div></t>
                     </div>
                 </div>
 

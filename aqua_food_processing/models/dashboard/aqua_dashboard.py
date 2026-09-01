@@ -674,14 +674,14 @@ class AquaDashboard(models.TransientModel):
             'sulphite': [sulphite_groups.get(k, 0) for k in ('not_tested', 'not_detected', 'detected')],
         }
 
-        # --- Weekly QC checks trend, last 8 weeks (line) ---
+        # --- QC checks trend, bucketed to match the FilterBar's active period (line) ---
         qc_with_dates = qc_all.filtered(lambda c: c.control_date)
-        qc_weekly = {}
+        qc_buckets = {}
         for c in qc_with_dates:
-            week_key = c.control_date.strftime('%Y-W%W')
-            qc_weekly[week_key] = qc_weekly.get(week_key, 0) + 1
-        qc_weekly_sorted = sorted(qc_weekly.items())[-8:]
-        qc_trend = [{'label': k, 'value': v} for k, v in qc_weekly_sorted]
+            sort_key, label = bucket_fn(c.control_date)
+            row = qc_buckets.setdefault(sort_key, {'label': label, 'value': 0})
+            row['value'] += 1
+        qc_trend = [v for k, v in sorted(qc_buckets.items())][-12:]
 
         # --- Rejected quantity by species, raw material rejections (horizontal bar) ---
         rejected_by_species = {}
@@ -1052,7 +1052,7 @@ class AquaDashboard(models.TransientModel):
 
         if drill_type == 'qc_trend':
             checks = self.env['quality.check'].search(AQUA_QC_DOMAIN)
-            checks = checks.filtered(lambda c: c.control_date and c.control_date.strftime('%Y-W%W') == filter_value)
+            checks = checks.filtered(lambda c: c.control_date and self._trend_bucket_matches(c.control_date, filter_value))
             return self._drill_qc_records_records(checks)
 
         if drill_type == 'rejected_qty_by_species':

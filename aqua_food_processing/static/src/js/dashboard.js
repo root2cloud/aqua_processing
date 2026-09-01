@@ -276,6 +276,10 @@ class AquaDashboard extends Component {
         return `${this.state.trend_granularity_label} Receipt Trend`;
     }
 
+    get qcTrendTitle() {
+        return `${this.state.trend_granularity_label} QC Checks Trend`;
+    }
+
     get weightReceivedTrendTitle() {
         return `Weight Received Trend (${this.state.trend_granularity_label}, kg)`;
     }
@@ -599,7 +603,7 @@ class AquaDashboard extends Component {
     }
 
     onQcTrendChartClick(ctx) {
-        this._openDrill('qc_trend', ctx.label, `Quality Checks — week ${ctx.label}`);
+        this._openDrill('qc_trend', ctx.label, `Quality Checks — ${ctx.label}`);
     }
 
     onRejectedQtyBySpeciesChartClick(ctx) {
