@@ -83,6 +83,19 @@ class AquaDashboard extends Component {
             rejected_qty_by_species: [],
             recent_qc_table: [],
 
+            budget_id: false,
+            budget_name: '',
+            budget_state: '',
+            budget_period_from: false,
+            budget_period_to: false,
+            budget_total_planned: 0,
+            budget_total_practical: 0,
+            budget_total_theoretical: 0,
+            budget_total_gross_margin: 0,
+            budget_achievement_pct: 0,
+            budget_lines_table: [],
+            budget_chart: [],
+
             drill: {
                 isOpen: false,
                 title: '',
@@ -399,6 +412,29 @@ class AquaDashboard extends Component {
             labels: rows.map((x) => x.label),
             datasets: [{ label: "Rejected (kg)", data: rows.map((x) => x.value), backgroundColor: "#C53030" }],
         };
+    }
+
+    // ---- Budget tab: Planned vs Practical (Actual), one bar pair per cost center ----
+    get budgetChartData() {
+        const rows = this.state.budget_chart;
+        return {
+            labels: rows.map((x) => x.label),
+            datasets: [
+                { label: "Planned", data: rows.map((x) => x.planned), backgroundColor: "#3182CE" },
+                { label: "Practical (Actual)", data: rows.map((x) => x.practical), backgroundColor: "#38A169" },
+            ],
+        };
+    }
+
+    onOpenBudgetRecord() {
+        if (!this.state.budget_id) return;
+        this.action.doAction({
+            type: 'ir.actions.act_window',
+            res_model: 'budget.budget',
+            res_id: this.state.budget_id,
+            views: [[false, 'form']],
+            target: 'current',
+        });
     }
 
     // ---- Drill-down: KPI tile clicks ----

@@ -738,6 +738,91 @@ class AquaDashboard(models.TransientModel):
                         comparison_pct[key] = 100.0 if cur else 0.0
                 comparison_label = COMPARE_LABELS.get(compare, '')
 
+        # --- Budget Management overview (Accounting > Budgets), scoped to this company.
+        # Shows the currently-active budget (period covering today), falling back to the
+        # most recently-ended one if nothing is active right now. Draft/Cancelled budgets
+        # are excluded since they aren't real commitments yet.
+        today = fields.Date.context_today(self)
+        budget_domain = [('state', 'not in', ['draft', 'cancel'])]
+        if company_id:
+            budget_domain += [('company_id', '=', company_id)]
+        active_budget = self.env['budget.budget'].search(
+            budget_domain + [('date_from', '<=', today), ('date_to', '>=', today)],
+            order='date_from desc', limit=1)
+        if not active_budget:
+            active_budget = self.env['budget.budget'].search(
+                budget_domain, order='date_to desc', limit=1)
+
+        budget_id = False
+        budget_name = ''
+        budget_state = ''
+        budget_period_from = False
+        budget_period_to = False
+        budget_lines_table = []
+        budget_chart = []
+        budget_total_planned = 0.0
+        budget_total_practical = 0.0
+        budget_total_theoretical = 0.0
+        budget_total_gross_margin = 0.0
+
+        if active_budget:
+            budget_id = active_budget.id
+            budget_name = active_budget.name
+            budget_state = active_budget.state
+            budget_period_from = active_budget.date_from
+            budget_period_to = active_budget.date_to
+
+            # Gross Margin, one number per cost center -- computed the same way as the
+            # native "Gross Margin" smart button on the Analytic Account form itself
+            # (SUM of account_analytic_line.amount for that account; positive lines are
+            # revenue-side, negative are cost-side). That button is a lifetime total for
+            # the account, not scoped to any period, so this mirrors that: no date filter,
+            # unlike Practical Amount above which IS scoped to the budget line's period.
+            gross_margin_by_account = {}
+            analytic_ids = active_budget.budget_line.mapped('analytic_account_id').ids
+            if analytic_ids:
+                query = """
+                    SELECT account_id, COALESCE(SUM(amount), 0)
+                    FROM account_analytic_line
+                    WHERE account_id = ANY(%s)
+                """
+                params = [analytic_ids]
+                if company_id:
+                    query += " AND (company_id IS NULL OR company_id = %s)"
+                    params.append(company_id)
+                query += " GROUP BY account_id"
+                self.env.cr.execute(query, params)
+                gross_margin_by_account = dict(self.env.cr.fetchall())
+
+            for line in active_budget.budget_line:
+                planned = line.planned_amount
+                practical = line.practical_amount
+                theoretical = line.theoretical_amount
+                gross_margin = gross_margin_by_account.get(line.analytic_account_id.id, 0.0)
+                budget_total_planned += planned
+                budget_total_practical += practical
+                budget_total_theoretical += theoretical
+                budget_total_gross_margin += gross_margin
+                label = line.analytic_account_id.name or line.general_budget_id.name or '—'
+                budget_lines_table.append({
+                    'position': line.general_budget_id.name or '—',
+                    'analytic_account': line.analytic_account_id.name or '—',
+                    'planned': round(planned, 1),
+                    'practical': round(practical, 1),
+                    'theoretical': round(theoretical, 1),
+                    'achievement': round(line.percentage, 1),
+                    'gross_margin': round(gross_margin, 1),
+                })
+                budget_chart.append({'label': label, 'planned': round(planned, 1), 'practical': round(practical, 1)})
+
+        budget_achievement_pct = round(
+            (budget_total_practical / budget_total_theoretical * 100.0)
+            if budget_total_theoretical else 0.0, 1)
+        budget_total_gross_margin = round(budget_total_gross_margin, 1)
+        budget_total_planned = round(budget_total_planned, 1)
+        budget_total_practical = round(budget_total_practical, 1)
+        budget_total_theoretical = round(budget_total_theoretical, 1)
+
         return {
             'comparison_pct': comparison_pct,
             'comparison_label': comparison_label,
@@ -804,6 +889,20 @@ class AquaDashboard(models.TransientModel):
             'qc_trend': qc_trend,
             'rejected_qty_by_species': rejected_qty_by_species,
             'recent_qc_table': recent_qc_table,
+
+            # Budget tab (Accounting > Budgets)
+            'budget_id': budget_id,
+            'budget_name': budget_name,
+            'budget_state': budget_state,
+            'budget_period_from': budget_period_from,
+            'budget_period_to': budget_period_to,
+            'budget_total_planned': budget_total_planned,
+            'budget_total_practical': budget_total_practical,
+            'budget_total_theoretical': budget_total_theoretical,
+            'budget_total_gross_margin': budget_total_gross_margin,
+            'budget_achievement_pct': budget_achievement_pct,
+            'budget_lines_table': budget_lines_table,
+            'budget_chart': budget_chart,
         }
 
     # ------------------------------------------------------------------

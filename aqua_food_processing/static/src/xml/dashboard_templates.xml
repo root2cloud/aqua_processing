@@ -38,6 +38,12 @@
                         t-on-click="() => this.setActiveTab('quality')">
                     <i class="fa fa-flask mr-1"/> Quality Control
                 </button>
+                <button type="button"
+                        class="o_aqua_tab_btn"
+                        t-att-class="{ o_aqua_tab_active: isTabActive('budget') }"
+                        t-on-click="() => this.setActiveTab('budget')">
+                    <i class="fa fa-money mr-1"/> Budget
+                </button>
             </div>
 
             <!-- ══════════════════════ OVERVIEW TAB ══════════════════════ -->
@@ -916,6 +922,141 @@
                         </t>
                     </div>
                 </div>
+            </t>
+
+            <!-- ══════════════════════ BUDGET TAB ══════════════════════ -->
+            <!-- Reads the currently-active Budget (Accounting > Budgets) for this
+                 company, the same record configured under Analytic Accounts /
+                 Budgetary Positions / Budgets. This tab is a read-only summary;
+                 all editing still happens in Accounting. -->
+            <t t-if="isTabActive('budget')">
+                <div class="o_aqua_section_label">
+                    <t t-if="state.budget_name" t-esc="state.budget_name"/>
+                    <t t-else="">No Active Budget</t>
+                    <t t-if="state.budget_period_from">
+                        (<t t-esc="state.budget_period_from"/> – <t t-esc="state.budget_period_to"/>)
+                    </t>
+                </div>
+
+                <t t-if="!state.budget_id">
+                    <div class="o_aqua_panel_full">
+                        <div class="o_aqua_empty">No confirmed budget found for this company. Set one up under Accounting → Budgets.</div>
+                    </div>
+                </t>
+
+                <t t-if="state.budget_id">
+                    <div class="o_aqua_kpi_row">
+                        <KpiTile
+                            label="'Total Planned'"
+                            value="state.budget_total_planned"
+                            valueFmt="'number'"
+                            icon="'fa-bullseye'"
+                            color="'#3182CE'"
+                            isLoading="state.isLoading"
+                            onDrill.bind="onOpenBudgetRecord"/>
+                        <KpiTile
+                            label="'Total Practical (Actual)'"
+                            value="state.budget_total_practical"
+                            valueFmt="'number'"
+                            icon="'fa-inr'"
+                            color="'#38A169'"
+                            isLoading="state.isLoading"
+                            onDrill.bind="onOpenBudgetRecord"/>
+                        <KpiTile
+                            label="'Total Theoretical (Pace)'"
+                            value="state.budget_total_theoretical"
+                            valueFmt="'number'"
+                            icon="'fa-clock-o'"
+                            color="'#D69E2E'"
+                            isLoading="state.isLoading"
+                            onDrill.bind="onOpenBudgetRecord"/>
+                        <KpiTile
+                            label="'Achievement'"
+                            value="state.budget_achievement_pct"
+                            valueFmt="'pct'"
+                            icon="'fa-line-chart'"
+                            color="'#805AD5'"
+                            isLoading="state.isLoading"
+                            onDrill.bind="onOpenBudgetRecord"/>
+                        <KpiTile
+                            label="'Gross Margin'"
+                            value="state.budget_total_gross_margin"
+                            valueFmt="'number'"
+                            icon="'fa-inr'"
+                            color="'#DD6B20'"
+                            isLoading="state.isLoading"
+                            onDrill.bind="onOpenBudgetRecord"/>
+                    </div>
+
+                    <div class="o_aqua_chart_row">
+                        <div class="o_aqua_panel_full">
+                            <t t-if="state.budget_chart.length">
+                                <ChartWidget
+                                    title="'Planned vs Practical by Cost Center'"
+                                    chartType="'bar'"
+                                    data="budgetChartData"
+                                    isLoading="state.isLoading"
+                                    exportFilename="'aqua_budget_chart'"/>
+                            </t>
+                            <t t-else="">
+                                <div class="aqua-chart-card">
+                                    <div class="aqua-chart-card__header"><div class="aqua-chart-card__title">Planned vs Practical by Cost Center</div></div>
+                                    <div class="o_aqua_empty">No budget lines added yet.</div>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+
+                    <div class="o_aqua_section_label">Budget Lines</div>
+                    <div class="o_aqua_panel_full" style="margin-bottom: 4px;">
+                        <div class="o_aqua_empty" style="text-align:left; padding: 0 0 8px 0;">
+                            Gross Margin is a lifetime total for the cost center (matches the smart button on the Analytic Account form) — unlike Planned/Practical/Theoretical, it is not limited to this budget's period.
+                        </div>
+                    </div>
+                    <div class="o_aqua_panel_full">
+                        <div class="aqua-chart-card">
+                            <div class="aqua-chart-card__header">
+                                <div class="aqua-chart-card__title">By Cost Center</div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" t-on-click="onOpenBudgetRecord">
+                                    Open in Accounting
+                                </button>
+                            </div>
+                            <t t-if="state.budget_lines_table.length">
+                                <div class="o_aqua_table_scroll">
+                                <table class="o_aqua_table">
+                                    <thead>
+                                        <tr>
+                                            <th>Budgetary Position</th>
+                                            <th>Analytic Account</th>
+                                            <th>Planned</th>
+                                            <th>Practical</th>
+                                            <th>Theoretical</th>
+                                            <th>Achievement</th>
+                                            <th>Gross Margin</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="state.budget_lines_table" t-as="row" t-key="row_index">
+                                            <tr class="o_aqua_table_row_clickable" t-on-click="onOpenBudgetRecord">
+                                                <td t-esc="row.position"/>
+                                                <td t-esc="row.analytic_account"/>
+                                                <td t-esc="row.planned"/>
+                                                <td t-esc="row.practical"/>
+                                                <td t-esc="row.theoretical"/>
+                                                <td><t t-esc="row.achievement"/>%</td>
+                                                <td t-esc="row.gross_margin"/>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                                </div>
+                            </t>
+                            <t t-else="">
+                                <div class="o_aqua_empty">No budget lines added yet.</div>
+                            </t>
+                        </div>
+                    </div>
+                </t>
             </t>
 
             <DrillPanel
