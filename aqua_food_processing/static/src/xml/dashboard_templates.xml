@@ -1008,11 +1008,6 @@
                     </div>
 
                     <div class="o_aqua_section_label">Budget Lines</div>
-                    <div class="o_aqua_panel_full" style="margin-bottom: 4px;">
-                        <div class="o_aqua_empty" style="text-align:left; padding: 0 0 8px 0;">
-                            Gross Margin is a lifetime total for the cost center (matches the smart button on the Analytic Account form) — unlike Planned/Practical/Theoretical, it is not limited to this budget's period.
-                        </div>
-                    </div>
                     <div class="o_aqua_panel_full">
                         <div class="aqua-chart-card">
                             <div class="aqua-chart-card__header">
