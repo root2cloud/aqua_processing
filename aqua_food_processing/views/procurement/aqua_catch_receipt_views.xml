@@ -125,14 +125,15 @@
                  the later "Aqua Processing: Quality Control" and Storage legs of a 3-step
                  receiving route, so the same Gross/Tare/Net Weight and Shrimp Counting entered
                  at the gate (Receipt) appeared to repeat, uneditable-looking and out of place,
-                 on the Quality Control transfer too (see AQP/QC/00019). Weighment/Shrimp
-                 Counting is a one-time, gate-only measurement, so it's now shown only on the
+                 on the Quality Control transfer too (see AQP/QC/00019), and also on the
+                 Manufacturing "Store Finished Product" transfer, where it makes no sense at all
+                 (see AQP/SFP/00001). Weighment/Shrimp Counting is a one-time, gate-only
+                 measurement taken when raw material is received, so it's now shown only on the
                  actual Receiving transfer (picking_type_id.code == 'incoming'). The Quality
                  Control step gets its own, dedicated Raw Material Quality Check section instead;
                  see the xpath below. -->
             <xpath expr="//notebook" position="before">
-                <field name="aqua_is_qc_step" invisible="1"/>
-                <group col="2" invisible="aqua_is_qc_step">
+                <group col="2" invisible="picking_type_code != 'incoming'">
                     <group string="Weighment">
                         <field name="aqua_gross_weight"/>
                         <field name="aqua_tare_weight"/>
