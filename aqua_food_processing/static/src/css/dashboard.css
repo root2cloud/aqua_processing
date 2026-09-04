@@ -1,526 +1,357 @@
-:root {
-    --aqua-teal:        #2C7A7B;
-    --aqua-teal-dark:   #1B4B4C;
-    --aqua-teal-light:  #E6FFFA;
-    --aqua-blue:        #3182CE;
-    --aqua-amber:       #D69E2E;
-    --aqua-red:         #C53030;
-    --aqua-purple:      #805AD5;
-    --aqua-green:       #38A169;
-
-    --aqua-white:        #FFFFFF;
-    --aqua-border:       #E7EAEE;
-    --aqua-canvas:       #F4F6F8;
-    --aqua-text:         #17202A;
-    --aqua-text-muted:   #6B7684;
-
-    --aqua-shadow:       0 1px 2px rgba(16,24,40,0.06), 0 1px 1px rgba(16,24,40,0.04);
-    --aqua-shadow-hover: 0 12px 28px rgba(16,24,40,0.12);
-    --aqua-radius:       14px;
-    --aqua-radius-sm:    9px;
-    --aqua-tile-height:  128px;
+/* ==========================================================================
+   Inter typeface, self-hosted (same policy as the locally-bundled Chart.js —
+   no runtime CDN calls). Only the 4 weights the dashboard actually uses.
+   ========================================================================== */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/aqua_food_processing/static/src/fonts/Inter-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/aqua_food_processing/static/src/fonts/Inter-Medium.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/aqua_food_processing/static/src/fonts/Inter-SemiBold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/aqua_food_processing/static/src/fonts/Inter-Bold.woff2') format('woff2');
 }
 
-* { box-sizing: border-box; }
+/* ==========================================================================
+   Aqua Processing Dashboard — visual system
+   Ported 1:1 from the approved HTML mockups (aqua_dashboard_*.html).
+   Scoped under .o_aqua_dashboard so it never leaks into the rest of Odoo.
+   Icon set: Font Awesome (already bundled with the Odoo backend — no
+   external CDN calls at runtime, matching this module's existing policy
+   for chart.js). Font: Inter with a system-font fallback stack, again to
+   avoid a runtime Google Fonts request.
+   ========================================================================== */
 
 .o_aqua_dashboard {
-    padding: 0 0 32px;
-    background: var(--aqua-canvas);
-    min-height: 100%;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    color: var(--aqua-text);
-    -webkit-font-smoothing: antialiased;
+  --bg-page:#F3F5F7; --card:#FFFFFF; --ink:#12181F; --ink-soft:#5B6672; --ink-mute:#9AA3AD; --line:#EAEDF1;
+  --blue:#2F6FED; --blue-tint:#EAF1FE; --teal:#12A594; --teal-tint:#E4F7F4; --amber:#E8940C; --amber-tint:#FDF2E0;
+  --coral:#E2543A; --coral-tint:#FDEAE6; --purple:#7C6CF0; --purple-tint:#EFEDFE; --green:#3AA655; --green-tint:#E7F6EA;
+  --radius-lg:26px; --radius-md:20px; --radius-sm:14px;
+
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  background:var(--bg-page) !important;
+  color:var(--ink);
+  min-height:100%;
+  width:100%;
+  box-sizing:border-box;
+}
+.o_aqua_dashboard *{ box-sizing:border-box; }
+.o_aqua_dashboard .aqua-main{ padding:26px 48px 60px; max-width:1400px; margin:0 auto; }
+
+/* ---- topbar ---- */
+.o_aqua_dashboard .topbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:16px; }
+.o_aqua_dashboard .topbar h1{ font-size:24px; font-weight:700; margin:0; }
+.o_aqua_dashboard .topbar p{ font-size:13px; color:var(--ink-soft); margin:2px 0 0; }
+.o_aqua_dashboard .top-actions{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.o_aqua_dashboard .pill-input{ display:flex; align-items:center; gap:8px; background:#FFFFFF !important; border:1px solid var(--line); border-radius:16px; padding:9px 16px; font-size:13px; color:var(--ink-mute); position:relative; box-shadow:none !important; }
+.o_aqua_dashboard .pill-input.filter-pill{ font-weight:600; color:var(--ink); }
+.o_aqua_dashboard .pill-input select{
+  appearance:none; -webkit-appearance:none; -moz-appearance:none;
+  border:none; background:transparent; font:inherit; color:inherit; font-weight:600;
+  padding:0; margin:0; cursor:pointer; outline:none;
+}
+.o_aqua_dashboard .pill-input input[type="date"]{ border:none; background:transparent; font:inherit; color:inherit; padding:0; outline:none; }
+.o_aqua_dashboard .pill-input .fa{ font-size:13px; color:inherit; }
+.o_aqua_dashboard .pill-input .fa-chevron-down{ font-size:10px; color:var(--ink-mute); }
+.o_aqua_dashboard .pill-input.search-pill{ min-width:180px; color:var(--ink-mute); }
+.o_aqua_dashboard .icon-btn{ width:40px; height:40px; border-radius:14px; background:#FFFFFF !important; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; position:relative; color:var(--ink-soft); cursor:pointer; box-shadow:none !important; }
+.o_aqua_dashboard .badge-dot{ position:absolute; top:6px; right:6px; width:8px; height:8px; border-radius:50%; background:var(--coral); }
+.o_aqua_dashboard .export-btn{ background:var(--ink); color:#fff; border:none; border-radius:16px; padding:10px 18px; font-size:13px; font-weight:600; display:flex; align-items:center; gap:8px; cursor:pointer; }
+
+/* ---- grid / card primitives ---- */
+.o_aqua_dashboard .grid{ display:grid; gap:18px; }
+.o_aqua_dashboard .g-hero{ grid-template-columns:2fr 1fr; margin-bottom:18px; }
+.o_aqua_dashboard .g-stats{ grid-template-columns:repeat(4,1fr); margin-bottom:18px; }
+.o_aqua_dashboard .g-mid{ grid-template-columns:1.1fr 1fr 1fr; margin-bottom:18px; }
+.o_aqua_dashboard .g-mid-even{ grid-template-columns:1fr 1fr 1fr; margin-bottom:18px; }
+.o_aqua_dashboard .g-bottom{ grid-template-columns:1fr 1fr; margin-bottom:18px; }
+.o_aqua_dashboard .g-bottom-wide{ grid-template-columns:1.1fr 1fr; margin-bottom:18px; }
+.o_aqua_dashboard .g-kpi3{ grid-template-columns:repeat(3,1fr); margin-bottom:18px; }
+.o_aqua_dashboard .g-kpi4{ grid-template-columns:repeat(4,1fr); margin-bottom:18px; }
+.o_aqua_dashboard .g-kpi5{ grid-template-columns:repeat(5,1fr); margin-bottom:18px; }
+.o_aqua_dashboard .g-kpi6{ grid-template-columns:repeat(6,1fr); margin-bottom:18px; }
+.o_aqua_dashboard .g-two{ grid-template-columns:1fr 1fr; margin-bottom:18px; }
+
+/* !important here is deliberate: Odoo's backend theme also ships a
+   Bootstrap `.aqua-card` component (background/border/box-shadow), and
+   depending on asset load order it can win over ours and dull the white
+   the mockups use. Force our card surface so it always renders pure
+   white on the light-gray page, exactly like the mockups. */
+.o_aqua_dashboard .aqua-card{
+  background:#FFFFFF !important;
+  border-radius:var(--radius-lg) !important;
+  padding:24px !important;
+  border:1px solid var(--line) !important;
+  box-shadow:none !important;
+  background-image:none !important;
+}
+.o_aqua_dashboard .aqua-card h3{ font-size:15px; font-weight:700; margin:0; }
+.o_aqua_dashboard .aqua-card .muted{ font-size:12.5px; color:var(--ink-soft); margin-top:2px; }
+.o_aqua_dashboard .card-head-row{ display:flex; justify-content:space-between; align-items:center; }
+.o_aqua_dashboard .view-all{ font-size:12px; color:var(--blue); font-weight:600; cursor:pointer; }
+
+.o_aqua_dashboard .section-sub{ font-size:11px; color:var(--ink-mute); font-weight:600; text-transform:uppercase; letter-spacing:.04em; margin:18px 0 4px; }
+
+/* ---- tab bar ---- */
+.o_aqua_dashboard .tabbar{ display:flex; gap:4px; background:#FFFFFF !important; border:1px solid var(--line); border-radius:16px; padding:6px; margin-bottom:20px; width:fit-content; flex-wrap:wrap; box-shadow:none !important; }
+.o_aqua_dashboard .tab{ padding:9px 16px; border-radius:11px; font-size:12.5px; font-weight:600; color:var(--ink-soft); text-decoration:none; white-space:nowrap; border:none; background:transparent; cursor:pointer; }
+.o_aqua_dashboard .tab.active{ background:var(--blue); color:#fff; }
+.o_aqua_dashboard .tab:not(.active):hover{ background:#F5F6F8; }
+
+/* ---- KPI tiles ---- */
+.o_aqua_dashboard .kpi-tile{ display:flex; flex-direction:column; gap:10px; padding:20px; cursor:pointer; }
+.o_aqua_dashboard .kpi-tile .stat-icon{ width:34px; height:34px; border-radius:10px; font-size:16px; }
+.o_aqua_dashboard .kpi-tile .stat-val{ font-size:20px; font-weight:700; }
+.o_aqua_dashboard .kpi-tile .stat-lbl{ font-size:11px; color:var(--ink-soft); }
+.o_aqua_dashboard .stat-icon{ display:flex; align-items:center; justify-content:center; border-radius:12px; }
+.o_aqua_dashboard .stat-top{ display:flex; justify-content:space-between; align-items:center; }
+
+/* ---- stat-card (overview) ---- */
+.o_aqua_dashboard .stat-card{ display:flex; flex-direction:column; gap:14px; cursor:pointer; }
+.o_aqua_dashboard .stat-card .stat-icon{ width:38px; height:38px; border-radius:12px; font-size:18px; }
+.o_aqua_dashboard .chip{ font-size:11px; font-weight:600; padding:4px 10px; border-radius:20px; }
+.o_aqua_dashboard .stat-card .stat-val{ font-size:26px; font-weight:700; }
+.o_aqua_dashboard .stat-card .stat-lbl{ font-size:12.5px; color:var(--ink-soft); }
+
+/* ---- hero / weather (overview) ---- */
+.o_aqua_dashboard .mini-stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:16px; }
+.o_aqua_dashboard .mini-stat{ border-radius:16px; padding:14px 16px; }
+.o_aqua_dashboard .mini-stat .val{ font-size:20px; font-weight:700; margin-top:0; }
+.o_aqua_dashboard .mini-stat .lbl{ font-size:11.5px; color:var(--ink-soft); margin-top:2px; }
+.o_aqua_dashboard .hero-img{ position:relative; border-radius:18px; overflow:hidden; height:190px; margin-top:16px; background:linear-gradient(135deg,#274472,#0f2540); }
+.o_aqua_dashboard .hero-img img{ width:100%; height:100%; object-fit:cover; display:block; }
+.o_aqua_dashboard .hero-tag{ position:absolute; bottom:14px; left:14px; background:rgba(18,24,31,.72); backdrop-filter:blur(4px); color:#fff; border-radius:14px; padding:9px 14px; display:flex; align-items:center; gap:8px; font-size:12.5px; }
+.o_aqua_dashboard .hero-tag .dot{ width:7px; height:7px; border-radius:50%; background:#3ECF7A; }
+.o_aqua_dashboard .weather-top{ display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--ink-soft); }
+.o_aqua_dashboard .temp{ font-size:44px; font-weight:700; margin:10px 0 4px; }
+.o_aqua_dashboard .inset-card{ background:#F7F8FA; border:none; padding:18px; margin-top:20px; border-radius:20px; }
+.o_aqua_dashboard .inset-card h3{ font-size:13.5px; }
+
+/* ---- donut / gauge ---- */
+.o_aqua_dashboard .donut-wrap{ display:flex; justify-content:center; margin:14px 0 18px; }
+.o_aqua_dashboard .gauge-wrap{ display:flex; align-items:center; justify-content:center; margin:18px 0 6px; }
+.o_aqua_dashboard .arc-wrap{ display:flex; justify-content:center; margin:10px 0 4px; }
+.o_aqua_dashboard .legend{ display:flex; flex-direction:column; gap:10px; }
+.o_aqua_dashboard .legend-row{ display:flex; align-items:center; justify-content:space-between; font-size:12.5px; }
+.o_aqua_dashboard .legend-row .lk{ display:flex; align-items:center; gap:8px; color:var(--ink-soft); }
+.o_aqua_dashboard .legend-dot{ width:8px; height:8px; border-radius:50%; display:inline-block; }
+
+/* ---- line-row (progress bars with label + value) ---- */
+.o_aqua_dashboard .line-row{ display:flex; align-items:center; gap:10px; margin-top:12px; font-size:12.5px; }
+.o_aqua_dashboard .line-row .track{ flex:1; height:7px; border-radius:20px; background:#EEF0F3; overflow:hidden; }
+.o_aqua_dashboard .line-row .fill{ height:100%; border-radius:20px; background:var(--blue); display:block; }
+.o_aqua_dashboard .line-row .lbl{ width:120px; color:var(--ink-soft); flex-shrink:0; }
+.o_aqua_dashboard .line-row .lbl-sm{ width:96px; }
+.o_aqua_dashboard .line-row .pct{ width:70px; text-align:right; font-weight:600; flex-shrink:0; }
+.o_aqua_dashboard .line-row .pct-sm{ width:36px; }
+
+/* ---- bar-pair (budget: planned vs practical) ---- */
+.o_aqua_dashboard .bar-pair-row{ display:flex; align-items:center; gap:12px; margin-top:14px; }
+.o_aqua_dashboard .bar-pair-row .lbl{ width:150px; font-size:12px; color:var(--ink-soft); flex-shrink:0; }
+.o_aqua_dashboard .bar-pair-row .bars{ flex:1; display:flex; flex-direction:column; gap:4px; }
+.o_aqua_dashboard .bp{ display:flex; align-items:center; gap:8px; }
+.o_aqua_dashboard .bp .track{ flex:1; height:9px; border-radius:6px; background:#EEF0F3; overflow:hidden; }
+.o_aqua_dashboard .bp .fill{ height:100%; border-radius:6px; display:block; }
+.o_aqua_dashboard .bp .v{ width:70px; font-size:11px; text-align:right; color:var(--ink-soft); flex-shrink:0; }
+.o_aqua_dashboard .pair-legend{ display:flex; gap:16px; margin-top:14px; font-size:11.5px; color:var(--ink-soft); }
+.o_aqua_dashboard .pair-legend .d{ display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; }
+
+/* ---- pair-row (quality: pass/fail segmented bar) ---- */
+.o_aqua_dashboard .pair-row{ display:flex; align-items:center; gap:10px; margin-top:12px; font-size:12px; }
+.o_aqua_dashboard .pair-row .lbl{ width:110px; color:var(--ink-soft); flex-shrink:0; }
+.o_aqua_dashboard .pair-track{ flex:1; display:flex; gap:2px; align-items:center; height:16px; }
+.o_aqua_dashboard .pair-track .seg{ height:16px; border-radius:5px; display:block; }
+.o_aqua_dashboard .pair-count{ width:60px; text-align:right; font-weight:600; flex-shrink:0; }
+
+/* ---- tables ---- */
+.o_aqua_dashboard .dtable{ width:100%; border-collapse:collapse; margin-top:14px; font-size:12.5px; }
+.o_aqua_dashboard .dtable th{ text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-mute); font-weight:600; padding:0 10px 10px; border-bottom:1px solid var(--line); }
+.o_aqua_dashboard .dtable td{ padding:11px 10px; border-bottom:1px solid var(--line); color:var(--ink); }
+.o_aqua_dashboard .dtable tr:last-child td{ border-bottom:none; }
+.o_aqua_dashboard .dtable td.soft{ color:var(--ink-soft); }
+.o_aqua_dashboard .dtable tbody tr{ cursor:pointer; }
+.o_aqua_dashboard .dtable tbody tr:hover{ background:#FAFBFC; }
+.o_aqua_dashboard .pill-sm{ font-size:10.5px; font-weight:600; padding:3px 9px; border-radius:20px; display:inline-block; }
+.o_aqua_dashboard .table-scroll{ overflow-x:auto; overflow-y:auto; max-height:420px; }
+.o_aqua_dashboard .table-scroll .dtable thead th{ position:sticky; top:0; background:#fff; z-index:1; }
+
+/* status colors reused on badges/pills wherever the mockup used inline tints */
+.o_aqua_dashboard .aqua-badge--green,  .o_aqua_dashboard .pill-sm.aqua-badge--green  { background:var(--green-tint);  color:var(--green); }
+.o_aqua_dashboard .aqua-badge--red,    .o_aqua_dashboard .pill-sm.aqua-badge--red    { background:var(--coral-tint);  color:var(--coral); }
+.o_aqua_dashboard .aqua-badge--amber,  .o_aqua_dashboard .pill-sm.aqua-badge--amber  { background:var(--amber-tint);  color:var(--amber); }
+.o_aqua_dashboard .aqua-badge--blue,   .o_aqua_dashboard .pill-sm.aqua-badge--blue   { background:var(--blue-tint);   color:var(--blue); }
+.o_aqua_dashboard .aqua-badge--purple, .o_aqua_dashboard .pill-sm.aqua-badge--purple { background:var(--purple-tint); color:var(--purple); }
+.o_aqua_dashboard .aqua-badge--gray,   .o_aqua_dashboard .pill-sm.aqua-badge--gray   { background:#F1F3F5; color:var(--ink-soft); }
+
+/* ---- funnel (procurement) ---- */
+.o_aqua_dashboard .funnel{ display:flex; flex-direction:column; gap:10px; margin-top:16px; }
+.o_aqua_dashboard .funnel-row{ display:flex; align-items:center; gap:14px; }
+.o_aqua_dashboard .funnel-bar-wrap{ flex:1; height:34px; border-radius:10px; background:#F0F2F5; overflow:hidden; }
+.o_aqua_dashboard .funnel-bar{ height:100%; border-radius:10px; display:flex; align-items:center; padding-left:14px; color:#fff; font-size:12px; font-weight:600; }
+.o_aqua_dashboard .funnel-lbl{ width:110px; font-size:12px; color:var(--ink-soft); flex-shrink:0; }
+
+/* ---- vertical bar column pairs (procurement: ordered vs received) ---- */
+.o_aqua_dashboard .bar-col-wrap{ display:flex; align-items:flex-end; gap:10px; height:150px; margin-top:16px; padding:0 4px; }
+.o_aqua_dashboard .bar-col{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:8px; height:100%; }
+.o_aqua_dashboard .bar-col .stick{ width:100%; max-width:34px; border-radius:8px 8px 3px 3px; background:var(--blue); }
+.o_aqua_dashboard .bar-col .stick.b2{ background:var(--teal); margin-top:-4px; }
+.o_aqua_dashboard .bar-col .v{ font-size:10.5px; font-weight:700; color:var(--ink); }
+.o_aqua_dashboard .bar-col .l{ font-size:10px; color:var(--ink-mute); text-align:center; }
+.o_aqua_dashboard .bar-col-legend{ display:flex; gap:16px; margin-top:14px; font-size:11.5px; color:var(--ink-soft); }
+
+/* ---- inventory grid (overview) ---- */
+.o_aqua_dashboard .inv-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-top:16px; }
+.o_aqua_dashboard .inv-item{ border-radius:16px; background:#F7F8FA; padding:14px; }
+.o_aqua_dashboard .inv-icon{ width:32px; height:32px; border-radius:10px; display:flex; align-items:center; justify-content:center; margin-bottom:10px; }
+.o_aqua_dashboard .inv-val{ font-size:16px; font-weight:700; }
+.o_aqua_dashboard .inv-lbl{ font-size:11px; color:var(--ink-soft); margin-top:2px; }
+
+/* ---- alerts / timeline (overview) ---- */
+.o_aqua_dashboard .alert-row{ display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--line); }
+.o_aqua_dashboard .alert-row:last-child{ border-bottom:none; }
+.o_aqua_dashboard .alert-icon{ width:32px; height:32px; border-radius:10px; background:var(--amber-tint); color:var(--amber); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.o_aqua_dashboard .timeline{ margin-top:8px; }
+.o_aqua_dashboard .t-row{ display:flex; gap:12px; padding:10px 0; }
+.o_aqua_dashboard .t-icon{ width:30px; height:30px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.o_aqua_dashboard .t-time{ font-size:11px; color:var(--ink-mute); }
+.o_aqua_dashboard .t-title{ font-size:13px; font-weight:600; margin-top:1px; }
+.o_aqua_dashboard .t-sub{ font-size:11.5px; color:var(--ink-soft); }
+
+/* ---- shipment cards (overview) ---- */
+.o_aqua_dashboard .ship-card{ border-radius:16px; background:#F7F8FA; padding:14px 16px; margin-top:10px; cursor:pointer; }
+.o_aqua_dashboard .ship-head{ display:flex; justify-content:space-between; align-items:center; }
+.o_aqua_dashboard .ship-meta{ display:flex; gap:18px; margin-top:10px; font-size:11.5px; color:var(--ink-soft); flex-wrap:wrap; }
+.o_aqua_dashboard .ship-meta b{ display:block; color:var(--ink); font-size:13px; font-weight:600; }
+.o_aqua_dashboard .status-pill{ font-size:11px; font-weight:600; padding:4px 10px; border-radius:20px; margin-top:10px; display:inline-block; }
+
+/* ---- budget header ---- */
+.o_aqua_dashboard .budget-header{ display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; }
+.o_aqua_dashboard .budget-header .name{ font-size:17px; font-weight:700; }
+.o_aqua_dashboard .budget-header .period{ font-size:12.5px; color:var(--ink-soft); margin-top:4px; }
+
+/* ---- processing: stage flow / wip rows / hbar chart ---- */
+.o_aqua_dashboard .stage-flow{ display:flex; align-items:center; gap:8px; margin-top:18px; }
+.o_aqua_dashboard .stage-box{ flex:1; text-align:center; padding:16px 8px; border-radius:16px; background:#F7F8FA; }
+.o_aqua_dashboard .stage-box .n{ font-size:18px; font-weight:700; }
+.o_aqua_dashboard .stage-box .l{ font-size:11px; color:var(--ink-soft); margin-top:4px; }
+.o_aqua_dashboard .stage-arrow{ color:var(--ink-mute); font-size:16px; }
+.o_aqua_dashboard .wip-row{ display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-radius:14px; background:#F7F8FA; margin-top:8px; font-size:12.5px; }
+.o_aqua_dashboard .hbar-chart{ margin-top:16px; }
+.o_aqua_dashboard .hbar-row{ display:flex; align-items:center; gap:12px; height:56px; }
+.o_aqua_dashboard .hbar-cat{ width:100px; font-size:12px; color:var(--ink-soft); flex-shrink:0; }
+.o_aqua_dashboard .hbar-track{ flex:1; height:36px; background:#F5F6F8; border-radius:6px; overflow:hidden; }
+.o_aqua_dashboard .hbar-fill{ height:100%; border-radius:6px 3px 3px 6px; display:block; }
+.o_aqua_dashboard .hbar-axis{ display:flex; justify-content:space-between; margin-top:8px; padding-left:112px; font-size:10.5px; color:var(--ink-mute); }
+
+/* ---- quality: stage cards, storage rows ---- */
+.o_aqua_dashboard .stage-card{ display:flex; flex-direction:column; gap:6px; padding:16px; border-radius:16px; background:#F7F8FA; }
+.o_aqua_dashboard .stage-card .top{ display:flex; justify-content:space-between; align-items:center; }
+.o_aqua_dashboard .stage-card .name{ font-size:12.5px; font-weight:600; color:var(--ink-soft); }
+.o_aqua_dashboard .stage-card .rate{ font-size:20px; font-weight:700; }
+.o_aqua_dashboard .stage-card .n{ font-size:11px; color:var(--ink-mute); }
+.o_aqua_dashboard .qc-row{ display:flex; justify-content:space-between; align-items:center; padding:11px 0; border-bottom:1px solid var(--line); font-size:13px; }
+.o_aqua_dashboard .qc-row:last-child{ border-bottom:none; }
+.o_aqua_dashboard .qc-dot{ display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:8px; }
+.o_aqua_dashboard .storage-row{ display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-radius:14px; background:#F7F8FA; margin-top:8px; font-size:12.5px; }
+
+/* ---- empty state ---- */
+.o_aqua_dashboard .o_aqua_empty{ padding:24px 4px; text-align:center; color:var(--ink-mute); font-size:12.5px; }
+
+/* ---- misc ---- */
+.o_aqua_dashboard a{ text-decoration:none; color:inherit; }
+
+/* ---- responsive ---- */
+@media (max-width: 1200px) {
+  .o_aqua_dashboard .g-hero, .o_aqua_dashboard .g-mid, .o_aqua_dashboard .g-mid-even,
+  .o_aqua_dashboard .g-bottom, .o_aqua_dashboard .g-bottom-wide, .o_aqua_dashboard .g-kpi5,
+  .o_aqua_dashboard .g-kpi6, .o_aqua_dashboard .g-kpi4, .o_aqua_dashboard .g-kpi3, .o_aqua_dashboard .g-two {
+    grid-template-columns:repeat(2,1fr);
+  }
+}
+@media (max-width: 720px) {
+  .o_aqua_dashboard .aqua-main{ padding:16px; }
+  .o_aqua_dashboard .g-hero, .o_aqua_dashboard .g-mid, .o_aqua_dashboard .g-mid-even,
+  .o_aqua_dashboard .g-bottom, .o_aqua_dashboard .g-bottom-wide, .o_aqua_dashboard .g-kpi5,
+  .o_aqua_dashboard .g-kpi6, .o_aqua_dashboard .g-kpi4, .o_aqua_dashboard .g-kpi3,
+  .o_aqua_dashboard .g-stats, .o_aqua_dashboard .g-two, .o_aqua_dashboard .inv-grid, .o_aqua_dashboard .mini-stats {
+    grid-template-columns:1fr;
+  }
 }
 
-.o_aqua_loading {
-    padding: 40px;
-    text-align: center;
-    color: var(--aqua-text-muted);
-    font-size: 1.1rem;
+/* ---- Drill-down side panel (existing feature, not part of the mockups —
+   restyled here only so its colors match the new palette; markup/classes
+   are unchanged since they're driven by drill_panel.xml, not the mockups). */
+/* ---- Chart.js custom tooltip (matches dashboard card system, not the
+   plain default Chart.js box) ---- */
+.o_aqua_dashboard .aqua-chart-tooltip{
+  position:absolute; pointer-events:none; z-index:20;
+  transform:translate(-50%, calc(-100% - 12px));
+  background:var(--ink); color:#fff;
+  border-radius:12px; padding:9px 13px;
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  font-size:12.5px; line-height:1.5; white-space:nowrap;
+  box-shadow:0 10px 30px rgba(18,24,31,.22), 0 2px 8px rgba(18,24,31,.12);
+  opacity:0; transition:opacity .12s ease, transform .12s ease;
 }
-.o_aqua_empty {
-    color: #a3adb8;
-    font-style: italic;
-    padding: 22px 0;
-    text-align: center;
-    font-size: 0.85rem;
+/* Variant for the hand-drawn SVG trend lines: fixed-positioned (viewport
+   coordinates from getBoundingClientRect), always visible while mounted
+   since the OWL t-if already handles show/hide - no opacity dance needed. */
+.o_aqua_dashboard .aqua-chart-tooltip--fixed{
+  position:fixed; z-index:1100; opacity:1;
 }
+.o_aqua_dashboard .aqua-chart-tooltip::after{
+  content:""; position:absolute; left:50%; bottom:-5px; transform:translateX(-50%);
+  width:10px; height:10px; background:var(--ink); border-radius:2px;
+  clip-path:polygon(0 0, 100% 0, 50% 100%);
+}
+.o_aqua_dashboard .aqua-chart-tooltip-title{
+  font-weight:600; font-size:11px; color:rgba(255,255,255,.6);
+  margin-bottom:3px; text-transform:uppercase; letter-spacing:.02em;
+}
+.o_aqua_dashboard .aqua-chart-tooltip-row{ display:flex; align-items:center; gap:7px; }
+.o_aqua_dashboard .aqua-chart-tooltip-dot{ width:7px; height:7px; border-radius:50%; flex:0 0 auto; }
+.o_aqua_dashboard .aqua-chart-tooltip-value{ font-weight:600; color:#fff; }
 
-/* ── Header bar ─────────────────────────────────────────── */
-
-.o_aqua_header {
-    background: linear-gradient(120deg, #0F3B3C 0%, var(--aqua-teal-dark) 45%, var(--aqua-teal) 100%);
-    padding: 22px 28px;
-    margin-bottom: 4px;
-    box-shadow: 0 4px 18px rgba(15,59,60,0.18);
-}
-.o_aqua_header__title {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-}
-.o_aqua_header__title > .fa-anchor {
-    width: 42px;
-    height: 42px;
-    border-radius: 12px;
-    background: rgba(255,255,255,0.14);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.15rem;
-    flex-shrink: 0;
-}
-.o_aqua_header h2 {
-    font-weight: 700;
-    color: #fff;
-    margin: 0;
-    font-size: 1.3rem;
-    letter-spacing: -0.2px;
-}
-.o_aqua_header__subtitle {
-    color: rgba(255,255,255,0.72);
-    font-size: 0.8rem;
-    font-weight: 500;
-    margin-top: 2px;
-}
-
-/* ── Filter bar (period + comparison; no branch/company -- single plant) ── */
-
-.o_aqua_header__row {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
-    flex-wrap: wrap;
-}
-.aqua-filter-bar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-.aqua-filter-bar__select,
-.aqua-filter-bar__date {
-    border: 1px solid rgba(255,255,255,0.24);
-    background: rgba(255,255,255,0.12);
-    color: #fff;
-    border-radius: 999px;
-    padding: 7px 14px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-    outline: none;
-    min-width: 128px;
-    transition: background 0.15s ease, border-color 0.15s ease;
-}
-.aqua-filter-bar__select:hover,
-.aqua-filter-bar__date:hover {
-    background: rgba(255,255,255,0.20);
-    border-color: rgba(255,255,255,0.4);
-}
-.aqua-filter-bar__select option { color: var(--aqua-text); background: #fff; }
-.aqua-filter-bar__date { min-width: 140px; color-scheme: dark; }
-.aqua-filter-bar__refresh {
-    background: rgba(255,255,255,0.12);
-    border: 1px solid rgba(255,255,255,0.24);
-    color: #fff;
-    border-radius: 999px;
-    width: 32px;
-    height: 32px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: background 0.15s ease;
-    flex-shrink: 0;
-}
-.aqua-filter-bar__refresh:hover { background: rgba(255,255,255,0.22); }
-.aqua-filter-bar__refresh:disabled { opacity: 0.6; cursor: default; }
-
-.aqua-comparison-note {
-    display: block;
-    font-size: 0.68rem;
-    font-weight: 700;
-    margin-top: 4px;
-    letter-spacing: 0;
-    text-transform: none;
-}
-.aqua-comparison-note--up { color: var(--aqua-green); }
-.aqua-comparison-note--down { color: var(--aqua-red); }
-.aqua-comparison-note--flat { color: var(--aqua-text-muted); }
-
-/* ── Tabs (pill / segmented control) ───────────────────────── */
-
-.o_aqua_tabs {
-    display: inline-flex;
-    gap: 2px;
-    background: var(--aqua-white);
-    border: 1px solid var(--aqua-border);
-    border-radius: 999px;
-    padding: 4px;
-    margin: -18px 28px 24px;
-    box-shadow: var(--aqua-shadow);
-    position: relative;
-    z-index: 1;
-}
-.o_aqua_tab_btn {
-    background: transparent;
-    border: none;
-    padding: 9px 18px;
-    font-size: 0.86rem;
-    font-weight: 600;
-    color: var(--aqua-text-muted);
-    cursor: pointer;
-    border-radius: 999px;
-    transition: color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
-    white-space: nowrap;
-}
-.o_aqua_tab_btn:hover { color: var(--aqua-text); background: var(--aqua-canvas); }
-.o_aqua_tab_active {
-    color: #fff;
-    background: linear-gradient(120deg, var(--aqua-teal-dark), var(--aqua-teal));
-    box-shadow: 0 3px 10px rgba(44,122,123,0.35);
-}
-.o_aqua_tab_active:hover { color: #fff; background: linear-gradient(120deg, var(--aqua-teal-dark), var(--aqua-teal)); }
-
-/* ── Layout ─────────────────────────────────────────────── */
-
-.o_aqua_kpi_row {
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-    margin: 0 28px 20px;
-}
-.o_aqua_kpi_row > * { flex: 1 1 210px; }
-
-.o_aqua_chart_row {
-    display: flex;
-    gap: 16px;
-    margin: 0 28px 16px;
-    flex-wrap: wrap;
-    align-items: stretch;
-}
-.o_aqua_panel_wide { flex: 2 1 420px; }
-.o_aqua_panel_narrow { flex: 1 1 300px; }
-.o_aqua_panel_full { width: calc(100% - 56px); margin: 0 28px 16px; }
-
-/* ── KPI tile ───────────────────────────────────────────── */
-
-.aqua-kpi-tile {
-    position: relative;
-    background: var(--aqua-white);
-    border: 1px solid var(--aqua-border);
-    border-radius: var(--aqua-radius);
-    box-shadow: var(--aqua-shadow);
-    padding: 18px 20px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    min-height: var(--aqua-tile-height);
-    transition: box-shadow .18s ease, transform .18s ease, border-color .18s ease;
-    overflow: hidden;
-    cursor: pointer;
-}
-.aqua-kpi-tile:hover {
-    box-shadow: var(--aqua-shadow-hover);
-    transform: translateY(-2px);
-    border-color: #D8DEE6;
-}
-/* Top accent line intentionally removed per feedback -- tiles now rely on the icon
-   chip's color alone to indicate category, no colored bar across the top. */
-
-.aqua-kpi-tile__icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 11px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-    flex-shrink: 0;
-}
-.aqua-kpi-tile__body { min-width: 0; }
-.aqua-kpi-tile__value {
-    font-size: 1.42rem;
-    font-weight: 800;
-    color: var(--aqua-text);
-    line-height: 1.15;
-    letter-spacing: -0.3px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    cursor: default;
-}
-.aqua-kpi-tile__label {
-    font-size: 0.74rem;
-    font-weight: 600;
-    color: var(--aqua-text-muted);
-    margin-top: 4px;
-    text-transform: uppercase;
-    letter-spacing: .03em;
-    line-height: 1.35;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    overflow: hidden;
-}
-.aqua-kpi-tile__sparkline {
-    position: absolute;
-    right: 12px;
-    bottom: 10px;
-    opacity: 0.65;
-}
-.aqua-kpi-tile__loading {
-    position: absolute;
-    inset: 0;
-    background: rgba(255,255,255,0.75);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--aqua-radius);
-    z-index: 2;
-}
-
-/* ── Chart card (Chart.js wrapper) ─────────────────────────── */
-
-.aqua-chart-card {
-    background: var(--aqua-white);
-    border: 1px solid var(--aqua-border);
-    border-radius: var(--aqua-radius);
-    box-shadow: var(--aqua-shadow);
-    padding: 16px 18px;
-    height: 100%;
-    transition: box-shadow .18s ease, border-color .18s ease;
-    overflow-x: auto;
-}
-.aqua-chart-card:hover { box-shadow: var(--aqua-shadow-hover); border-color: #D8DEE6; }
-
-.aqua-chart-card__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-    gap: 10px;
-}
-.aqua-chart-card__title {
-    font-weight: 700;
-    color: var(--aqua-text);
-    font-size: 0.92rem;
-    letter-spacing: -0.1px;
-}
-.aqua-chart-card__action-btn {
-    background: var(--aqua-teal-light);
-    border: none;
-    border-radius: 999px;
-    padding: 4px 11px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: var(--aqua-teal);
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: background .15s ease;
-}
-.aqua-chart-card__action-btn:hover { background: #CCFBF1; }
-
-.aqua-chart-card__canvas-wrap { width: 100%; }
-
-/* ── Loading spinner (shared) ───────────────────────────── */
-
-.aqua-loading-overlay {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255,255,255,0.6);
-}
-.aqua-spinner {
-    width: 22px;
-    height: 22px;
-    border: 3px solid var(--aqua-border);
-    border-top-color: var(--aqua-teal);
-    border-radius: 50%;
-    display: inline-block;
-    animation: aqua-spin .7s linear infinite;
-}
+.o_aqua_dashboard .aqua-loading-overlay { display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.6); }
+.o_aqua_dashboard .aqua-spinner { width:22px; height:22px; border:3px solid var(--line); border-top-color:var(--blue); border-radius:50%; display:inline-block; animation:aqua-spin .7s linear infinite; }
 @keyframes aqua-spin { to { transform: rotate(360deg); } }
 
-/* ── Table ──────────────────────────────────────────────── */
+.o_aqua_dashboard .aqua-drill-overlay { position:fixed; inset:0; background:rgba(17,24,39,0.45); backdrop-filter:blur(2px); z-index:1040; display:flex; align-items:flex-start; justify-content:flex-end; }
+.o_aqua_dashboard .aqua-drill-panel { width:640px; max-width:95vw; height:100vh; background:#fff; box-shadow:-8px 0 32px rgba(17,24,39,0.20); display:flex; flex-direction:column; animation:aqua-slide-in .22s cubic-bezier(.16,1,.3,1); font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
+@keyframes aqua-slide-in { from { transform:translateX(100%); } to { transform:translateX(0); } }
+.o_aqua_dashboard .aqua-drill-panel__header { background:var(--ink); color:#fff; padding:16px 22px; display:flex; align-items:center; gap:12px; }
+.o_aqua_dashboard .aqua-drill-panel__title { flex:1; font-size:14.5px; font-weight:700; }
+.o_aqua_dashboard .aqua-drill-panel__export-btn { background:rgba(255,255,255,0.14); border:none; border-radius:999px; color:#fff; padding:5px 12px; font-size:11px; font-weight:700; cursor:pointer; }
+.o_aqua_dashboard .aqua-drill-panel__export-btn:hover { background:rgba(255,255,255,0.24); }
+.o_aqua_dashboard .aqua-drill-panel__close { background:rgba(255,255,255,0.10); border:none; border-radius:8px; color:#fff; font-size:18px; cursor:pointer; line-height:1; padding:4px 9px; }
+.o_aqua_dashboard .aqua-drill-panel__close:hover { background:rgba(255,255,255,0.2); }
+.o_aqua_dashboard .aqua-drill-panel__body { flex:1; overflow-y:auto; padding:20px 22px; background:var(--bg-page); position:relative; }
+.o_aqua_dashboard .aqua-drill-panel__open-form-btn { background:var(--blue); color:#fff; border:none; border-radius:999px; padding:4px 12px; font-size:11px; font-weight:600; cursor:pointer; }
+.o_aqua_dashboard .aqua-drill-panel__open-form-btn:hover { background:#1d54c9; }
 
-.o_aqua_table { width: 100%; border-collapse: collapse; }
-.o_aqua_table_scroll {
-    max-height: 420px;
-    overflow-y: auto;
-}
-.o_aqua_table_scroll .o_aqua_table thead th {
-    position: sticky;
-    top: 0;
-    background: #fff;
-    z-index: 1;
-}
-.o_aqua_table th {
-    text-align: left;
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: .05em;
-    color: var(--aqua-text-muted);
-    font-weight: 700;
-    padding: 10px 12px;
-    border-bottom: 2px solid var(--aqua-border);
-    white-space: nowrap;
-}
-.o_aqua_table td {
-    padding: 11px 12px;
-    font-size: 0.85rem;
-    color: #2d3748;
-    border-bottom: 1px solid #f0f2f5;
-    white-space: nowrap;
-}
-.o_aqua_table tbody tr:nth-child(even) { background: #FBFCFD; }
-.o_aqua_table_row_clickable { cursor: pointer; transition: background .12s ease; }
-.o_aqua_table_row_clickable:hover { background: var(--aqua-teal-light) !important; }
-.o_aqua_table a { color: var(--aqua-teal); font-weight: 700; text-decoration: none; }
-.o_aqua_table a:hover { text-decoration: underline; }
-
-/* ── Drill panel (slide-over) ──────────────────────────────── */
-
-.aqua-drill-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(17,24,39,0.45);
-    backdrop-filter: blur(2px);
-    z-index: 1040;
-    display: flex;
-    align-items: flex-start;
-    justify-content: flex-end;
-}
-.aqua-drill-panel {
-    width: 640px;
-    max-width: 95vw;
-    height: 100vh;
-    background: #fff;
-    box-shadow: -8px 0 32px rgba(17,24,39,0.20);
-    display: flex;
-    flex-direction: column;
-    animation: aqua-slide-in .22s cubic-bezier(.16,1,.3,1);
-}
-@keyframes aqua-slide-in {
-    from { transform: translateX(100%); }
-    to   { transform: translateX(0); }
-}
-.aqua-drill-panel__header {
-    background: linear-gradient(135deg, #0F3B3C 0%, var(--aqua-teal-dark) 45%, var(--aqua-teal) 100%);
-    color: #fff;
-    padding: 16px 22px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-.aqua-drill-panel__title { flex: 1; font-size: 14.5px; font-weight: 700; }
-.aqua-drill-panel__export-btn {
-    background: rgba(255,255,255,0.14);
-    border: none;
-    border-radius: 999px;
-    color: #fff;
-    padding: 5px 12px;
-    font-size: 11px;
-    font-weight: 700;
-    cursor: pointer;
-}
-.aqua-drill-panel__export-btn:hover { background: rgba(255,255,255,0.24); }
-.aqua-drill-panel__close {
-    background: rgba(255,255,255,0.10);
-    border: none;
-    border-radius: 8px;
-    color: #fff;
-    font-size: 18px;
-    cursor: pointer;
-    line-height: 1;
-    padding: 4px 9px;
-}
-.aqua-drill-panel__close:hover { background: rgba(255,255,255,0.2); }
-.aqua-drill-panel__body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px 22px;
-    background: var(--aqua-canvas);
-    position: relative;
-}
-.aqua-drill-panel__open-form-btn {
-    background: var(--aqua-teal);
-    color: #fff;
-    border: none;
-    border-radius: 999px;
-    padding: 4px 12px;
-    font-size: 11px;
-    font-weight: 600;
-    cursor: pointer;
-}
-.aqua-drill-panel__open-form-btn:hover { background: var(--aqua-teal-dark); }
-
-.aqua-drill-table { width: 100%; border-collapse: collapse; font-size: 12.5px; background: #fff; border-radius: var(--aqua-radius-sm); overflow: hidden; }
-.aqua-drill-table thead th {
-    background: #f7fafc;
-    color: var(--aqua-text-muted);
-    padding: 9px 16px;
-    text-align: left;
-    font-size: 10.5px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .5px;
-    border-bottom: 1px solid var(--aqua-border);
-}
-.aqua-drill-table tbody tr { border-bottom: 1px solid #f1f2f6; }
-.aqua-drill-table tbody tr:last-child { border-bottom: none; }
-.aqua-drill-table tbody tr:hover { background: var(--aqua-teal-light); }
-.aqua-drill-table tbody td { padding: 10px 16px; color: #4a5568; }
-
-/* ── Badges ─────────────────────────────────────────────── */
-
-.aqua-badge {
-    display: inline-block;
-    border-radius: 999px;
-    padding: 3px 10px;
-    font-size: 10.5px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .3px;
-    background: var(--aqua-teal-light);
-    color: var(--aqua-teal);
-}
-.aqua-badge--green  { background: #EAFBF1; color: #1E8A52; }
-.aqua-badge--red    { background: #FDECEC; color: var(--aqua-red); }
-.aqua-badge--amber  { background: #FEF6E7; color: #B7791F; }
-.aqua-badge--blue   { background: #EAF3FC; color: var(--aqua-blue); }
-.aqua-badge--purple { background: #F3EDFC; color: var(--aqua-purple); }
-.aqua-badge--gray   { background: #F1F3F5; color: var(--aqua-text-muted); }
-
-/* ── Section label (groups related KPI rows / chart rows under a heading) ── */
-
-.o_aqua_section_label {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 0.72rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .07em;
-    color: var(--aqua-teal-dark);
-    margin: 28px 28px 12px;
-}
-.o_aqua_section_label:first-child { margin-top: 0; }
-.o_aqua_section_label::after {
-    content: "";
-    flex: 1;
-    height: 1px;
-    background: var(--aqua-border);
-}
-
-/* ── Responsive ─────────────────────────────────────────── */
-
-@media (max-width: 900px) {
-    .o_aqua_kpi_row, .o_aqua_chart_row { margin-left: 16px; margin-right: 16px; }
-    .o_aqua_panel_full { width: calc(100% - 32px); margin-left: 16px; margin-right: 16px; }
-    .o_aqua_section_label { margin-left: 16px; margin-right: 16px; }
-    .o_aqua_tabs { margin-left: 16px; margin-right: 16px; }
-    .o_aqua_header { padding: 18px; }
-}
+.o_aqua_dashboard .aqua-drill-table { width:100%; border-collapse:collapse; font-size:12.5px; background:#fff; border-radius:var(--radius-sm); overflow:hidden; }
+.o_aqua_dashboard .aqua-drill-table thead th { background:#f7fafc; color:var(--ink-mute); padding:9px 16px; text-align:left; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid var(--line); }
+.o_aqua_dashboard .aqua-drill-table tbody tr { border-bottom:1px solid #f1f2f6; }
+.o_aqua_dashboard .aqua-drill-table tbody tr:last-child { border-bottom:none; }
+.o_aqua_dashboard .aqua-drill-table tbody tr:hover { background:var(--blue-tint); }
+.o_aqua_dashboard .aqua-drill-table tbody td { padding:10px 16px; color:#4a5568; }
+.o_aqua_dashboard .aqua-badge { font-size:10.5px; font-weight:600; padding:3px 9px; border-radius:20px; display:inline-block; background:#F1F3F5; color:var(--ink-soft); }

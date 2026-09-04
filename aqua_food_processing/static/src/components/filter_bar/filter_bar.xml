@@ -2,32 +2,44 @@
 <templates xml:space="preserve">
 
 <t t-name="aqua_food_processing.FilterBar">
-  <div class="aqua-filter-bar">
+  <t t-set="periodLabel" t-value="periodOptions.find((o) => o.value === state.period).label"/>
+  <t t-set="compareLabel" t-value="compareOptions.find((o) => o.value === state.compare).label"/>
 
-    <select class="aqua-filter-bar__select" t-on-change="onPeriodChange" title="Period">
+  <div class="pill-input filter-pill">
+    <i class="fa fa-calendar"/>
+    <select t-on-change="onPeriodChange" title="Period">
       <t t-foreach="periodOptions" t-as="opt" t-key="opt.value">
         <option t-att-value="opt.value" t-att-selected="state.period === opt.value">
           <t t-esc="opt.label"/>
         </option>
       </t>
     </select>
+    <i class="fa fa-chevron-down"/>
+  </div>
 
-    <t t-if="state.period === 'custom'">
-      <input type="date" class="aqua-filter-bar__date" t-att-value="state.customFrom"
-             t-on-change="onCustomFromChange" title="From"/>
-      <input type="date" class="aqua-filter-bar__date" t-att-value="state.customTo"
-             t-on-change="onCustomToChange" title="To"/>
-    </t>
+  <t t-if="state.period === 'custom'">
+    <div class="pill-input">
+      <i class="fa fa-calendar"/>
+      <input type="date" t-att-value="state.customFrom" t-on-change="onCustomFromChange" title="From"/>
+    </div>
+    <div class="pill-input">
+      <i class="fa fa-calendar"/>
+      <input type="date" t-att-value="state.customTo" t-on-change="onCustomToChange" title="To"/>
+    </div>
+  </t>
 
-    <select class="aqua-filter-bar__select" t-on-change="onCompareChange" title="Compare to">
+  <div class="pill-input filter-pill">
+    <i class="fa fa-sliders"/>
+    <select t-on-change="onCompareChange" title="Compare to">
       <t t-foreach="compareOptions" t-as="opt" t-key="opt.value">
         <option t-att-value="opt.value" t-att-selected="state.compare === opt.value">
           <t t-esc="opt.label"/>
         </option>
       </t>
     </select>
-
+    <i class="fa fa-chevron-down"/>
   </div>
+
 </t>
 
 </templates>

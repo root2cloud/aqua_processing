@@ -82,6 +82,69 @@ export class ChartWidget extends Component {
             this._chart.destroy();
             this._chart = null;
         }
+        this._removeTooltipEl();
+    }
+
+    _removeTooltipEl() {
+        if (this._tooltipEl) {
+            this._tooltipEl.remove();
+            this._tooltipEl = null;
+        }
+    }
+
+    /**
+     * Custom HTML tooltip that matches the rest of the dashboard's visual
+     * system (rounded card, soft shadow, Inter font, brand accent dot)
+     * instead of Chart.js's plain default browser-style box. Built once
+     * per chart and repositioned/repopulated on every 'active tooltip'
+     * event, then hidden (not destroyed) on 'inactive' — recreating the
+     * node on every hover is what causes the flash-to-plain-box look.
+     */
+    _renderCustomTooltip(tctx) {
+        const { chart, tooltip } = tctx;
+        const canvas = chart.canvas;
+        const wrapper = canvas.parentNode;
+        if (!wrapper) return;
+
+        if (!this._tooltipEl) {
+            const el = document.createElement("div");
+            el.className = "aqua-chart-tooltip";
+            wrapper.style.position = wrapper.style.position || "relative";
+            wrapper.appendChild(el);
+            this._tooltipEl = el;
+        }
+        const el = this._tooltipEl;
+
+        if (tooltip.opacity === 0) {
+            el.style.opacity = 0;
+            return;
+        }
+
+        if (tooltip.body) {
+            const titleLines = tooltip.title || [];
+            const bodyLines = tooltip.body.map((b) => b.lines);
+
+            let html = "";
+            if (titleLines.length) {
+                html += `<div class="aqua-chart-tooltip-title">${titleLines.join(" ")}</div>`;
+            }
+            bodyLines.forEach((lines, i) => {
+                const dp = tooltip.labelColors[i];
+                const color = (dp && dp.borderColor) || (dp && dp.backgroundColor) || "#2C7A7B";
+                lines.forEach((line) => {
+                    html += `<div class="aqua-chart-tooltip-row">
+                        <span class="aqua-chart-tooltip-dot" style="background:${color}"></span>
+                        <span class="aqua-chart-tooltip-value">${line}</span>
+                    </div>`;
+                });
+            });
+            el.innerHTML = html;
+        }
+
+        const { offsetLeft: canvasLeft, offsetTop: canvasTop } = canvas;
+        el.style.opacity = 1;
+        el.style.left = canvasLeft + tooltip.caretX + "px";
+        el.style.top = canvasTop + tooltip.caretY + "px";
     }
 
     _initChart() {
@@ -143,6 +206,8 @@ export class ChartWidget extends Component {
                     labels: { boxWidth: 12, font: { size: 11 } },
                 },
                 tooltip: {
+                    enabled: false,
+                    external: (tctx) => this._renderCustomTooltip(tctx),
                     callbacks: {
                         label: (ctx) => {
                             const v = ctx.parsed.y ?? ctx.parsed.x ?? ctx.parsed ?? ctx.raw;

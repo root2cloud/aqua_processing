@@ -17,6 +17,11 @@ class AquaDashboard extends Component {
         this.action = useService("action");
         this.notification = useService("notification");
         this.filters = { period: 'ytd', compare: 'none', customFrom: '', customTo: '' };
+        // Hand-drawn SVG trend lines (receipt/weight/spend/QC trends) don't go
+        // through Chart.js, so they need their own hover tooltip instead of
+        // the native <title> attribute (which renders as a plain OS tooltip
+        // that can't be styled - see svgTooltip/onSvgPointEnter below).
+        this.svgTooltip = useState({ visible: false, x: 0, y: 0, text: '' });
         this.state = useState({
             isLoading: true,
             activeTab: 'overview',
@@ -128,6 +133,25 @@ class AquaDashboard extends Component {
 
     isTabActive(tabName) {
         return this.state.activeTab === tabName;
+    }
+
+    get tabTitle() {
+        const T = {
+            overview: 'Aqua processing dashboard', procurement: 'Procurement',
+            processing: 'Processing', quality: 'Quality control', budget: 'Budget',
+        };
+        return T[this.state.activeTab] || 'Aqua processing dashboard';
+    }
+
+    get tabSubtitle() {
+        const T = {
+            overview: 'Shrimp processing and export operations',
+            procurement: 'Purchase → receiving → storage flow',
+            processing: 'Intake → work-in-progress → cold storage',
+            quality: 'IQC · IPQC · Final QC — full inspection lifecycle',
+            budget: 'Planned vs actual, by cost center',
+        };
+        return T[this.state.activeTab] || '';
     }
 
     // ---- Filter bar: period + comparison (no branch/company -- single plant) ----
@@ -437,6 +461,337 @@ class AquaDashboard extends Component {
         });
     }
 
+    // budget.budget's state field uses technical values ('draft', 'confirmed',
+    // 'validate', 'done', 'cancel') -- map to the same labels shown on the
+    // record's own status bar (e.g. 'validate' -> 'Validated') instead of
+    // printing the raw value on the dashboard's status pill.
+    get budgetStateLabel() {
+        const LABELS = {
+            draft: 'Draft', confirmed: 'Confirmed', validate: 'Validated',
+            done: 'Done', cancel: 'Cancelled',
+        };
+        const key = (this.state.budget_state || '').toLowerCase();
+        return LABELS[key] || this.state.budget_state || 'Draft';
+    }
+
+    // ==================================================================
+    //  Visual-system helpers for the new mockup-accurate templates:
+    //  number/currency formatting + SVG geometry for gauges, donuts and
+    //  trend lines. Pure functions of state - no data fetching here.
+    // ==================================================================
+
+    static COLORS = {
+        blue: '#2F6FED', teal: '#12A594', amber: '#E8940C',
+        coral: '#E2543A', purple: '#7C6CF0', green: '#3AA655', gray: '#CBD5E0',
+    };
+
+    fmtNum(v) {
+        return Math.round(v || 0).toLocaleString('en-IN');
+    }
+
+    fmtPct(v) {
+        return `${Number(v || 0).toFixed(1)}%`;
+    }
+
+    // Plain one-decimal number, no unit (template-safe: avoids referencing
+    // the global Number() constructor directly inside a QWeb expression,
+    // which OWL tries to resolve as ctx.Number and throws).
+    fmt1(v) {
+        return Number(v || 0).toFixed(1);
+    }
+
+    // kg -> compact Indian notation: "1.72L kg" / "3.4K kg" / "4.85Cr kg"
+    // (kept the name fmtTon for compatibility with the templates; it now
+    // formats in kilograms, not tons)
+    fmtTon(kg) {
+        return this._fmtKgCompact(kg);
+    }
+
+    // Same compact form, used inside the resource-monitoring donut center label.
+    fmtTonCompact(kg) {
+        return this._fmtKgCompact(kg);
+    }
+
+    _fmtKgCompact(kg) {
+        kg = kg || 0;
+        const abs = Math.abs(kg);
+        if (abs >= 1e7) return `${(kg / 1e7).toFixed(2)}Cr kg`;
+        if (abs >= 1e5) return `${(kg / 1e5).toFixed(2)}L kg`;
+        if (abs >= 1e3) return `${(kg / 1e3).toFixed(2)}K kg`;
+        return `${Math.round(kg).toLocaleString('en-IN')} kg`;
+    }
+
+    // ₹ -> Indian compact notation: ₹4.85 Cr / ₹86.4L / ₹12.3K
+    fmtINR(v) {
+        v = v || 0;
+        const abs = Math.abs(v);
+        if (abs >= 1e7) return `₹${(v / 1e7).toFixed(2)} Cr`;
+        if (abs >= 1e5) return `₹${(v / 1e5).toFixed(1)}L`;
+        if (abs >= 1e3) return `₹${(v / 1e3).toFixed(1)}K`;
+        return `₹${Math.round(v)}`;
+    }
+
+    fmtINRPerKg(v) {
+        return `₹${Math.round(v || 0)}/kg`;
+    }
+
+    // Half-circle gauge <path>, total length = π·r. Returns "filled total" for stroke-dasharray.
+    semiArcDash(pct, r = 95) {
+        const circ = Math.PI * r;
+        const filled = Math.max(0, Math.min(100, pct || 0)) / 100 * circ;
+        return `${filled.toFixed(1)} ${circ.toFixed(1)}`;
+    }
+
+    // Full-circle single-value gauge <circle>, total length = 2π·r.
+    fullArcDash(pct, r = 52) {
+        const circ = 2 * Math.PI * r;
+        const filled = Math.max(0, Math.min(100, pct || 0)) / 100 * circ;
+        return `${filled.toFixed(1)} ${circ.toFixed(1)}`;
+    }
+
+    // Multi-segment donut: [{label, value, color}] -> same rows + dasharray/dashoffset.
+    donutSegments(parts, r = 58) {
+        const circ = 2 * Math.PI * r;
+        const total = parts.reduce((s, p) => s + (p.value || 0), 0) || 1;
+        let offset = 0;
+        return parts.map((p) => {
+            const len = (p.value / total) * circ;
+            const seg = {
+                label: p.label, value: p.value, color: p.color,
+                dasharray: `${len.toFixed(1)} ${circ.toFixed(1)}`,
+                dashoffset: (-offset).toFixed(1),
+            };
+            offset += len;
+            return seg;
+        });
+    }
+
+    statusColor(label) {
+        const C = AquaDashboard.COLORS;
+        const MAP = {
+            Completed: C.green, Done: C.green, Passed: C.green, Pass: C.green, Accept: C.green, Delivered: C.green,
+            Cancelled: C.coral, Failed: C.coral, Fail: C.coral, Reject: C.coral, Detected: C.coral,
+            Open: C.amber, Waiting: C.amber, Draft: C.amber, 'To Do': C.amber, 'Downgrade / Conditional': C.amber, Pending: C.amber, Hold: C.amber,
+            Confirmed: C.amber, 'In Progress': C.blue, Ready: C.blue, Booked: C.blue, Stuffed: C.blue, Scheduled: C.amber, Running: C.blue,
+        };
+        return MAP[label] || C.gray;
+    }
+
+    // Cycles the mockup's fixed 5-color order (blue, teal, purple, amber, coral).
+    cyclePalette(index) {
+        const P = [AquaDashboard.COLORS.blue, AquaDashboard.COLORS.teal, AquaDashboard.COLORS.purple, AquaDashboard.COLORS.amber, AquaDashboard.COLORS.coral];
+        return P[index % P.length];
+    }
+
+    withStatusColors(rows) {
+        return (rows || []).map((r) => ({ ...r, color: this.statusColor(r.label) }));
+    }
+
+    withCyclePalette(rows) {
+        return (rows || []).map((r, i) => ({ ...r, color: this.cyclePalette(i) }));
+    }
+
+    // Bar width % relative to the max value in the same list (min 2% so a
+    // non-zero row is never visually invisible).
+    barPct(value, rows, key = 'value') {
+        const max = Math.max(...(rows || []).map((r) => r[key] || 0), 1);
+        return Math.max(2, Math.round(((value || 0) / max) * 100));
+    }
+
+    _axisLabel(v) {
+        if (v >= 1e7) return `${(v / 1e7).toFixed(1)}Cr`;
+        if (v >= 1e5) return `${(v / 1e5).toFixed(1)}L`;
+        if (v >= 1000) return `${Math.round(v / 1000)}K`;
+        return `${Math.round(v)}`;
+    }
+
+    // rows: [{label, value}] -> grid lines, polyline, filled area and end
+    // points for the mockup's SVG trend-line cards.
+    lineChartGeometry(rows, opts = {}) {
+        const width = opts.width || 580, height = opts.height || 200;
+        const padL = 44, padR = 20, padT = 25, padB = 34;
+        const baseline = height - padB;
+        const plotW = width - padL - padR;
+        const plotH = baseline - padT;
+        rows = rows || [];
+        const values = rows.map((r) => r.value || 0);
+        const maxV = Math.max(...values, 1) * 1.18;
+        const n = rows.length;
+        const stepX = n > 1 ? plotW / (n - 1) : 0;
+        const points = rows.map((r, i) => {
+            const x = padL + stepX * i;
+            const y = baseline - (maxV ? (r.value || 0) / maxV : 0) * plotH;
+            return { x: +x.toFixed(1), y: +y.toFixed(1), label: r.label, value: r.value };
+        });
+        const polyline = points.map((p) => `${p.x},${p.y}`).join(' ');
+        const areaPath = points.length
+            ? `M${points[0].x},${baseline} L${points.map((p) => `${p.x},${p.y}`).join(' L')} L${points[points.length - 1].x},${baseline} Z`
+            : '';
+        const gridLines = [0, 1, 2, 3].map((i) => {
+            const y = padT + (plotH / 3) * i;
+            const val = maxV * (1 - i / 3);
+            return { y: +y.toFixed(1), label: this._axisLabel(val) };
+        });
+        return {
+            width, height, baseline, padL, padR, points, polyline, areaPath, gridLines,
+            first: points[0] || { x: padL, y: baseline },
+            last: points[points.length - 1] || { x: width - padR, y: baseline },
+        };
+    }
+
+    // ---- Overview tab: donut / gauge / KPI row data, sourced from the
+    // same aggregates already loaded for the other tabs (period-scoped by
+    // the FilterBar, not literally "today" - the mockup's "today" framing
+    // maps onto the dashboard's selected period everywhere below). ----
+
+    get ovQcRows() { return this.withStatusColors(this.state.qc_breakdown); }
+    get ovShipmentRows() { return this.withStatusColors(this.state.shipment_breakdown); }
+    get ovReceiptStatusRows() { return this.withStatusColors(this.state.receipt_status_breakdown); }
+    get ovColdRoomOverallPct() {
+        const rooms = this.state.cold_room_utilization;
+        if (!rooms.length) return 0;
+        const cap = rooms.reduce((s, r) => s + (r.capacity_kg || 0), 0) || 1;
+        const used = rooms.reduce((s, r) => s + (r.capacity_kg || 0) * (r.pct || 0) / 100, 0);
+        return Math.round((used / cap) * 1000) / 10;
+    }
+    get ovYieldPct() {
+        if (!this.state.total_input_qty) return 0;
+        return Math.round((this.state.total_stock_on_hand / this.state.total_input_qty) * 1000) / 10;
+    }
+
+    // Period-over-period comparison chip for a g-stats tile, backed by the
+    // comparison_pct/comparison_label the backend already computes for the
+    // FilterBar's "Compare to" option. Returns null (no chip rendered) when
+    // no comparison basis is selected, or when this particular metric has no
+    // meaningful "vs prior period" reading (e.g. a live snapshot).
+    //   invertColor: true for metrics where a *decrease* is the good outcome
+    //   (e.g. Rejection rate), so the tint still reads "green = good".
+    comparisonChip(key, invertColor = false) {
+        if (!this.state.comparison_label) return null;
+        const pct = this.state.comparison_pct[key];
+        if (pct === undefined || pct === null) return null;
+        const C = AquaDashboard.COLORS;
+        const flat = Math.abs(pct) < 0.05;
+        const goingUp = pct > 0;
+        const isGood = flat ? true : (invertColor ? !goingUp : goingUp);
+        const arrow = flat ? '▬' : (goingUp ? '▲' : '▼');
+        return {
+            text: `${arrow} ${Math.abs(pct).toFixed(1)}%`,
+            bg: isGood ? `${C.green}22` : `${C.coral}22`,
+            color: isGood ? C.green : C.coral,
+        };
+    }
+
+    // "Resource monitoring" donut: mass flow through the plant this period,
+    // built from aggregates already loaded elsewhere on the dashboard
+    // (no separate backend model for this breakdown).
+    //   Raw material      -> catch weight received
+    //   Production output -> weight fed into processing
+    //   Frozen stock in   -> WIP / holding stock (still moving into cold storage)
+    //   Frozen stock out  -> finished stock on hand (ready to ship out)
+    //   Others / waste    -> weight lost to rejected receipts
+    get ovResourceMonitoringParts() {
+        const C = AquaDashboard.COLORS;
+        const rawMaterial = this.state.total_weight_received || 0;
+        const productionOutput = this.state.total_input_qty || 0;
+        const frozenStockIn = this.state.wip_stock_kg || 0;
+        const frozenStockOut = this.state.total_stock_on_hand || 0;
+        const waste = rawMaterial * ((this.state.rejection_rate || 0) / 100);
+        return [
+            { label: 'Raw material', value: rawMaterial, color: C.blue },
+            { label: 'Production output', value: productionOutput, color: C.teal },
+            { label: 'Frozen stock in', value: frozenStockIn, color: C.purple },
+            { label: 'Frozen stock out', value: frozenStockOut, color: C.amber },
+            { label: 'Others / waste', value: waste, color: C.coral },
+        ];
+    }
+    get ovResourceMonitoringSegments() { return this.donutSegments(this.ovResourceMonitoringParts); }
+    get ovResourceMonitoringTotal() {
+        return this.ovResourceMonitoringParts.reduce((s, p) => s + (p.value || 0), 0);
+    }
+
+    // ---- Procurement tab: donut / bar-list rows built from state ----
+
+    get procReceiptStatusSegments() { return this.donutSegments(this.withStatusColors(this.state.receipt_status_breakdown)); }
+    get procSpeciesRows() { return this.withCyclePalette(this.state.receipts_by_species); }
+    get procSpendByVendorRows() { return this.state.spend_by_vendor; }
+    get procWeightByVendorRows() { return this.withCyclePalette(this.state.weight_by_vendor); }
+    get procStockByProductRows() { return this.withCyclePalette(this.state.current_stock_by_product); }
+    get procStockByLocationRows() { return this.withCyclePalette(this.state.current_stock_by_location); }
+    get procWeightTrendGeom() { return this.lineChartGeometry(this.state.daily_weight_trend); }
+    get procSpendTrendGeom() { return this.lineChartGeometry(this.state.purchase_spend_trend); }
+    get procOrderedVsReceivedRows() {
+        const rows = this.state.ordered_vs_received;
+        const max = Math.max(...rows.map((r) => Math.max(r.ordered || 0, r.received || 0)), 1);
+        return rows.map((r) => ({
+            ...r,
+            orderedPct: Math.max(2, Math.round(((r.ordered || 0) / max) * 100)),
+            receivedPct: Math.max(2, Math.round(((r.received || 0) / max) * 100)),
+        }));
+    }
+
+    // ---- Processing tab ----
+
+    get procgStatusSegments() { return this.donutSegments(this.withStatusColors(this.state.processing_status_breakdown)); }
+    get procgBlastFreezeSegments() { return this.donutSegments(this.withStatusColors(this.state.blast_freeze_status)); }
+    get procgInputSpeciesRows() { return this.withCyclePalette(this.state.input_qty_by_species); }
+    get procgWipRows() { return this.withCyclePalette(this.state.wip_stock_by_product); }
+    get procgOrderedByStatus() {
+        const rows = this.state.processing_status_breakdown;
+        const find = (label) => (rows.find((r) => r.label === label) || {}).value || 0;
+        return { confirmed: find('Confirmed'), inProgress: find('In Progress'), done: find('Done') };
+    }
+
+    // ---- Quality tab ----
+
+    get qQcStageSegments() { return this.donutSegments(this.withCyclePalette(this.state.qc_stage_breakdown)); }
+    get qIntakeDecisionSegments() { return this.donutSegments(this.withStatusColors(this.state.intake_decision_breakdown)); }
+    get qRejectedBySpeciesRows() { return this.state.rejected_qty_by_species.map((r) => ({ ...r, color: AquaDashboard.COLORS.coral })); }
+    get qTrendGeom() { return this.lineChartGeometry(this.state.qc_trend); }
+    get qIpqcByOperationRows() {
+        const r = this.state.ipqc_by_operation_chart;
+        return (r.labels || []).map((label, i) => {
+            const pass = r.pass[i] || 0, fail = r.fail[i] || 0, total = Math.max(pass + fail, 1);
+            return { label, pass, fail, passPct: Math.round((pass / total) * 100), failPct: Math.round((fail / total) * 100) };
+        });
+    }
+    // residue_screening = { labels: [...result categories, e.g. Not Tested /
+    // Not Detected / Detected], antibiotic: [count per category], sulphite:
+    // [count per category] } - one segmented row per test, exactly like the
+    // mockup's "Residue screening" card.
+    get qResidueRows() {
+        const r = this.state.residue_screening;
+        const labels = r.labels || [];
+        const colorFor = (label) => {
+            if (/detect/i.test(label) && !/not/i.test(label)) return AquaDashboard.COLORS.coral;
+            if (/not.?detect/i.test(label)) return AquaDashboard.COLORS.green;
+            return '#D9DEE4';
+        };
+        const rowFor = (key, title) => {
+            const vals = r[key] || [];
+            const total = vals.reduce((s, v) => s + (v || 0), 0) || 1;
+            const segs = labels.map((label, i) => ({
+                label, value: vals[i] || 0,
+                pct: Math.max(vals[i] ? 2 : 0, Math.round(((vals[i] || 0) / total) * 100)),
+                color: colorFor(label),
+            }));
+            return { title, segs };
+        };
+        return [rowFor('antibiotic', 'Antibiotic'), rowFor('sulphite', 'Sulphite')];
+    }
+
+    // ---- Budget tab ----
+
+    get budgetPairRows() {
+        const rows = this.state.budget_chart;
+        const max = Math.max(...rows.map((r) => Math.max(r.planned || 0, r.practical || 0)), 1);
+        return rows.map((r) => ({
+            ...r,
+            plannedPct: Math.max(2, Math.round(((r.planned || 0) / max) * 100)),
+            practicalPct: Math.max(2, Math.round(((r.practical || 0) / max) * 100)),
+        }));
+    }
+
     // ---- Drill-down: KPI tile clicks ----
 
     onDrillTotalReceipts() {
@@ -453,6 +808,10 @@ class AquaDashboard extends Component {
 
     onDrillTotalWeightReceived() {
         this._openDrill('total_weight_received', null, 'All Catch Receipts by Weight');
+    }
+
+    onDrillActiveVendors() {
+        this._openDrill('active_vendor_count', null, 'Active Vendors');
     }
 
     onDrillTotalPurchaseSpend() {
@@ -530,6 +889,29 @@ class AquaDashboard extends Component {
 
     onReceiptTrendChartClick(ctx) {
         this._openDrill('receipt_trend', ctx.label, `Catch Receipts — ${ctx.label}`);
+    }
+
+    /**
+     * Shared hover handler for the hand-drawn SVG trend lines (these don't
+     * go through Chart.js/ChartWidget, so they don't get its tooltip for
+     * free). Positions a styled HTML tooltip - matching the one used by
+     * ChartWidget - relative to the hovered point's own SVG circle, so it
+     * stays anchored correctly regardless of the card's size on screen.
+     * @param {MouseEvent} ev - the mouseenter event on the invisible hit-circle
+     * @param {string} text - pre-formatted tooltip text, e.g. "Jul 2026: 40.30K kg"
+     */
+    onSvgPointEnter(ev, text) {
+        // position:fixed + viewport coordinates, so this works regardless of
+        // which card/scroll-container the hovered point sits in.
+        const ptRect = ev.currentTarget.getBoundingClientRect();
+        this.svgTooltip.visible = true;
+        this.svgTooltip.text = text;
+        this.svgTooltip.x = ptRect.left + ptRect.width / 2;
+        this.svgTooltip.y = ptRect.top;
+    }
+
+    onSvgPointLeave() {
+        this.svgTooltip.visible = false;
     }
 
     onColdRoomChartClick(ctx) {

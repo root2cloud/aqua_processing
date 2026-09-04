@@ -233,6 +233,8 @@ class AquaDashboard(models.TransientModel):
         receipts = Receipt.search(domain)
         total_receipts = len(receipts)
         total_weight_received = sum(receipts.mapped('total_received'))
+        cancelled_receipts = Receipt.search_count(domain + [('state', '=', 'cancelled')])
+        rejection_rate = (cancelled_receipts / total_receipts * 100.0) if total_receipts else 0.0
 
         po_domain = [('state', 'in', ('purchase', 'done'))]
         if company_id:
@@ -252,7 +254,9 @@ class AquaDashboard(models.TransientModel):
         iqc_pass_rate = self._pass_rate(QC, qc_domain + [('aqua_test_stage', '=', 'raw_material')])
         ipqc_pass_rate = self._pass_rate(QC, qc_domain + [('aqua_test_stage', '=', 'in_process')])
 
-        mo_domain = [('catch_receipt_id', '!=', False)]
+        # All Processing Orders count towards the dashboard, whether or not a Source Catch
+        # Receipt happens to be linked -- see the matching note on mo_domain_aqua below.
+        mo_domain = []
         if company_id:
             mo_domain += [('company_id', '=', company_id)]
         if dt_from:
@@ -264,6 +268,7 @@ class AquaDashboard(models.TransientModel):
         return {
             'total_receipts': total_receipts,
             'total_weight_received': total_weight_received,
+            'rejection_rate': rejection_rate,
             'total_purchase_spend': total_purchase_spend,
             'avg_price_per_kg': avg_price_per_kg,
             'qc_total': qc_total,
@@ -523,8 +528,10 @@ class AquaDashboard(models.TransientModel):
         # ══════════════════ Processing: intake → cold storage flow ══════════════════
 
         mo_domain = [('company_id', '=', company_id)] if company_id else []
-        # Only Aqua processing orders are the ones with a source Catch Receipt.
-        mo_domain_aqua = mo_domain + [('catch_receipt_id', '!=', False)]
+        # Every Processing Order counts here, whether or not it happens to have a Source
+        # Catch Receipt linked -- the Processing Orders list itself (action_aqua_processing_order)
+        # has no such filter, so the dashboard shouldn't silently drop orders it can't see.
+        mo_domain_aqua = list(mo_domain)
         if dt_from:
             mo_domain_aqua += [('create_date', '>=', dt_from), ('create_date', '<=', dt_to)]
 
@@ -721,6 +728,7 @@ class AquaDashboard(models.TransientModel):
                 current_snapshot = {
                     'total_receipts': total_receipts,
                     'total_weight_received': total_weight_received,
+                    'rejection_rate': rejection_rate,
                     'total_purchase_spend': total_purchase_spend,
                     'avg_price_per_kg': avg_price_per_kg,
                     'qc_total': qc_total,
@@ -964,6 +972,27 @@ class AquaDashboard(models.TransientModel):
         if drill_type == 'total_weight_received':
             return self._drill_receipts(domain)
 
+        if drill_type == 'active_vendor_count':
+            # One row per distinct vendor behind active_vendor_count above -- same
+            # domain (company/period), grouped by vendor instead of listed by receipt.
+            vendor_groups = self.env['aqua.catch.receipt'].read_group(
+                domain, ['id', 'total_received:sum'], ['vendor_id'])
+            vendor_rows = sorted([{
+                'id': g['vendor_id'][0] if g['vendor_id'] else 0,
+                'name': g['vendor_id'][1] if g['vendor_id'] else 'Unspecified',
+                'receipts': g['vendor_id_count'],
+                'weight': round(g['total_received'], 1),
+            } for g in vendor_groups if g['vendor_id']], key=lambda x: x['weight'], reverse=True)
+            return {
+                'model': 'res.partner',
+                'columns': [
+                    {'field': 'name', 'label': 'Vendor', 'fmt': 'string'},
+                    {'field': 'receipts', 'label': 'Receipts', 'fmt': 'number'},
+                    {'field': 'weight', 'label': 'Weight Received (kg)', 'fmt': 'number'},
+                ],
+                'records': vendor_rows,
+            }
+
         if drill_type == 'total_purchase_spend':
             po_domain = [('state', 'in', ('purchase', 'done'))]
             if company_id:
@@ -1090,22 +1119,21 @@ class AquaDashboard(models.TransientModel):
             }
 
         if drill_type == 'processing_status_breakdown':
-            mo_domain = domain + [('catch_receipt_id', '!=', False)]
+            mo_domain = list(domain)
             if filter_value:
                 mo_domain += [('state', '=', MO_LABEL_TO_STATE.get(filter_value, filter_value))]
             productions = self.env['mrp.production'].search(mo_domain, limit=200)
             return self._drill_processing_records(productions)
 
         if drill_type == 'input_qty_by_species':
-            mo_domain = domain + [('catch_receipt_id', '!=', False)]
+            mo_domain = list(domain)
             if filter_value:
                 mo_domain += [('species_id.name', '=', filter_value)]
             productions = self.env['mrp.production'].search(mo_domain, limit=200)
             return self._drill_processing_records(productions)
 
         if drill_type == 'total_processing_orders':
-            productions = self.env['mrp.production'].search(
-                domain + [('catch_receipt_id', '!=', False)], limit=200)
+            productions = self.env['mrp.production'].search(domain, limit=200)
             return self._drill_processing_records(productions)
 
         if drill_type in ('wip_stock_kg', 'wip_stock_by_product'):
