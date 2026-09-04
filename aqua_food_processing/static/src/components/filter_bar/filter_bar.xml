@@ -5,16 +5,26 @@
   <t t-set="periodLabel" t-value="periodOptions.find((o) => o.value === state.period).label"/>
   <t t-set="compareLabel" t-value="compareOptions.find((o) => o.value === state.compare).label"/>
 
-  <div class="pill-input filter-pill">
-    <i class="fa fa-calendar"/>
-    <select t-on-change="onPeriodChange" title="Period">
-      <t t-foreach="periodOptions" t-as="opt" t-key="opt.value">
-        <option t-att-value="opt.value" t-att-selected="state.period === opt.value">
-          <t t-esc="opt.label"/>
-        </option>
-      </t>
-    </select>
-    <i class="fa fa-chevron-down"/>
+  <div class="aqua-dropdown">
+    <div class="pill-input filter-pill aqua-dropdown-trigger"
+         t-att-class="{ 'aqua-dropdown-trigger--open': state.openMenu === 'period' }"
+         t-on-click="() => this.toggleMenu('period')" title="Period">
+      <i class="fa fa-calendar"/>
+      <span t-esc="periodLabel"/>
+      <i class="fa fa-chevron-down"/>
+    </div>
+    <t t-if="state.openMenu === 'period'">
+      <div class="aqua-dropdown-panel">
+        <t t-foreach="periodOptions" t-as="opt" t-key="opt.value">
+          <div class="aqua-dropdown-option"
+               t-att-class="{ 'aqua-dropdown-option--active': state.period === opt.value }"
+               t-on-click="() => this.selectPeriod(opt.value)">
+            <span t-esc="opt.label"/>
+            <i t-if="state.period === opt.value" class="fa fa-check"/>
+          </div>
+        </t>
+      </div>
+    </t>
   </div>
 
   <t t-if="state.period === 'custom'">
@@ -28,16 +38,26 @@
     </div>
   </t>
 
-  <div class="pill-input filter-pill">
-    <i class="fa fa-sliders"/>
-    <select t-on-change="onCompareChange" title="Compare to">
-      <t t-foreach="compareOptions" t-as="opt" t-key="opt.value">
-        <option t-att-value="opt.value" t-att-selected="state.compare === opt.value">
-          <t t-esc="opt.label"/>
-        </option>
-      </t>
-    </select>
-    <i class="fa fa-chevron-down"/>
+  <div class="aqua-dropdown">
+    <div class="pill-input filter-pill aqua-dropdown-trigger"
+         t-att-class="{ 'aqua-dropdown-trigger--open': state.openMenu === 'compare' }"
+         t-on-click="() => this.toggleMenu('compare')" title="Compare to">
+      <i class="fa fa-sliders"/>
+      <span t-esc="compareLabel"/>
+      <i class="fa fa-chevron-down"/>
+    </div>
+    <t t-if="state.openMenu === 'compare'">
+      <div class="aqua-dropdown-panel">
+        <t t-foreach="compareOptions" t-as="opt" t-key="opt.value">
+          <div class="aqua-dropdown-option"
+               t-att-class="{ 'aqua-dropdown-option--active': state.compare === opt.value }"
+               t-on-click="() => this.selectCompare(opt.value)">
+            <span t-esc="opt.label"/>
+            <i t-if="state.compare === opt.value" class="fa fa-check"/>
+          </div>
+        </t>
+      </div>
+    </t>
   </div>
 
 </t>

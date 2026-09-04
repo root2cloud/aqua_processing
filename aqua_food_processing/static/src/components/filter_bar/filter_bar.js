@@ -6,7 +6,7 @@
  * dummy control with nothing behind it. Emits 'filter-change' with the full
  * filter state whenever the person changes something.
  */
-import { Component, useState } from "@odoo/owl";
+import { Component, useState, useExternalListener } from "@odoo/owl";
 
 export class FilterBar extends Component {
     static template = "aqua_food_processing.FilterBar";
@@ -26,6 +26,16 @@ export class FilterBar extends Component {
             compare:    'none',  // none | ly | lm | lq
             customFrom: '',
             customTo:   '',
+            openMenu:   null,    // null | 'period' | 'compare'
+        });
+        // Any click outside an open dropdown panel closes it — this is what
+        // makes the custom menu behave like the rest of the app's popovers
+        // instead of a native <select>.
+        useExternalListener(window, "click", (ev) => {
+            if (!this.state.openMenu) return;
+            if (!ev.target.closest(".aqua-dropdown")) {
+                this.state.openMenu = null;
+            }
         });
     }
 
@@ -54,13 +64,19 @@ export class FilterBar extends Component {
         this.props.onFilterChange({ ...this.state });
     }
 
-    onPeriodChange(ev) {
-        this.state.period = ev.target.value;
-        if (this.state.period !== 'custom') this._emit();
+    toggleMenu(name) {
+        this.state.openMenu = this.state.openMenu === name ? null : name;
     }
 
-    onCompareChange(ev) {
-        this.state.compare = ev.target.value;
+    selectPeriod(value) {
+        this.state.period = value;
+        this.state.openMenu = value === 'custom' ? 'period' : null;
+        if (value !== 'custom') this._emit();
+    }
+
+    selectCompare(value) {
+        this.state.compare = value;
+        this.state.openMenu = null;
         this._emit();
     }
 
