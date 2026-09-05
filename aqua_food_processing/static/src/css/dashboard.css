@@ -188,19 +188,18 @@
 .o_aqua_dashboard .tab:not(.active):hover{ background:#F5F6F8; }
 
 /* ---- KPI tiles ----
-   Icon badges are perfect circles (not rounded squares) — matches the
-   reference mockups' pill-shaped icon chips exactly, and reads as far more
-   "product dashboard" than a rounded-square icon does. */
+   Icon badges are rounded squares — matches the reference mockups' icon
+   chips (border-radius:10-12px), not circles. */
 .o_aqua_dashboard .kpi-tile{ display:flex; flex-direction:column; gap:14px; padding:20px; cursor:pointer; }
-.o_aqua_dashboard .kpi-tile .stat-icon{ width:40px; height:40px; border-radius:50%; font-size:16px; }
+.o_aqua_dashboard .kpi-tile .stat-icon{ width:40px; height:40px; border-radius:10px; font-size:16px; }
 .o_aqua_dashboard .kpi-tile .stat-val{ font-size:21px; font-weight:700; letter-spacing:-.01em; }
 .o_aqua_dashboard .kpi-tile .stat-lbl{ font-size:11.5px; color:var(--ink-soft); font-weight:500; }
-.o_aqua_dashboard .stat-icon{ display:flex; align-items:center; justify-content:center; border-radius:50%; }
+.o_aqua_dashboard .stat-icon{ display:flex; align-items:center; justify-content:center; border-radius:12px; }
 .o_aqua_dashboard .stat-top{ display:flex; justify-content:space-between; align-items:center; }
 
 /* ---- stat-card (overview) ---- */
 .o_aqua_dashboard .stat-card{ display:flex; flex-direction:column; gap:14px; cursor:pointer; }
-.o_aqua_dashboard .stat-card .stat-icon{ width:44px; height:44px; border-radius:50%; font-size:19px; }
+.o_aqua_dashboard .stat-card .stat-icon{ width:44px; height:44px; border-radius:12px; font-size:19px; }
 .o_aqua_dashboard .chip{ font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; }
 .o_aqua_dashboard .stat-card .stat-val{ font-size:27px; font-weight:700; letter-spacing:-.015em; }
 .o_aqua_dashboard .stat-card .stat-lbl{ font-size:12.5px; color:var(--ink-soft); font-weight:500; }
