@@ -12,7 +12,28 @@
                     </div>
                     <div class="top-actions">
                         <FilterBar onFilterChange.bind="onFilterChange" onRefresh.bind="onRefresh" isLoading="state.isLoading"/>
-                        <div class="pill-input search-pill"><i class="fa fa-search"/> Search...</div>
+                        <div class="pill-input search-pill" style="position:relative;">
+                            <i class="fa fa-search"/>
+                            <input type="text" placeholder="Search receipts, orders, checks…"
+                                   t-att-value="search.query"
+                                   t-on-input="onSearchInput"
+                                   t-on-focus="onSearchFocus"
+                                   t-on-blur="onSearchBlur"/>
+                            <i t-if="search.query" class="fa fa-times-circle search-clear" t-on-click="onSearchClear" title="Clear"/>
+                            <div class="search-dropdown" t-if="search.isOpen">
+                                <div t-if="search.loading" class="search-dropdown-msg">Searching…</div>
+                                <div t-if="!search.loading and !search.results.length" class="search-dropdown-msg">No matches for "<t t-esc="search.query"/>"</div>
+                                <t t-if="!search.loading" t-foreach="searchGroups" t-as="grp" t-key="grp.group">
+                                    <div class="search-dropdown-group" t-esc="grp.group"/>
+                                    <t t-foreach="grp.items" t-as="res" t-key="res.model + '-' + res.id">
+                                        <div class="search-dropdown-row" t-on-mousedown="() => this.onSearchResultClick(res)">
+                                            <span class="label" t-esc="res.label"/>
+                                            <span class="sublabel" t-if="res.sublabel" t-esc="res.sublabel"/>
+                                        </div>
+                                    </t>
+                                </t>
+                            </div>
+                        </div>
                         <div class="icon-btn" t-on-click="onRefresh" title="Refresh">
                             <i class="fa fa-bell"/><span class="badge-dot"/>
                         </div>
@@ -75,22 +96,96 @@
                         </t>
 
                         <div class="aqua-card">
-                            <div class="weather-top"><i class="fa fa-map-marker"/> Visakhapatnam, India</div>
-                            <div class="temp">31°</div>
-                            <p class="muted">Partly cloudy · Humidity 68% · Wind 12 km/h</p>
-                            <!-- No weather feed is wired into this Odoo module (and no
-                                 external weather API is reachable at runtime), so this
-                                 card stays informational like the rest of the plant's
-                                 physical-conditions signage rather than live data. -->
+                            <div class="weather-top"><i class="fa fa-map-marker"/> <t t-esc="weather.locationLabel"/></div>
+
+                            <t t-if="weather.loading">
+                                <p class="muted" style="margin-top:8px;">Fetching current weather…</p>
+                            </t>
+
+                            <t t-if="!weather.loading and weather.error">
+                                <div class="temp">--°</div>
+                                <p class="muted">Weather unavailable right now.</p>
+                            </t>
+
+                            <t t-if="!weather.loading and !weather.error">
+                                <div class="weather-row">
+                                    <div class="temp"><t t-esc="weatherTempDisplay"/>°</div>
+                                    <svg class="weather-icon" width="56" height="56" viewBox="0 0 64 64">
+                                        <t t-if="weatherIconKey === 'sunny'">
+                                            <g stroke="var(--amber)" stroke-width="3" stroke-linecap="round">
+                                                <line x1="32" y1="4" x2="32" y2="12"/>
+                                                <line x1="32" y1="52" x2="32" y2="60"/>
+                                                <line x1="4" y1="32" x2="12" y2="32"/>
+                                                <line x1="52" y1="32" x2="60" y2="32"/>
+                                                <line x1="12.7" y1="12.7" x2="18.3" y2="18.3"/>
+                                                <line x1="45.7" y1="45.7" x2="51.3" y2="51.3"/>
+                                                <line x1="12.7" y1="51.3" x2="18.3" y2="45.7"/>
+                                                <line x1="45.7" y1="18.3" x2="51.3" y2="12.7"/>
+                                            </g>
+                                            <circle cx="32" cy="32" r="14" fill="var(--amber)"/>
+                                        </t>
+                                        <t t-if="weatherIconKey === 'clear_night'">
+                                            <path d="M40,8 A20,20 0 1 0 40,56 A24,24 0 0 1 40,8 Z" fill="var(--purple)"/>
+                                        </t>
+                                        <t t-if="weatherIconKey === 'partly_cloudy'">
+                                            <g stroke="var(--amber)" stroke-width="3" stroke-linecap="round">
+                                                <line x1="24" y1="4" x2="24" y2="9"/>
+                                                <line x1="4" y1="24" x2="9" y2="24"/>
+                                                <line x1="9.5" y1="9.5" x2="13" y2="13"/>
+                                            </g>
+                                            <circle cx="24" cy="24" r="11" fill="var(--amber)"/>
+                                            <path d="M18,52 a11,11 0 0 1 -2,-21.8 a15,15 0 0 1 29,-4 a12,12 0 0 1 -2,25.8 Z" fill="#fff" stroke="#D9DEE4" stroke-width="1.5"/>
+                                        </t>
+                                        <t t-if="weatherIconKey === 'cloudy' or weatherIconKey === 'fog'">
+                                            <path d="M16,50 a12,12 0 0 1 -2,-23.8 a16,16 0 0 1 31,-4.4 a13,13 0 0 1 -2,28.2 Z" fill="#CBD5E0"/>
+                                            <g t-if="weatherIconKey === 'fog'" stroke="var(--ink-mute)" stroke-width="2.5" stroke-linecap="round">
+                                                <line x1="14" y1="56" x2="50" y2="56"/>
+                                                <line x1="18" y1="61" x2="46" y2="61"/>
+                                            </g>
+                                        </t>
+                                        <t t-if="weatherIconKey === 'rain'">
+                                            <path d="M16,42 a12,12 0 0 1 -2,-23.8 a16,16 0 0 1 31,-4.4 a13,13 0 0 1 -2,28.2 Z" fill="#9AA9C9"/>
+                                            <g stroke="var(--blue)" stroke-width="3" stroke-linecap="round">
+                                                <line x1="20" y1="50" x2="16" y2="60"/>
+                                                <line x1="32" y1="50" x2="28" y2="60"/>
+                                                <line x1="44" y1="50" x2="40" y2="60"/>
+                                            </g>
+                                        </t>
+                                        <t t-if="weatherIconKey === 'snow'">
+                                            <path d="M16,42 a12,12 0 0 1 -2,-23.8 a16,16 0 0 1 31,-4.4 a13,13 0 0 1 -2,28.2 Z" fill="#B9C4D6"/>
+                                            <g stroke="#fff" stroke-width="2.5" stroke-linecap="round">
+                                                <line x1="20" y1="48" x2="20" y2="58"/>
+                                                <line x1="15.5" y1="53" x2="24.5" y2="53"/>
+                                                <line x1="32" y1="48" x2="32" y2="58"/>
+                                                <line x1="27.5" y1="53" x2="36.5" y2="53"/>
+                                                <line x1="44" y1="48" x2="44" y2="58"/>
+                                                <line x1="39.5" y1="53" x2="48.5" y2="53"/>
+                                            </g>
+                                        </t>
+                                        <t t-if="weatherIconKey === 'storm'">
+                                            <path d="M16,38 a12,12 0 0 1 -2,-23.8 a16,16 0 0 1 31,-4.4 a13,13 0 0 1 -2,28.2 Z" fill="#7A889E"/>
+                                            <path d="M34,44 L24,58 L31,58 L27,64 L40,48 L33,48 Z" fill="var(--amber)"/>
+                                        </t>
+                                    </svg>
+                                </div>
+                                <p class="muted">
+                                    <t t-esc="weatherConditionLabel"/> · Humidity <t t-esc="weatherHumidityDisplay"/>% · Wind <t t-esc="weatherWindDisplay"/> km/h
+                                </p>
+                                <p class="muted weather-updated" t-if="weather.updatedAt">Updated <t t-esc="weather.updatedAt"/></p>
+                            </t>
+
                             <div class="inset-card">
                                 <h3>Resource monitoring</h3>
                                 <div class="donut-wrap">
                                     <svg width="150" height="150" viewBox="0 0 150 150">
                                         <circle cx="75" cy="75" r="58" fill="none" stroke="#EEF0F3" stroke-width="20"/>
                                         <t t-foreach="ovResourceMonitoringSegments" t-as="seg" t-key="seg.label">
-                                            <circle cx="75" cy="75" r="58" fill="none" t-attf-stroke="{{seg.color}}" stroke-width="20" stroke-linecap="round"
+                                            <circle cx="75" cy="75" r="58" fill="none" t-attf-stroke="{{seg.color}}" stroke-width="20" stroke-linecap="round" style="cursor:pointer;"
                                                     t-attf-stroke-dasharray="{{seg.dasharray}}" t-attf-stroke-dashoffset="{{seg.dashoffset}}"
-                                                    transform="rotate(-90 75 75)"/>
+                                                    transform="rotate(-90 75 75)"
+                                                    t-on-click="() => this.onResourceMonitoringChartClick({label: seg.label})"
+                                                    t-on-mouseenter="(ev) => this.onSvgPointEnter(ev, seg.label + ': ' + this.fmtTon(seg.value))"
+                                                    t-on-mouseleave="() => this.onSvgPointLeave()"/>
                                         </t>
                                         <text x="75" y="71" text-anchor="middle" font-size="12" fill="var(--ink-mute)" font-family="Inter">Total</text>
                                         <text x="75" y="90" text-anchor="middle" font-size="17" font-weight="700" fill="var(--ink)" font-family="Inter"><t t-esc="fmtTonCompact(ovResourceMonitoringTotal)"/></text>

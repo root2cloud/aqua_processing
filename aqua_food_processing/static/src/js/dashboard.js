@@ -23,6 +23,22 @@ class AquaDashboard extends Component {
         // that can't be styled - see svgTooltip/onSvgPointEnter below).
         this.svgTooltip = useState({ visible: false, x: 0, y: 0, text: '' });
         this.ui = useState({ heroExpanded: false });
+        // Topbar quick-search: debounced query -> global_search() results,
+        // rendered as a dropdown under the search box (see onSearchInput /
+        // onSearchResultClick). Kept outside `state` since it has nothing
+        // to do with the dashboard's own report data / period filters.
+        this.search = useState({ query: '', results: [], isOpen: false, loading: false });
+        this._searchDebounce = null;
+        // Live weather for the plant location (see _loadWeather). Card
+        // shows a fallback message if the request fails - e.g. no outbound
+        // internet access from the browser - rather than silently reverting
+        // to fake numbers.
+        this.weather = useState({
+            loading: true, error: false,
+            tempC: null, humidity: null, windKph: null,
+            code: null, isDay: true, updatedAt: '',
+            locationLabel: AquaDashboard.FALLBACK_LOCATION_LABEL,
+        });
         // Legend click -> show/hide toggle for the hand-drawn paired-bar
         // cards (Ordered vs received, Pass/Fail, Planned/Practical, etc).
         // These cards don't go through Chart.js, so they don't get its
@@ -120,6 +136,7 @@ class AquaDashboard extends Component {
             },
         });
         onMounted(() => this.loadData());
+        onMounted(() => this._loadWeather());
     }
 
     // ---- Shared UI helper: status label -> badge color class ----
@@ -142,6 +159,199 @@ class AquaDashboard extends Component {
 
     onHeroLightboxClose() {
         this.ui.heroExpanded = false;
+    }
+
+    // ---- Weather card (Overview) ----
+    // Fallback coordinates (Visakhapatnam) used only if the browser can't
+    // or won't provide a real location - geolocation permission denied,
+    // unsupported browser, no HTTPS context, etc. - so the card still
+    // shows *something* rather than an error.
+    static FALLBACK_LAT = 17.6868;
+    static FALLBACK_LON = 83.2185;
+    static FALLBACK_LOCATION_LABEL = 'Visakhapatnam, India';
+
+    // Resolves the browser's current position via the Geolocation API,
+    // wrapped in a promise with a timeout so a slow/never-answered
+    // permission prompt doesn't hang the weather card forever.
+    _getBrowserLocation() {
+        return new Promise((resolve) => {
+            if (!('geolocation' in navigator)) {
+                resolve(null);
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+                () => resolve(null),
+                { timeout: 8000, maximumAge: 10 * 60 * 1000 }
+            );
+        });
+    }
+
+    // Lat/lon -> "City, Country" via BigDataCloud's free, keyless reverse-
+    // geocoding endpoint (client-side, no account/API key needed). Falls
+    // back to a bare coordinate string if the lookup itself fails, so the
+    // weather numbers still display even without a nice place name.
+    async _reverseGeocode(lat, lon) {
+        try {
+            const resp = await fetch(
+                `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`
+            );
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const data = await resp.json();
+            const city = data.city || data.locality || data.principalSubdivision || '';
+            const country = data.countryName || '';
+            return [city, country].filter(Boolean).join(', ') || `${lat.toFixed(2)}, ${lon.toFixed(2)}`;
+        } catch (e) {
+            return `${lat.toFixed(2)}, ${lon.toFixed(2)}`;
+        }
+    }
+
+    // Open-Meteo needs no API key and allows browser-side CORS requests,
+    // so this is fetched straight from the client rather than proxied
+    // through an Odoo controller. Location: tries the browser's actual
+    // position first (this dashboard can be opened from anywhere, not
+    // just from inside the plant), and only falls back to the fixed
+    // Visakhapatnam coordinates if geolocation is denied/unavailable.
+    async _loadWeather() {
+        this.weather.loading = true;
+        this.weather.error = false;
+        try {
+            const browserLoc = await this._getBrowserLocation();
+            const lat = browserLoc ? browserLoc.lat : AquaDashboard.FALLBACK_LAT;
+            const lon = browserLoc ? browserLoc.lon : AquaDashboard.FALLBACK_LON;
+
+            this.weather.locationLabel = browserLoc
+                ? await this._reverseGeocode(lat, lon)
+                : AquaDashboard.FALLBACK_LOCATION_LABEL;
+
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,is_day&timezone=auto`;
+            const resp = await fetch(url);
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const data = await resp.json();
+            const c = data.current || {};
+            this.weather.tempC = c.temperature_2m ?? null;
+            this.weather.humidity = c.relative_humidity_2m ?? null;
+            this.weather.windKph = c.wind_speed_10m ?? null;
+            this.weather.code = c.weather_code ?? null;
+            this.weather.isDay = c.is_day !== 0;
+            this.weather.updatedAt = c.time
+                ? new Date(c.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : '';
+        } catch (e) {
+            this.weather.error = true;
+        } finally {
+            this.weather.loading = false;
+        }
+    }
+
+    // WMO weather codes (used by Open-Meteo) collapsed down to the handful
+    // of icon/label buckets this card actually draws.
+    get weatherConditionLabel() {
+        const code = this.weather.code;
+        if (code === null || code === undefined) return '';
+        if (code === 0) return this.weather.isDay ? 'Clear sky' : 'Clear night';
+        if ([1, 2].includes(code)) return 'Partly cloudy';
+        if (code === 3) return 'Cloudy';
+        if ([45, 48].includes(code)) return 'Foggy';
+        if ([51, 53, 55, 56, 57].includes(code)) return 'Drizzle';
+        if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return 'Rain';
+        if ([71, 73, 75, 77, 85, 86].includes(code)) return 'Snow';
+        if ([95, 96, 99].includes(code)) return 'Thunderstorm';
+        return 'Partly cloudy';
+    }
+
+    get weatherIconKey() {
+        const code = this.weather.code;
+        if (code === null || code === undefined) return 'partly_cloudy';
+        if (code === 0) return this.weather.isDay ? 'sunny' : 'clear_night';
+        if ([1, 2].includes(code)) return 'partly_cloudy';
+        if (code === 3) return 'cloudy';
+        if ([45, 48].includes(code)) return 'fog';
+        if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return 'rain';
+        if ([71, 73, 75, 77, 85, 86].includes(code)) return 'snow';
+        if ([95, 96, 99].includes(code)) return 'storm';
+        return 'partly_cloudy';
+    }
+
+    // Plain-number display getters: QWeb resolves a bare `Math`/`Number`
+    // in a template expression as a lookup on the render context (and
+    // throws), so rounding happens here instead of inline in the XML.
+    get weatherTempDisplay() { return this.weather.tempC === null ? '--' : Math.round(this.weather.tempC); }
+    get weatherHumidityDisplay() { return this.weather.humidity === null ? '--' : Math.round(this.weather.humidity); }
+    get weatherWindDisplay() { return this.weather.windKph === null ? '--' : Math.round(this.weather.windKph); }
+
+    // ---- Topbar quick search ----
+    // Debounced so a fast typist doesn't fire one RPC per keystroke; 250ms
+    // is short enough that the dropdown still feels instant.
+    onSearchInput(ev) {
+        this.search.query = ev.target.value;
+        clearTimeout(this._searchDebounce);
+        const q = this.search.query.trim();
+        if (q.length < 2) {
+            this.search.results = [];
+            this.search.isOpen = false;
+            return;
+        }
+        this._searchDebounce = setTimeout(() => this._runSearch(q), 250);
+    }
+
+    async _runSearch(query) {
+        this.search.loading = true;
+        this.search.isOpen = true;
+        try {
+            const results = await this.orm.call("aqua.dashboard", "global_search", [query]);
+            // The query can change while the RPC is in flight; drop a stale response.
+            if (this.search.query.trim() === query) {
+                this.search.results = results || [];
+            }
+        } catch (e) {
+            this.search.results = [];
+        } finally {
+            this.search.loading = false;
+        }
+    }
+
+    onSearchFocus() {
+        if (this.search.results.length) this.search.isOpen = true;
+    }
+
+    // Results grouped by record type for the dropdown - computed here
+    // rather than in the template so the "one heading per group" logic
+    // doesn't depend on QWeb's per-iteration variable scoping.
+    get searchGroups() {
+        const groups = [];
+        const byGroup = {};
+        for (const r of this.search.results) {
+            if (!byGroup[r.group]) {
+                byGroup[r.group] = { group: r.group, items: [] };
+                groups.push(byGroup[r.group]);
+            }
+            byGroup[r.group].items.push(r);
+        }
+        return groups;
+    }
+
+    // Delay the close slightly so the click on a result row lands before
+    // the dropdown unmounts underneath it.
+    onSearchBlur() {
+        setTimeout(() => { this.search.isOpen = false; }, 150);
+    }
+
+    onSearchClear() {
+        this.search.query = '';
+        this.search.results = [];
+        this.search.isOpen = false;
+    }
+
+    onSearchResultClick(result) {
+        this.search.isOpen = false;
+        this.action.doAction({
+            type: 'ir.actions.act_window',
+            res_model: result.model,
+            res_id: result.id,
+            views: [[false, 'form']],
+            target: 'current',
+        });
     }
 
     // ---- Tabs: Overview / Procurement / Processing / Quality Control ----
@@ -900,6 +1110,25 @@ class AquaDashboard extends Component {
 
     onDrillTotalProcessingOrders() {
         this._openDrill('total_processing_orders', null, 'All Processing Orders');
+    }
+
+    // "Resource monitoring" (Overview) is a synthetic five-way mass-flow
+    // breakdown built from several existing aggregates (see
+    // ovResourceMonitoringParts) rather than one queryable model of its
+    // own, so a click routes to whichever real drill-down already backs
+    // that number elsewhere on the dashboard instead of a dedicated
+    // "resource monitoring" drill type that the backend has never heard of.
+    onResourceMonitoringChartClick(ctx) {
+        const DRILL_BY_LABEL = {
+            'Raw material':      ['total_weight_received', null, 'All Catch Receipts by Weight'],
+            'Production output':  ['total_processing_orders', null, 'All Processing Orders'],
+            'Frozen stock in':    ['wip_stock_kg', null, 'Raw Material Staged for Processing'],
+            'Frozen stock out':   ['total_stock_on_hand', null, 'Current Stock On Hand'],
+            'Others / waste':     ['cancelled_receipts', null, 'Cancelled Catch Receipts'],
+        };
+        const entry = DRILL_BY_LABEL[ctx.label];
+        if (!entry) return;
+        this._openDrill(entry[0], entry[1], entry[2]);
     }
 
     onDrillWipStock() {
