@@ -98,7 +98,7 @@
                                 </div>
                                 <div class="legend">
                                     <t t-foreach="ovResourceMonitoringParts" t-as="part" t-key="part.label">
-                                        <div class="legend-row">
+                                        <div t-att-class="'legend-row ' + seriesLegendClass('resource_monitoring', part.label)" t-on-click="() => this.toggleSeries('resource_monitoring', part.label)" style="cursor:pointer;">
                                             <div class="lk"><span class="legend-dot" t-attf-style="background:{{part.color}};"/><t t-esc="part.label"/></div>
                                             <t t-esc="fmtPct(ovResourceMonitoringTotal ? (part.value / ovResourceMonitoringTotal * 100) : 0)"/>
                                         </div>
@@ -376,7 +376,7 @@
                             </div>
                             <div class="legend">
                                 <t t-foreach="ovReceiptStatusRows" t-as="row" t-key="row.label">
-                                    <div class="legend-row" t-on-click="() => this.onReceiptStatusChartClick({label: row.label})" style="cursor:pointer;">
+                                    <div t-att-class="'legend-row ' + seriesLegendClass('receipt_status', row.label)" t-on-click="() => this.toggleSeries('receipt_status', row.label)" style="cursor:pointer;">
                                         <div class="lk"><span class="legend-dot" t-attf-style="background:{{row.color}};"/><t t-esc="row.label"/></div>
                                         <t t-esc="row.value"/>
                                     </div>
@@ -440,15 +440,15 @@
                                          t-on-mouseenter="(ev) => this.onSvgPointEnter(ev, row.label + ' — Ordered: ' + this.fmtNum(row.ordered) + ' kg · Received: ' + this.fmtNum(row.received) + ' kg')"
                                          t-on-mouseleave="() => this.onSvgPointLeave()">
                                         <div class="v" t-esc="row.received"/>
-                                        <div class="stick" t-attf-style="height:{{row.orderedPct}}%;"/>
-                                        <div class="stick b2" t-attf-style="height:{{row.receivedPct}}%;"/>
+                                        <div class="stick" t-if="isSeriesVisible('ordered_vs_received', 'ordered')" t-attf-style="height:{{row.orderedPct}}%;"/>
+                                        <div class="stick b2" t-if="isSeriesVisible('ordered_vs_received', 'received')" t-attf-style="height:{{row.receivedPct}}%;"/>
                                         <div class="l" t-esc="row.label"/>
                                     </div>
                                 </t>
                             </div>
                             <div class="bar-col-legend">
-                                <div><span class="legend-dot" style="background:var(--blue); margin-right:6px;"/>Ordered (kg)</div>
-                                <div><span class="legend-dot" style="background:var(--teal); margin-right:6px;"/>Received (kg)</div>
+                                <div t-att-class="seriesLegendClass('ordered_vs_received', 'ordered')" style="cursor:pointer;" t-on-click.stop="() => this.toggleSeries('ordered_vs_received', 'ordered')"><span class="legend-dot" style="background:var(--blue); margin-right:6px;"/>Ordered (kg)</div>
+                                <div t-att-class="seriesLegendClass('ordered_vs_received', 'received')" style="cursor:pointer;" t-on-click.stop="() => this.toggleSeries('ordered_vs_received', 'received')"><span class="legend-dot" style="background:var(--teal); margin-right:6px;"/>Received (kg)</div>
                             </div>
                         </div>
                     </div>
@@ -636,7 +636,7 @@
                             </div>
                             <div class="legend">
                                 <t t-foreach="state.processing_status_breakdown" t-as="row" t-key="row.label">
-                                    <div class="legend-row" t-on-click="() => this.onProcessingStatusChartClick({label: row.label})" style="cursor:pointer;">
+                                    <div t-att-class="'legend-row ' + seriesLegendClass('processing_status', row.label)" t-on-click="() => this.toggleSeries('processing_status', row.label)" style="cursor:pointer;">
                                         <div class="lk"><span class="legend-dot" t-attf-style="background:{{statusColor(row.label)}};"/><t t-esc="row.label"/></div>
                                         <t t-esc="row.value"/>
                                     </div>
@@ -675,7 +675,7 @@
                             </div>
                             <div class="legend">
                                 <t t-foreach="state.blast_freeze_status" t-as="row" t-key="row.label">
-                                    <div class="legend-row" t-on-click="() => this.onBlastFreezeChartClick({label: row.label})" style="cursor:pointer;">
+                                    <div t-att-class="'legend-row ' + seriesLegendClass('blast_freeze', row.label)" t-on-click="() => this.toggleSeries('blast_freeze', row.label)" style="cursor:pointer;">
                                         <div class="lk"><span class="legend-dot" t-attf-style="background:{{statusColor(row.label)}};"/><t t-esc="row.label"/></div>
                                         <t t-esc="row.value"/>
                                     </div>
@@ -806,8 +806,8 @@
                                 </svg>
                             </div>
                             <div class="legend">
-                                <t t-foreach="qQcStageSegments" t-as="seg" t-key="seg.label">
-                                    <div class="legend-row" t-on-click="() => this.onQcStageChartClick({label: seg.label})" style="cursor:pointer;">
+                                <t t-foreach="qQcStageRows" t-as="seg" t-key="seg.label">
+                                    <div t-att-class="'legend-row ' + seriesLegendClass('qc_stage', seg.label)" t-on-click="() => this.toggleSeries('qc_stage', seg.label)" style="cursor:pointer;">
                                         <div class="lk"><span class="legend-dot" t-attf-style="background:{{seg.color}};"/><t t-esc="seg.label"/></div>
                                         <t t-esc="seg.value"/>
                                     </div>
@@ -834,8 +834,8 @@
                                 </svg>
                             </div>
                             <div class="legend">
-                                <t t-foreach="qIntakeDecisionSegments" t-as="seg" t-key="seg.label">
-                                    <div class="legend-row" t-on-click="() => this.onIntakeDecisionChartClick({label: seg.label})" style="cursor:pointer;">
+                                <t t-foreach="qIntakeDecisionRows" t-as="seg" t-key="seg.label">
+                                    <div t-att-class="'legend-row ' + seriesLegendClass('intake_decision', seg.label)" t-on-click="() => this.toggleSeries('intake_decision', seg.label)" style="cursor:pointer;">
                                         <div class="lk"><span class="legend-dot" t-attf-style="background:{{seg.color}};"/><t t-esc="seg.label"/></div>
                                         <t t-esc="seg.value"/>
                                     </div>
@@ -892,16 +892,16 @@
                                 <div class="pair-row" t-on-click="() => this.onIpqcByOperationChartClick({label: row.label})" style="cursor:pointer;">
                                     <span class="lbl" t-esc="row.label"/>
                                     <div class="pair-track">
-                                        <div class="seg" t-attf-style="width:{{row.passPct}}%; background:var(--green);"/>
-                                        <div class="seg" t-attf-style="width:{{row.failPct}}%; background:var(--coral);"/>
+                                        <div class="seg" t-if="isSeriesVisible('ipqc_by_operation', 'pass')" t-attf-style="width:{{row.passPct}}%; background:var(--green);"/>
+                                        <div class="seg" t-if="isSeriesVisible('ipqc_by_operation', 'fail')" t-attf-style="width:{{row.failPct}}%; background:var(--coral);"/>
                                     </div>
                                     <span class="pair-count"><t t-esc="row.pass"/> / <t t-esc="row.fail"/></span>
                                 </div>
                             </t>
                             <div class="o_aqua_empty" t-if="!qIpqcByOperationRows.length">No in-process checks recorded yet.</div>
                             <div class="pair-legend">
-                                <div><span class="d" style="background:var(--green);"/>Pass</div>
-                                <div><span class="d" style="background:var(--coral);"/>Fail</div>
+                                <div t-att-class="seriesLegendClass('ipqc_by_operation', 'pass')" style="cursor:pointer;" t-on-click="() => this.toggleSeries('ipqc_by_operation', 'pass')"><span class="d" style="background:var(--green);"/>Pass</div>
+                                <div t-att-class="seriesLegendClass('ipqc_by_operation', 'fail')" style="cursor:pointer;" t-on-click="() => this.toggleSeries('ipqc_by_operation', 'fail')"><span class="d" style="background:var(--coral);"/>Fail</div>
                             </div>
                         </div>
 
@@ -913,16 +913,16 @@
                                     <span class="lbl" t-esc="row.title"/>
                                     <div class="pair-track">
                                         <t t-foreach="row.segs" t-as="seg" t-key="seg.label">
-                                            <div class="seg" t-attf-style="width:{{seg.pct}}%; background:{{seg.color}};"/>
+                                            <div class="seg" t-if="isSeriesVisible('residue_screening', seg.label)" t-attf-style="width:{{seg.pct}}%; background:{{seg.color}};"/>
                                         </t>
                                     </div>
                                 </div>
                             </t>
                             <div class="o_aqua_empty" t-if="!qResidueRows.length">No residue screening data yet.</div>
                             <div class="pair-legend">
-                                <div><span class="d" style="background:#D9DEE4;"/>Not tested</div>
-                                <div><span class="d" style="background:var(--green);"/>Not detected</div>
-                                <div><span class="d" style="background:var(--coral);"/>Detected</div>
+                                <div t-att-class="seriesLegendClass('residue_screening', 'Not Tested')" style="cursor:pointer;" t-on-click="() => this.toggleSeries('residue_screening', 'Not Tested')"><span class="d" style="background:#D9DEE4;"/>Not tested</div>
+                                <div t-att-class="seriesLegendClass('residue_screening', 'Not Detected')" style="cursor:pointer;" t-on-click="() => this.toggleSeries('residue_screening', 'Not Detected')"><span class="d" style="background:var(--green);"/>Not detected</div>
+                                <div t-att-class="seriesLegendClass('residue_screening', 'Detected')" style="cursor:pointer;" t-on-click="() => this.toggleSeries('residue_screening', 'Detected')"><span class="d" style="background:var(--coral);"/>Detected</div>
                             </div>
                         </div>
                     </div>
@@ -1025,15 +1025,15 @@
                                     <div class="bar-pair-row" t-on-click="onOpenBudgetRecord" style="cursor:pointer;">
                                         <span class="lbl" t-esc="row.label"/>
                                         <div class="bars">
-                                            <div class="bp"><div class="track"><div class="fill" t-attf-style="width:{{row.plannedPct}}%; background:var(--blue);"/></div><span class="v" t-esc="fmtINR(row.planned)"/></div>
-                                            <div class="bp"><div class="track"><div class="fill" t-attf-style="width:{{row.practicalPct}}%; background:var(--teal);"/></div><span class="v" t-esc="fmtINR(row.practical)"/></div>
+                                            <div class="bp" t-if="isSeriesVisible('budget_pair', 'planned')"><div class="track"><div class="fill" t-attf-style="width:{{row.plannedPct}}%; background:var(--blue);"/></div><span class="v" t-esc="fmtINR(row.planned)"/></div>
+                                            <div class="bp" t-if="isSeriesVisible('budget_pair', 'practical')"><div class="track"><div class="fill" t-attf-style="width:{{row.practicalPct}}%; background:var(--teal);"/></div><span class="v" t-esc="fmtINR(row.practical)"/></div>
                                         </div>
                                     </div>
                                 </t>
                                 <div class="o_aqua_empty" t-if="!budgetPairRows.length">No budget lines added yet.</div>
                                 <div class="pair-legend">
-                                    <div><span class="d" style="background:var(--blue);"/>Planned</div>
-                                    <div><span class="d" style="background:var(--teal);"/>Practical</div>
+                                    <div t-att-class="seriesLegendClass('budget_pair', 'planned')" style="cursor:pointer;" t-on-click.stop="() => this.toggleSeries('budget_pair', 'planned')"><span class="d" style="background:var(--blue);"/>Planned</div>
+                                    <div t-att-class="seriesLegendClass('budget_pair', 'practical')" style="cursor:pointer;" t-on-click.stop="() => this.toggleSeries('budget_pair', 'practical')"><span class="d" style="background:var(--teal);"/>Practical</div>
                                 </div>
                             </div>
                         </div>

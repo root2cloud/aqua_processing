@@ -23,6 +23,14 @@ class AquaDashboard extends Component {
         // that can't be styled - see svgTooltip/onSvgPointEnter below).
         this.svgTooltip = useState({ visible: false, x: 0, y: 0, text: '' });
         this.ui = useState({ heroExpanded: false });
+        // Legend click -> show/hide toggle for the hand-drawn paired-bar
+        // cards (Ordered vs received, Pass/Fail, Planned/Practical, etc).
+        // These cards don't go through Chart.js, so they don't get its
+        // "click a legend dot to hide that series" behaviour for free -
+        // this reproduces the same interaction: keyed by
+        // {chartId: {seriesKey: false}}, a series is visible unless its
+        // entry is explicitly `false`.
+        this.seriesVisibility = useState({});
         this.state = useState({
             isLoading: true,
             activeTab: 'overview',
@@ -616,6 +624,40 @@ class AquaDashboard extends Component {
         return Math.max(2, Math.round(((value || 0) / max) * 100));
     }
 
+    // ---- Legend click -> series show/hide (hand-drawn paired-bar cards) ----
+    // A series is visible unless explicitly set to `false`; this mirrors
+    // Chart.js's own default: nothing hidden until the user clicks a legend
+    // item, and clicking it again brings it back.
+    isSeriesVisible(chartId, seriesKey) {
+        const entry = this.seriesVisibility[chartId];
+        return !entry || entry[seriesKey] !== false;
+    }
+
+    toggleSeries(chartId, seriesKey) {
+        if (!this.seriesVisibility[chartId]) {
+            this.seriesVisibility[chartId] = {};
+        }
+        const entry = this.seriesVisibility[chartId];
+        entry[seriesKey] = this.isSeriesVisible(chartId, seriesKey) ? false : true;
+    }
+
+    // CSS class for a legend row itself, so the dimmed/struck-through state
+    // reflects which series is currently hidden.
+    seriesLegendClass(chartId, seriesKey) {
+        return this.isSeriesVisible(chartId, seriesKey) ? '' : 'legend-off';
+    }
+
+    // Drops any row whose label has been toggled off via a donut legend
+    // click, before the remainder is handed to donutSegments() - this is
+    // what makes the ring visually rebalance across the remaining slices,
+    // the same way Chart.js redraws a pie/doughnut when a legend item is
+    // hidden. Always filter on the *label*, not array index: the ring and
+    // its legend are rendered from separate lists in a couple of places,
+    // so index-based keys would not line up between them.
+    _visibleRows(chartId, rows) {
+        return (rows || []).filter((r) => this.isSeriesVisible(chartId, r.label));
+    }
+
     _axisLabel(v) {
         if (v >= 1e7) return `${(v / 1e7).toFixed(1)}Cr`;
         if (v >= 1e5) return `${(v / 1e5).toFixed(1)}L`;
@@ -723,14 +765,14 @@ class AquaDashboard extends Component {
             { label: 'Others / waste', value: waste, color: C.coral },
         ];
     }
-    get ovResourceMonitoringSegments() { return this.donutSegments(this.ovResourceMonitoringParts); }
+    get ovResourceMonitoringSegments() { return this.donutSegments(this._visibleRows('resource_monitoring', this.ovResourceMonitoringParts)); }
     get ovResourceMonitoringTotal() {
         return this.ovResourceMonitoringParts.reduce((s, p) => s + (p.value || 0), 0);
     }
 
     // ---- Procurement tab: donut / bar-list rows built from state ----
 
-    get procReceiptStatusSegments() { return this.donutSegments(this.withStatusColors(this.state.receipt_status_breakdown)); }
+    get procReceiptStatusSegments() { return this.donutSegments(this._visibleRows('receipt_status', this.withStatusColors(this.state.receipt_status_breakdown))); }
     get procSpeciesRows() { return this.withCyclePalette(this.state.receipts_by_species); }
     get procSpendByVendorRows() { return this.state.spend_by_vendor; }
     get procWeightByVendorRows() { return this.withCyclePalette(this.state.weight_by_vendor); }
@@ -750,8 +792,8 @@ class AquaDashboard extends Component {
 
     // ---- Processing tab ----
 
-    get procgStatusSegments() { return this.donutSegments(this.withStatusColors(this.state.processing_status_breakdown)); }
-    get procgBlastFreezeSegments() { return this.donutSegments(this.withStatusColors(this.state.blast_freeze_status)); }
+    get procgStatusSegments() { return this.donutSegments(this._visibleRows('processing_status', this.withStatusColors(this.state.processing_status_breakdown))); }
+    get procgBlastFreezeSegments() { return this.donutSegments(this._visibleRows('blast_freeze', this.withStatusColors(this.state.blast_freeze_status))); }
     get procgInputSpeciesRows() { return this.withCyclePalette(this.state.input_qty_by_species); }
     get procgWipRows() { return this.withCyclePalette(this.state.wip_stock_by_product); }
     get procgOrderedByStatus() {
@@ -762,8 +804,12 @@ class AquaDashboard extends Component {
 
     // ---- Quality tab ----
 
-    get qQcStageSegments() { return this.donutSegments(this.withCyclePalette(this.state.qc_stage_breakdown)); }
-    get qIntakeDecisionSegments() { return this.donutSegments(this.withStatusColors(this.state.intake_decision_breakdown)); }
+    // Unfiltered rows (for the legend, which must keep listing a toggled-off
+    // slice so it can be clicked again) vs the filtered ring itself.
+    get qQcStageRows() { return this.withCyclePalette(this.state.qc_stage_breakdown); }
+    get qQcStageSegments() { return this.donutSegments(this._visibleRows('qc_stage', this.qQcStageRows)); }
+    get qIntakeDecisionRows() { return this.withStatusColors(this.state.intake_decision_breakdown); }
+    get qIntakeDecisionSegments() { return this.donutSegments(this._visibleRows('intake_decision', this.qIntakeDecisionRows)); }
     get qRejectedBySpeciesRows() { return this.state.rejected_qty_by_species.map((r) => ({ ...r, color: AquaDashboard.COLORS.coral })); }
     get qTrendGeom() { return this.lineChartGeometry(this.state.qc_trend); }
     get qIpqcByOperationRows() {
