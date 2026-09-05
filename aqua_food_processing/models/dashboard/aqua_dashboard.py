@@ -160,12 +160,22 @@ class AquaDashboard(models.TransientModel):
             return None, None
         return datetime.combine(start_date, time.min), datetime.combine(end_date, time.max)
 
-    def _trend_granularity(self, period, start_date, end_date):
+    def _trend_granularity(self, period, start_date, end_date, data_start=None, data_end=None):
         """Pick a bucket size for the trend line charts (Receipt / Purchase Spend / Avg
-        Price per kg) to match the FilterBar's active period, by name rather than by
-        measuring the date span: Today buckets by day, This Week by week, and This
-        Month/This Quarter/Year to Date/All Time by month. A Custom range has no period
-        name to key off, so it falls back to sizing itself off the actual span.
+        Price per kg / QC). Today always buckets by day and This Week always buckets by
+        week, since those windows are short enough that a coarser bucket would collapse
+        everything into 1-2 points anyway.
+
+        Every other period (This Month/Quarter/YTD/All Time/Custom) sizes its bucket off
+        the *actual spread of the underlying records* (data_start/data_end), not the full
+        calendar span of the selected period. Without this, a brand-new deployment that
+        only has, say, 3-4 weeks of real Catch Receipts would always fall onto 1-2 monthly
+        buckets under "YTD" or "All Time" -- rendering as a flat, near-straight line no
+        matter how the data actually moved day to day. Basing it on where the records
+        themselves fall means a short real history still gets enough points (daily or
+        weekly) to draw a proper trend line, and it naturally widens to weekly/monthly
+        buckets once there's a longer history to show.
+
         Returns (bucket_fn, period_label) where bucket_fn(dt) -> (sort_key, display_label)
         and period_label is the FilterBar period's own name (e.g. 'This Quarter', 'YTD') --
         used as-is in the chart titles, regardless of what bucket size was picked above."""
@@ -183,17 +193,19 @@ class AquaDashboard(models.TransientModel):
 
         if period == 'today':
             return day_bucket, period_label
-        if period in ('week', 'quarter'):
+        if period == 'week':
             return week_bucket, period_label
-        if period in ('month', 'ytd', 'all'):
-            return month_bucket, period_label
 
-        # 'custom' (or anything unrecognized): no fixed name to key off, so size the
-        # buckets off the actual selected range instead (title still just says 'Custom Range').
-        span_days = (end_date - start_date).days if (start_date and end_date) else None
-        if span_days is not None and span_days <= 14:
+        span_start = data_start.date() if hasattr(data_start, 'date') else data_start
+        span_end = data_end.date() if hasattr(data_end, 'date') else data_end
+        if span_start and span_end:
+            span_days = (span_end - span_start).days
+        else:
+            span_days = (end_date - start_date).days if (start_date and end_date) else None
+
+        if span_days is not None and span_days <= 21:
             return day_bucket, period_label
-        if span_days is not None and span_days <= 120:
+        if span_days is not None and span_days <= 180:
             return week_bucket, period_label
         return month_bucket, period_label
 
@@ -372,9 +384,13 @@ class AquaDashboard(models.TransientModel):
             'value': g['state_count'],
         } for g in ship_groups]
 
-        # --- Receipt trend (line chart), bucketed to match the FilterBar's active period ---
-        bucket_fn, trend_granularity_label = self._trend_granularity(period, start_date, end_date)
+        # --- Receipt trend (line chart), bucketed to match the actual spread of the data ---
         receipts = Receipt.search(domain + [('receipt_date', '!=', False)], order='receipt_date')
+        receipt_dates = receipts.mapped('receipt_date')
+        data_start = min(receipt_dates) if receipt_dates else None
+        data_end = max(receipt_dates) if receipt_dates else None
+        bucket_fn, trend_granularity_label = self._trend_granularity(
+            period, start_date, end_date, data_start, data_end)
         receipt_buckets = {}
         for r in receipts:
             sort_key, label = bucket_fn(r.receipt_date)

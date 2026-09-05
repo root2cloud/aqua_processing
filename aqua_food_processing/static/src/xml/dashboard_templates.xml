@@ -317,7 +317,7 @@
                                     <text t-att-x="g.padL - 10" t-att-y="gl.y + 4" text-anchor="end" font-size="10" fill="var(--ink-mute)" font-family="Inter" t-esc="gl.label"/>
                                 </t>
                                 <path t-att-d="g.areaPath" fill="var(--teal)" opacity="0.15"/>
-                                <polyline t-att-points="g.polyline" fill="none" stroke="var(--teal)" stroke-width="2.5"/>
+                                <path t-att-d="g.linePath" fill="none" stroke="var(--teal)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
                                 <t t-foreach="g.points" t-as="p" t-key="p_index">
                                     <circle t-att-cx="p.x" t-att-cy="p.y" r="3.5" fill="var(--teal)"/>
                                     <circle t-att-cx="p.x" t-att-cy="p.y" r="11" fill="transparent" style="cursor:pointer;"
@@ -562,7 +562,7 @@
                                     <text t-att-x="g.padL - 10" t-att-y="gl.y + 4" text-anchor="end" font-size="10" fill="var(--ink-mute)" font-family="Inter" t-esc="gl.label"/>
                                 </t>
                                 <path t-att-d="g.areaPath" fill="var(--teal)" opacity="0.15"/>
-                                <polyline t-att-points="g.polyline" fill="none" stroke="var(--teal)" stroke-width="2.5"/>
+                                <path t-att-d="g.linePath" fill="none" stroke="var(--teal)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
                                 <t t-foreach="g.points" t-as="p" t-key="p_index">
                                     <circle t-att-cx="p.x" t-att-cy="p.y" r="3.5" fill="var(--teal)"/>
                                     <circle t-att-cx="p.x" t-att-cy="p.y" r="11" fill="transparent" style="cursor:pointer;"
@@ -585,7 +585,7 @@
                                     <text t-att-x="g.padL - 10" t-att-y="gl.y + 4" text-anchor="end" font-size="10" fill="var(--ink-mute)" font-family="Inter" t-esc="gl.label"/>
                                 </t>
                                 <path t-att-d="g.areaPath" fill="var(--purple)" opacity="0.15"/>
-                                <polyline t-att-points="g.polyline" fill="none" stroke="var(--purple)" stroke-width="2.5"/>
+                                <path t-att-d="g.linePath" fill="none" stroke="var(--purple)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
                                 <t t-foreach="g.points" t-as="p" t-key="p_index">
                                     <circle t-att-cx="p.x" t-att-cy="p.y" r="3.5" fill="var(--purple)"/>
                                     <circle t-att-cx="p.x" t-att-cy="p.y" r="11" fill="transparent" style="cursor:pointer;"
@@ -968,7 +968,7 @@
                                     <text t-att-x="g.padL - 10" t-att-y="gl.y + 4" text-anchor="end" font-size="10" fill="var(--ink-mute)" font-family="Inter" t-esc="gl.label"/>
                                 </t>
                                 <path t-att-d="g.areaPath" fill="var(--green)" opacity="0.15"/>
-                                <polyline t-att-points="g.polyline" fill="none" stroke="var(--green)" stroke-width="2.5"/>
+                                <path t-att-d="g.linePath" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
                                 <t t-foreach="g.points" t-as="p" t-key="p_index">
                                     <circle t-att-cx="p.x" t-att-cy="p.y" r="3.5" fill="var(--green)"/>
                                     <circle t-att-cx="p.x" t-att-cy="p.y" r="11" fill="transparent" style="cursor:pointer;"

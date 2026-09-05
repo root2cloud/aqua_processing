@@ -367,10 +367,10 @@ class AquaDashboard extends Component {
 
     get tabTitle() {
         const T = {
-            overview: 'Aqua processing dashboard', procurement: 'Procurement',
+            overview: 'Aqua processing overview', procurement: 'Procurement',
             processing: 'Processing', quality: 'Quality control', budget: 'Budget',
         };
-        return T[this.state.activeTab] || 'Aqua processing dashboard';
+        return T[this.state.activeTab] || 'Aqua processing overview';
     }
 
     get tabSubtitle() {
@@ -1001,8 +1001,14 @@ class AquaDashboard extends Component {
         return `${Math.round(v)}`;
     }
 
-    // rows: [{label, value}] -> grid lines, polyline, filled area and end
+    // rows: [{label, value}] -> grid lines, smooth curve path, filled area and end
     // points for the mockup's SVG trend-line cards.
+    //
+    // Renders a smooth Catmull-Rom-to-Bezier curve through the points (built by
+    // hand below) rather than an SVG <polyline>, which can only ever draw
+    // straight segments between points no matter how the data looks - that's
+    // what was producing a sharp, pointed peak instead of the soft continuous
+    // wave used throughout the reference mockups.
     lineChartGeometry(rows, opts = {}) {
         const width = opts.width || 580, height = opts.height || 200;
         const padL = 44, padR = 20, padT = 25, padB = 34;
@@ -1020,8 +1026,31 @@ class AquaDashboard extends Component {
             return { x: +x.toFixed(1), y: +y.toFixed(1), label: r.label, value: r.value };
         });
         const polyline = points.map((p) => `${p.x},${p.y}`).join(' ');
+        // Smooth curve: a Catmull-Rom spline converted to cubic Bezier segments
+        // (each pair of on-curve points gets two control points derived from
+        // its neighbours), exactly what Chart.js does internally for a
+        // `tension`-based line - reproduced here by hand since this chart is
+        // plain SVG, not Chart.js. `smoothing` (0-1) mirrors Chart.js `tension`.
+        const smoothPath = (pts) => {
+            if (pts.length < 2) return pts.length ? `M${pts[0].x},${pts[0].y}` : '';
+            const smoothing = 0.6;
+            let d = `M${pts[0].x},${pts[0].y}`;
+            for (let i = 0; i < pts.length - 1; i++) {
+                const p0 = pts[i === 0 ? 0 : i - 1];
+                const p1 = pts[i];
+                const p2 = pts[i + 1];
+                const p3 = pts[i + 2 < pts.length ? i + 2 : i + 1];
+                const cp1x = p1.x + (p2.x - p0.x) / 6 * smoothing * 2;
+                const cp1y = p1.y + (p2.y - p0.y) / 6 * smoothing * 2;
+                const cp2x = p2.x - (p3.x - p1.x) / 6 * smoothing * 2;
+                const cp2y = p2.y - (p3.y - p1.y) / 6 * smoothing * 2;
+                d += ` C${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2.x},${p2.y}`;
+            }
+            return d;
+        };
+        const linePath = smoothPath(points);
         const areaPath = points.length
-            ? `M${points[0].x},${baseline} L${points.map((p) => `${p.x},${p.y}`).join(' L')} L${points[points.length - 1].x},${baseline} Z`
+            ? `${linePath} L${points[points.length - 1].x},${baseline} L${points[0].x},${baseline} Z`
             : '';
         const gridLines = [0, 1, 2, 3].map((i) => {
             const y = padT + (plotH / 3) * i;
@@ -1029,7 +1058,7 @@ class AquaDashboard extends Component {
             return { y: +y.toFixed(1), label: this._axisLabel(val) };
         });
         return {
-            width, height, baseline, padL, padR, points, polyline, areaPath, gridLines,
+            width, height, baseline, padL, padR, points, polyline, linePath, areaPath, gridLines,
             first: points[0] || { x: padL, y: baseline },
             last: points[points.length - 1] || { x: width - padR, y: baseline },
         };

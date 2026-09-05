@@ -179,6 +179,25 @@ export class ChartWidget extends Component {
         this._chart.update();
     }
 
+    /**
+     * Soft top-to-bottom fade under a line chart's fill area (fully opaque
+     * near the line, transparent by the bottom of the chart) instead of a
+     * flat translucent block — this is what makes the reference mockups'
+     * trend lines read as a smooth "wave" rather than a filled rectangle.
+     * Falls back to the flat color if canvas 2D context isn't available
+     * (e.g. during SSR/tests) so a chart never silently fails to render.
+     */
+    _makeAreaGradient(hexColor) {
+        const canvas = this.canvasRef.el;
+        const ctx = canvas && canvas.getContext && canvas.getContext("2d");
+        if (!ctx) return hexColor + "33";
+        const h = canvas.height || this.props.height || 260;
+        const gradient = ctx.createLinearGradient(0, 0, 0, h);
+        gradient.addColorStop(0, hexColor + "3D");
+        gradient.addColorStop(1, hexColor + "01");
+        return gradient;
+    }
+
     _getChartJsConfig() {
         const { chartType, data, options } = this.props;
 
@@ -188,8 +207,9 @@ export class ChartWidget extends Component {
         ];
 
         const datasets = (data.datasets || []).map((ds, i) => ({
-            backgroundColor: COLORS[i % COLORS.length] +
-                (chartType === "line" ? "33" : "CC"),
+            backgroundColor: chartType === "line"
+                ? this._makeAreaGradient(ds.borderColor || COLORS[i % COLORS.length])
+                : COLORS[i % COLORS.length] + "CC",
             borderColor: COLORS[i % COLORS.length],
             borderWidth: 2,
             ...ds,
@@ -234,18 +254,38 @@ export class ChartWidget extends Component {
         };
 
         switch (chartType) {
-            case "line":
+            case "line": {
+                // Plain Catmull-Rom tension (NOT cubicInterpolationMode:'monotone' --
+                // monotone interpolation ignores `tension` entirely and forces a
+                // straight, pointed line through any local peak/valley, which is
+                // exactly the sharp-cornered look we don't want). A higher tension
+                // here is what gives the soft, continuously-rounded "wavy thread"
+                // look of the reference mockups, even through peaks. Points stay
+                // invisible until hovered, so the curve itself carries the shape.
+                const lineDatasets = datasets.map((ds, i) => ({
+                    tension: 0.6,
+                    fill: true,
+                    borderWidth: 2.5,
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                    pointHoverBackgroundColor: "#fff",
+                    pointHoverBorderWidth: 2,
+                    pointHoverBorderColor: ds.borderColor || COLORS[i % COLORS.length],
+                    ...ds,
+                }));
                 return {
                     type: "line",
-                    data: { labels: data.labels, datasets: datasets.map(ds => ({ tension: 0.35, fill: true, ...ds })) },
+                    data: { labels: data.labels, datasets: lineDatasets },
                     options: {
                         ...baseOptions,
+                        interaction: { mode: "index", intersect: false },
                         scales: {
                             x: { grid: { display: false } },
-                            y: { beginAtZero: true, grid: { color: "#f0f0f0" } },
+                            y: { beginAtZero: true, grid: { color: "#f0f0f0" }, ticks: { padding: 8 } },
                         },
                     },
                 };
+            }
 
             case "bar":
                 return {
