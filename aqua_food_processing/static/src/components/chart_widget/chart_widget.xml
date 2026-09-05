@@ -4,22 +4,18 @@
 <t t-name="aqua_food_processing.ChartWidget">
   <div class="aqua-chart-card">
 
-    <div class="aqua-chart-card__header">
-      <div class="aqua-chart-card__title">
-        <t t-esc="props.title"/>
-      </div>
-      <div class="aqua-chart-card__actions">
-        <button class="aqua-chart-card__action-btn" t-on-click="onExportChart"
-                title="Export chart as PNG">
-          &#8595; PNG
-        </button>
-      </div>
-    </div>
+    <!-- No header here on purpose: every caller already renders its own
+         h3/subtitle above this component, so a second title here (plus a
+         PNG export button nobody asked for) was pure duplication - see
+         canvas-wrap below, which now owns the card's full content area. -->
 
     <!-- Canvas is always mounted; the loading spinner is an overlay drawn on
          top of it, not a replacement for it, so toggling isLoading never
          destroys/recreates the canvas element itself. -->
-    <div class="aqua-chart-card__canvas-wrap" t-att-style="'height:' + props.height + 'px;position:relative;'">
+    <div class="aqua-chart-card__canvas-wrap"
+         t-att-style="props.fillHeight
+            ? ('flex:1 1 auto;min-height:' + props.height + 'px;position:relative;')
+            : ('height:' + props.height + 'px;flex:0 0 auto;position:relative;')">
       <canvas t-ref="chartCanvas" style="width:100%;height:100%;"/>
       <t t-if="props.isLoading">
         <div class="aqua-loading-overlay" style="position:absolute;inset:0;">

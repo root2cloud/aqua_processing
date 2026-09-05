@@ -304,30 +304,38 @@
                     </div>
 
                     <div class="grid g-bottom">
-                        <div class="aqua-card">
-                            <h3>Recent activity — receipt trend</h3>
-                            <p class="muted" t-esc="receiptTrendTitle"/>
-                            <!-- No timestamped activity feed exists in the data model, so
-                                 the receipt trend (which is real, period-scoped data)
-                                 stands in for the mockup's "today's activity" timeline. -->
-                            <svg width="100%" height="150" viewBox="0 0 580 160" style="margin-top:8px;" t-if="state.receipt_trend.length">
-                                <t t-set="g" t-value="lineChartGeometry(state.receipt_trend, {height: 160})"/>
-                                <t t-foreach="g.gridLines" t-as="gl" t-key="gl_index">
-                                    <line t-att-x1="g.padL" t-att-y1="gl.y" t-att-x2="g.width - g.padR" t-att-y2="gl.y" stroke="var(--line)"/>
-                                    <text t-att-x="g.padL - 10" t-att-y="gl.y + 4" text-anchor="end" font-size="10" fill="var(--ink-mute)" font-family="Inter" t-esc="gl.label"/>
-                                </t>
-                                <path t-att-d="g.areaPath" fill="var(--teal)" opacity="0.15"/>
-                                <path t-att-d="g.linePath" fill="none" stroke="var(--teal)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                <t t-foreach="g.points" t-as="p" t-key="p_index">
-                                    <circle t-att-cx="p.x" t-att-cy="p.y" r="3.5" fill="var(--teal)"/>
-                                    <circle t-att-cx="p.x" t-att-cy="p.y" r="11" fill="transparent" style="cursor:pointer;"
-                                            t-on-click="() => this.onReceiptTrendChartClick({label: p.label})"
-                                            t-on-mouseenter="(ev) => this.onSvgPointEnter(ev, p.label + ': ' + this.fmtNum(p.value) + ' receipt(s)')"
-                                            t-on-mouseleave="() => this.onSvgPointLeave()"/>
-                                    <text t-att-x="p.x" t-att-y="g.baseline + 18" text-anchor="middle" font-size="10.5" fill="var(--ink-mute)" font-family="Inter" t-esc="p.label"/>
-                                </t>
-                            </svg>
-                            <div class="o_aqua_empty" t-else="">No catch receipts recorded yet.</div>
+                        <div class="aqua-card" style="display:flex;flex-direction:column;">
+                            <!-- Was a fixed-height (150px) hand-drawn SVG line. In this grid
+                                 the row height is set by the taller neighbour ("Shipment
+                                 status"), so the fixed-height SVG just sat near the top of
+                                 the stretched card with dead white space below it instead of
+                                 reaching the card's bottom edge. ChartWidget's canvas fills
+                                 its wrapper (flex:1 / height:100%), so it always reaches the
+                                 bottom of whatever height the card ends up at, and reuses the
+                                 same smooth Chart.js curve + gradient fill + styled tooltip
+                                 as the rest of the dashboard instead of the plainer hand-drawn
+                                 look. -->
+                            <t t-if="state.receipt_trend.length">
+                                <p class="muted" style="margin-bottom:4px;flex:0 0 auto;" t-esc="receiptTrendTitle"/>
+                                <!-- flex:1/min-height:0 here (not just on ChartWidget's own
+                                     internal canvas-wrap) is what lets the chart actually grow
+                                     into whatever room the grid row gives this card, rather
+                                     than sitting at a fixed size with dead space below it. -->
+                                <div style="flex:1 1 auto;min-height:0;display:flex;flex-direction:column;">
+                                    <ChartWidget
+                                        chartType="'line'"
+                                        data="receiptTrendChartData"
+                                        height="220"
+                                        fillHeight="true"
+                                        onElementClick="(ctx) => this.onReceiptTrendChartClick(ctx)"
+                                    />
+                                </div>
+                            </t>
+                            <t t-else="">
+                                <h3>Recent activity — receipt trend</h3>
+                                <p class="muted" t-esc="receiptTrendTitle"/>
+                                <div class="o_aqua_empty">No catch receipts recorded yet.</div>
+                            </t>
                         </div>
 
                         <div class="aqua-card">
@@ -552,52 +560,49 @@
                     </div>
 
                     <div class="grid g-two">
-                        <div class="aqua-card">
-                            <h3>Weight received trend</h3>
-                            <p class="muted" t-esc="'Weight received trend (' + state.trend_granularity_label + ', kg)'"/>
-                            <svg width="100%" height="190" viewBox="0 0 580 200" style="margin-top:8px;" t-if="state.daily_weight_trend.length">
-                                <t t-set="g" t-value="procWeightTrendGeom"/>
-                                <t t-foreach="g.gridLines" t-as="gl" t-key="gl_index">
-                                    <line t-att-x1="g.padL" t-att-y1="gl.y" t-att-x2="g.width - g.padR" t-att-y2="gl.y" stroke="var(--line)"/>
-                                    <text t-att-x="g.padL - 10" t-att-y="gl.y + 4" text-anchor="end" font-size="10" fill="var(--ink-mute)" font-family="Inter" t-esc="gl.label"/>
-                                </t>
-                                <path t-att-d="g.areaPath" fill="var(--teal)" opacity="0.15"/>
-                                <path t-att-d="g.linePath" fill="none" stroke="var(--teal)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                <t t-foreach="g.points" t-as="p" t-key="p_index">
-                                    <circle t-att-cx="p.x" t-att-cy="p.y" r="3.5" fill="var(--teal)"/>
-                                    <circle t-att-cx="p.x" t-att-cy="p.y" r="11" fill="transparent" style="cursor:pointer;"
-                                            t-on-click="() => this.onDailyWeightTrendChartClick({label: p.label})"
-                                            t-on-mouseenter="(ev) => this.onSvgPointEnter(ev, p.label + ': ' + this.fmtTon(p.value))"
-                                            t-on-mouseleave="() => this.onSvgPointLeave()"/>
-                                    <text t-att-x="p.x" t-att-y="g.baseline + 18" text-anchor="middle" font-size="10.5" fill="var(--ink-mute)" font-family="Inter" t-esc="p.label"/>
-                                </t>
-                            </svg>
-                            <div class="o_aqua_empty" t-else="">Not enough data yet for a trend line.</div>
+                        <div class="aqua-card" style="display:flex;flex-direction:column;">
+                            <t t-if="state.daily_weight_trend.length">
+                                <h3>Weight received trend</h3>
+                                <p class="muted" style="flex:0 0 auto;" t-esc="weightReceivedTrendTitle"/>
+                                <div style="flex:1 1 auto;min-height:0;display:flex;flex-direction:column;margin-top:8px;">
+                                    <ChartWidget
+                                        chartType="'line'"
+                                        data="dailyWeightTrendChartData"
+                                        height="220"
+                                        fillHeight="true"
+                                        onElementClick="(ctx) => this.onDailyWeightTrendChartClick(ctx)"
+                                    />
+                                </div>
+                            </t>
+                            <t t-else="">
+                                <h3>Weight received trend</h3>
+                                <p class="muted" t-esc="weightReceivedTrendTitle"/>
+                                <div class="o_aqua_empty">Not enough data yet for a trend line.</div>
+                            </t>
                         </div>
 
-                        <div class="aqua-card">
-                            <h3>Purchase spend trend</h3>
-                            <p class="muted" t-esc="'Purchase spend trend (' + state.trend_granularity_label + ', ₹)'"/>
-                            <svg width="100%" height="190" viewBox="0 0 580 200" style="margin-top:8px;" t-if="state.purchase_spend_trend.length">
-                                <t t-set="g" t-value="procSpendTrendGeom"/>
-                                <t t-foreach="g.gridLines" t-as="gl" t-key="gl_index">
-                                    <line t-att-x1="g.padL" t-att-y1="gl.y" t-att-x2="g.width - g.padR" t-att-y2="gl.y" stroke="var(--line)"/>
-                                    <text t-att-x="g.padL - 10" t-att-y="gl.y + 4" text-anchor="end" font-size="10" fill="var(--ink-mute)" font-family="Inter" t-esc="gl.label"/>
-                                </t>
-                                <path t-att-d="g.areaPath" fill="var(--purple)" opacity="0.15"/>
-                                <path t-att-d="g.linePath" fill="none" stroke="var(--purple)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                <t t-foreach="g.points" t-as="p" t-key="p_index">
-                                    <circle t-att-cx="p.x" t-att-cy="p.y" r="3.5" fill="var(--purple)"/>
-                                    <circle t-att-cx="p.x" t-att-cy="p.y" r="11" fill="transparent" style="cursor:pointer;"
-                                            t-on-click="() => this.onPurchaseSpendTrendChartClick({label: p.label})"
-                                            t-on-mouseenter="(ev) => this.onSvgPointEnter(ev, p.label + ': ' + this.fmtINR(p.value))"
-                                            t-on-mouseleave="() => this.onSvgPointLeave()"/>
-                                    <text t-att-x="p.x" t-att-y="g.baseline + 18" text-anchor="middle" font-size="10.5" fill="var(--ink-mute)" font-family="Inter" t-esc="p.label"/>
-                                </t>
-                            </svg>
-                            <div class="o_aqua_empty" t-else="">Not enough data yet for a trend line.</div>
+                        <div class="aqua-card" style="display:flex;flex-direction:column;">
+                            <t t-if="state.purchase_spend_trend.length">
+                                <h3>Purchase spend trend</h3>
+                                <p class="muted" style="flex:0 0 auto;" t-esc="purchaseSpendTrendTitle"/>
+                                <div style="flex:1 1 auto;min-height:0;display:flex;flex-direction:column;margin-top:8px;">
+                                    <ChartWidget
+                                        chartType="'line'"
+                                        data="purchaseSpendTrendChartData"
+                                        height="220"
+                                        fillHeight="true"
+                                        onElementClick="(ctx) => this.onPurchaseSpendTrendChartClick(ctx)"
+                                    />
+                                </div>
+                            </t>
+                            <t t-else="">
+                                <h3>Purchase spend trend</h3>
+                                <p class="muted" t-esc="purchaseSpendTrendTitle"/>
+                                <div class="o_aqua_empty">Not enough data yet for a trend line.</div>
+                            </t>
                         </div>
                     </div>
+
 
                     <div class="grid" style="grid-template-columns:1fr; margin-bottom:18px;">
                         <div class="aqua-card">
@@ -958,27 +963,25 @@
                     </div>
 
                     <div class="grid" style="grid-template-columns:1fr; margin-bottom:18px;">
-                        <div class="aqua-card">
-                            <h3>QC checks trend</h3>
-                            <p class="muted" t-esc="qcTrendTitle"/>
-                            <svg width="100%" height="190" viewBox="0 0 580 200" style="margin-top:8px;" t-if="state.qc_trend.length">
-                                <t t-set="g" t-value="qTrendGeom"/>
-                                <t t-foreach="g.gridLines" t-as="gl" t-key="gl_index">
-                                    <line t-att-x1="g.padL" t-att-y1="gl.y" t-att-x2="g.width - g.padR" t-att-y2="gl.y" stroke="var(--line)"/>
-                                    <text t-att-x="g.padL - 10" t-att-y="gl.y + 4" text-anchor="end" font-size="10" fill="var(--ink-mute)" font-family="Inter" t-esc="gl.label"/>
-                                </t>
-                                <path t-att-d="g.areaPath" fill="var(--green)" opacity="0.15"/>
-                                <path t-att-d="g.linePath" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                <t t-foreach="g.points" t-as="p" t-key="p_index">
-                                    <circle t-att-cx="p.x" t-att-cy="p.y" r="3.5" fill="var(--green)"/>
-                                    <circle t-att-cx="p.x" t-att-cy="p.y" r="11" fill="transparent" style="cursor:pointer;"
-                                            t-on-click="() => this.onQcTrendChartClick({label: p.label})"
-                                            t-on-mouseenter="(ev) => this.onSvgPointEnter(ev, p.label + ': ' + this.fmtNum(p.value) + ' check(s)')"
-                                            t-on-mouseleave="() => this.onSvgPointLeave()"/>
-                                    <text t-att-x="p.x" t-att-y="g.baseline + 18" text-anchor="middle" font-size="10.5" fill="var(--ink-mute)" font-family="Inter" t-esc="p.label"/>
-                                </t>
-                            </svg>
-                            <div class="o_aqua_empty" t-else="">Not enough data yet for a trend line.</div>
+                        <div class="aqua-card" style="display:flex;flex-direction:column;">
+                            <t t-if="state.qc_trend.length">
+                                <h3>QC checks trend</h3>
+                                <p class="muted" style="flex:0 0 auto;" t-esc="qcTrendTitle"/>
+                                <div style="flex:1 1 auto;min-height:0;display:flex;flex-direction:column;margin-top:8px;">
+                                    <ChartWidget
+                                        chartType="'line'"
+                                        data="qcTrendChartData"
+                                        height="220"
+                                        fillHeight="true"
+                                        onElementClick="(ctx) => this.onQcTrendChartClick(ctx)"
+                                    />
+                                </div>
+                            </t>
+                            <t t-else="">
+                                <h3>QC checks trend</h3>
+                                <p class="muted" t-esc="qcTrendTitle"/>
+                                <div class="o_aqua_empty">Not enough data yet for a trend line.</div>
+                            </t>
                         </div>
                     </div>
 

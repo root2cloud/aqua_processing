@@ -175,19 +175,10 @@
 
 .o_aqua_dashboard .section-sub{ font-size:11px; color:var(--ink-mute); font-weight:600; text-transform:uppercase; letter-spacing:.04em; margin:18px 0 4px; }
 
-/* ---- Chart.js chart card (ChartWidget) — was previously unstyled, which
-   is why every chart title/export button fell back to plain browser
-   defaults instead of matching the rest of the card system. ---- */
+/* ---- Chart.js chart card (ChartWidget) — no header of its own; callers
+   render their own h3/subtitle, so this is just the flex shell that lets
+   the canvas-wrap below fill the card. ---- */
 .o_aqua_dashboard .aqua-chart-card{ display:flex; flex-direction:column; height:100%; }
-.o_aqua_dashboard .aqua-chart-card__header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; gap:12px; }
-.o_aqua_dashboard .aqua-chart-card__title{ font-size:15px; font-weight:700; color:var(--ink); letter-spacing:-.01em; }
-.o_aqua_dashboard .aqua-chart-card__actions{ flex-shrink:0; }
-.o_aqua_dashboard .aqua-chart-card__action-btn{
-  font-size:11px; font-weight:600; color:var(--ink-soft);
-  background:#F5F6F8; border:none; border-radius:20px;
-  padding:6px 12px; cursor:pointer; transition:background .12s ease, color .12s ease;
-}
-.o_aqua_dashboard .aqua-chart-card__action-btn:hover{ background:var(--blue-tint); color:var(--blue); }
 .o_aqua_dashboard .aqua-chart-card__canvas-wrap{ flex:1; }
 
 /* ---- tab bar ---- */

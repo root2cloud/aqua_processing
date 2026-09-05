@@ -23,13 +23,21 @@ export class ChartWidget extends Component {
 
     static props = {
         chartType:      { type: String },
-        title:          { type: String },
         data:           { type: Object },
         options:        { type: Object,  optional: true },
         height:         { type: Number,  optional: true },
+        // When true, the canvas wrapper stretches to fill whatever height
+        // its parent ends up with (via CSS flex:1) instead of a fixed px
+        // height. Use this whenever the card sits in a CSS grid row next to
+        // a taller neighbour - a fixed height there just leaves dead white
+        // space between the chart and the bottom of the (stretched) card.
+        // Requires an ancestor that actually establishes a height for the
+        // flex chain to fill (e.g. a grid row with equal-height stretch);
+        // `height` is still used as a min-height fallback so the chart
+        // never collapses to 0 before that ancestor has a size.
+        fillHeight:     { type: Boolean, optional: true },
         isLoading:      { type: Boolean, optional: true },
         onElementClick: { type: Function, optional: true },
-        exportFilename: { type: String,  optional: true },
     };
 
     // Owl only reads defaults from `static defaultProps`, never from a
@@ -39,9 +47,9 @@ export class ChartWidget extends Component {
     static defaultProps = {
         options:        {},
         height:         260,
+        fillHeight:     false,
         isLoading:      false,
         onElementClick: () => {},
-        exportFilename: "aqua_chart",
     };
 
     setup() {
@@ -198,6 +206,62 @@ export class ChartWidget extends Component {
         return gradient;
     }
 
+    /**
+     * Soft drop-shadow ("glow") behind the line stroke — Chart.js has no
+     * built-in option for this, so a tiny chart-scoped plugin sets the
+     * canvas 2D shadow properties right before Chart.js strokes the line
+     * dataset, then restores them straight after. This is what gives the
+     * line a bit of depth/lift off the page instead of a flat, plain
+     * stroke, similar to the softly-glowing lines in the reference mockups.
+     */
+    _lineGlowPlugin() {
+        return {
+            id: "aquaLineGlow",
+            beforeDatasetDraw: (chart, args) => {
+                const meta = chart.getDatasetMeta(args.index);
+                const color = (meta.dataset && meta.dataset.options && meta.dataset.options.borderColor) || "#2C7A7B";
+                const ctx = chart.ctx;
+                ctx.save();
+                ctx.shadowColor = color + "4D"; // ~30% opacity glow
+                ctx.shadowBlur = 10;
+                ctx.shadowOffsetY = 4;
+            },
+            afterDatasetDraw: (chart) => {
+                chart.ctx.restore();
+            },
+        };
+    }
+
+    /**
+     * Vertical dashed "crosshair" plugin for line charts — a thin dashed
+     * guide from the hovered point straight down to the x-axis, exactly
+     * like the reference dashboard mockups. Chart.js has no built-in
+     * crosshair, so this is a small chart-scoped plugin (only attached to
+     * `type: "line"` configs below) that reads the currently-active
+     * tooltip point on every redraw and draws the guide itself — nothing
+     * shows when nothing is hovered, since `_active` is empty then.
+     */
+    _crosshairPlugin() {
+        return {
+            id: "aquaCrosshair",
+            afterDatasetsDraw: (chart) => {
+                const active = chart.tooltip && chart.tooltip._active;
+                if (!active || !active.length) return;
+                const { ctx, chartArea } = chart;
+                const x = active[0].element.x;
+                ctx.save();
+                ctx.beginPath();
+                ctx.setLineDash([4, 4]);
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = "#CBD5E0";
+                ctx.moveTo(x, chartArea.top);
+                ctx.lineTo(x, chartArea.bottom);
+                ctx.stroke();
+                ctx.restore();
+            },
+        };
+    }
+
     _getChartJsConfig() {
         const { chartType, data, options } = this.props;
 
@@ -258,32 +322,53 @@ export class ChartWidget extends Component {
                 // Plain Catmull-Rom tension (NOT cubicInterpolationMode:'monotone' --
                 // monotone interpolation ignores `tension` entirely and forces a
                 // straight, pointed line through any local peak/valley, which is
-                // exactly the sharp-cornered look we don't want). A higher tension
-                // here is what gives the soft, continuously-rounded "wavy thread"
-                // look of the reference mockups, even through peaks. Points stay
-                // invisible until hovered, so the curve itself carries the shape.
+                // exactly the sharp-cornered look we don't want). Tension pushed
+                // up from 0.6 to 0.78 - the previous value still let real data
+                // (a single sharp receiving spike, a lone spend spike, etc.) come
+                // through as a narrow pointed hill; this rounds every crest/trough
+                // into a soft, continuous dome/basin instead, which is the biggest
+                // visible difference from the reference mockups' wave shape. Points
+                // stay invisible until hovered, so the curve itself carries the shape.
                 const lineDatasets = datasets.map((ds, i) => ({
-                    tension: 0.6,
+                    tension: 0.78,
                     fill: true,
                     borderWidth: 2.5,
                     pointRadius: 0,
                     pointHoverRadius: 5,
-                    pointHoverBackgroundColor: "#fff",
+                    pointHoverBackgroundColor: ds.borderColor || COLORS[i % COLORS.length],
                     pointHoverBorderWidth: 2,
-                    pointHoverBorderColor: ds.borderColor || COLORS[i % COLORS.length],
+                    pointHoverBorderColor: "#fff",
                     ...ds,
                 }));
+                // The reference mockups never let the wave get near the top of
+                // the chart - the tallest peak still sits well under the axis
+                // ceiling, which is what makes the whole thing read as "floating"
+                // in open space instead of a shape cropped tight to its own box.
+                // Chart.js's default auto-max hugs the data (only ~5-10% above
+                // the highest point), so without this the line/fill runs almost
+                // to the very top. suggestedMax at 1.6x the highest value forces
+                // that same generous headroom regardless of the data's own scale.
+                const allVals = lineDatasets.flatMap((ds) => (ds.data || []).filter((v) => typeof v === "number"));
+                const dataMax = allVals.length ? Math.max(...allVals) : 0;
+                const suggestedMax = dataMax > 0 ? dataMax * 1.6 : undefined;
                 return {
                     type: "line",
                     data: { labels: data.labels, datasets: lineDatasets },
                     options: {
                         ...baseOptions,
+                        layout: { padding: { top: 12, bottom: 4 } },
                         interaction: { mode: "index", intersect: false },
                         scales: {
                             x: { grid: { display: false } },
-                            y: { beginAtZero: true, grid: { color: "#f0f0f0" }, ticks: { padding: 8 } },
+                            y: {
+                                beginAtZero: true,
+                                suggestedMax,
+                                grid: { color: "#f0f0f0" },
+                                ticks: { padding: 8 },
+                            },
                         },
                     },
+                    plugins: [this._lineGlowPlugin(), this._crosshairPlugin()],
                 };
             }
 
@@ -364,14 +449,5 @@ export class ChartWidget extends Component {
                     options: baseOptions,
                 };
         }
-    }
-
-    onExportChart() {
-        if (!this._chart) return;
-        const url = this.canvasRef.el.toDataURL("image/png");
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${this.props.exportFilename}.png`;
-        a.click();
     }
 }
