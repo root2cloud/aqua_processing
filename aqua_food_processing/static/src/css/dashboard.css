@@ -476,6 +476,27 @@
 .o_aqua_dashboard .stage-card .name{ font-size:12.5px; font-weight:600; color:var(--ink-soft); }
 .o_aqua_dashboard .stage-card .rate{ font-size:20px; font-weight:700; }
 .o_aqua_dashboard .stage-card .n{ font-size:11px; color:var(--ink-mute); }
+
+/* IQC / IPQC / Final QC stage tiles (mockup: aqua_dashboard_quality.html):
+   these markup as "aqua-card stage-card" so they inherit the shared card
+   behaviour (click, hover lift), but visually they are meant to be a flat,
+   near-transparent tint that sits directly on the page - not a solid white
+   floating card with its own shadow like the rest of the dashboard. The
+   generic .aqua-card rule above forces #FFFFFF/padding/radius/shadow with
+   !important so it always wins over the plain .stage-card background
+   further up this file; this compound, higher-specificity + !important
+   override is what actually restores the flat mockup look for these three
+   tiles specifically, without touching any other card on the page. */
+.o_aqua_dashboard .aqua-card.stage-card{
+  background:#F7F8FA !important;
+  padding:16px !important;
+  border-radius:16px !important;
+  border:1px solid var(--line) !important;
+  box-shadow:none !important;
+}
+.o_aqua_dashboard .aqua-card.stage-card:hover{
+  box-shadow:none !important;
+}
 .o_aqua_dashboard .qc-row{ display:flex; justify-content:space-between; align-items:center; padding:11px 0; border-bottom:1px solid var(--line); font-size:13px; }
 .o_aqua_dashboard .qc-row:last-child{ border-bottom:none; }
 .o_aqua_dashboard .qc-dot{ display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:8px; }
