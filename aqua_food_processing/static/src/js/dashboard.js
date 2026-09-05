@@ -1,6 +1,7 @@
 /** @odoo-module **/
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
+import { user } from "@web/core/user";
 import { Component, onMounted, useState } from "@odoo/owl";
 
 import { KpiTile } from "../components/kpi_tile/kpi_tile";
@@ -16,6 +17,7 @@ class AquaDashboard extends Component {
         this.orm = useService("orm");
         this.action = useService("action");
         this.notification = useService("notification");
+        this.user = user;
         this.filters = { period: 'ytd', compare: 'none', customFrom: '', customTo: '' };
         // Hand-drawn SVG trend lines (receipt/weight/spend/QC trends) don't go
         // through Chart.js, so they need their own hover tooltip instead of
@@ -390,6 +392,130 @@ class AquaDashboard extends Component {
 
     onRefresh() {
         this.loadData();
+    }
+
+    // ---- Topbar: "My Profile" shortcut ----
+    // Opens the same res.users form the standard Odoo user-menu avatar
+    // (top-right, above this dashboard) opens under "My Profile" - this is
+    // a convenience shortcut for people who live inside this dashboard all
+    // day, not a replacement for that menu.
+    onProfileClick() {
+        this.action.doAction({
+            type: 'ir.actions.act_window',
+            res_model: 'res.users',
+            res_id: this.user.userId,
+            views: [[false, 'form']],
+            target: 'new',
+        });
+    }
+
+    // ---- Topbar: Export ----
+    // Exports whichever tab is currently active as a CSV - one section per
+    // card on that tab, in the same order they appear on screen. Kept
+    // simple (label/value rows) rather than trying to reproduce every
+    // chart's exact table shape; the drill-down panel's own "↓ CSV"
+    // button already covers "export this one chart's underlying records"
+    // in full detail.
+    get _exportSections() {
+        const tab = this.state.activeTab;
+
+        if (tab === 'overview') {
+            return [
+                { title: 'Overview KPIs', headers: ['Metric', 'Value'], rows: [
+                    ['Raw material received (kg)', this.state.total_weight_received],
+                    ['In production (kg)', this.state.total_input_qty],
+                    ['Finished goods (kg)', this.state.total_stock_on_hand],
+                    ['Yield (period) %', this.ovYieldPct],
+                ] },
+                { title: 'Resource monitoring', headers: ['Category', 'Value (kg)'],
+                  rows: this.ovResourceMonitoringParts.map((p) => [p.label, p.value]) },
+            ];
+        }
+
+        if (tab === 'procurement') {
+            return [
+                { title: 'Receipt status', headers: ['Status', 'Count'],
+                  rows: this.ovReceiptStatusRows.map((r) => [r.label, r.value]) },
+                { title: 'Receipts by species', headers: ['Species', 'Count'],
+                  rows: this.procSpeciesRows.map((r) => [r.label, r.value]) },
+                { title: 'Spend by vendor', headers: ['Vendor', 'Spend'],
+                  rows: this.procSpendByVendorRows.map((r) => [r.label, r.value]) },
+                { title: 'Received weight by vendor (kg)', headers: ['Vendor', 'Weight (kg)'],
+                  rows: this.procWeightByVendorRows.map((r) => [r.label, r.value]) },
+                { title: 'Ordered vs received', headers: ['Receipt', 'Ordered (kg)', 'Received (kg)'],
+                  rows: this.procOrderedVsReceivedRows.map((r) => [r.label, r.ordered, r.received]) },
+                { title: 'Current stock by product', headers: ['Product', 'Qty (kg)'],
+                  rows: this.procStockByProductRows.map((r) => [r.label, r.value]) },
+                { title: 'Current stock by location', headers: ['Location', 'Qty (kg)'],
+                  rows: this.procStockByLocationRows.map((r) => [r.label, r.value]) },
+            ];
+        }
+
+        if (tab === 'processing') {
+            return [
+                { title: 'Processing order status', headers: ['Status', 'Count'],
+                  rows: (this.state.processing_status_breakdown || []).map((r) => [r.label, r.value]) },
+                { title: 'Input weight by species', headers: ['Species', 'Weight (kg)'],
+                  rows: this.procgInputSpeciesRows.map((r) => [r.label, r.value]) },
+                { title: 'Blast freeze status', headers: ['Status', 'Count'],
+                  rows: (this.state.blast_freeze_status || []).map((r) => [r.label, r.value]) },
+                { title: 'WIP stock by product', headers: ['Product', 'Qty (kg)'],
+                  rows: (this.state.wip_stock_by_product || []).map((r) => [r.label, r.value]) },
+            ];
+        }
+
+        if (tab === 'quality') {
+            return [
+                { title: 'Checks by stage', headers: ['Stage', 'Count'],
+                  rows: this.qQcStageRows.map((r) => [r.label, r.value]) },
+                { title: 'Intake decisions', headers: ['Decision', 'Count'],
+                  rows: this.qIntakeDecisionRows.map((r) => [r.label, r.value]) },
+                { title: 'IPQC by shop-floor operation', headers: ['Operation', 'Pass', 'Fail'],
+                  rows: this.qIpqcByOperationRows.map((r) => [r.label, r.pass, r.fail]) },
+                { title: 'Rejected quantity by species', headers: ['Species', 'Qty (kg)'],
+                  rows: (this.state.rejected_qty_by_species || []).map((r) => [r.label, r.value]) },
+            ];
+        }
+
+        if (tab === 'budget') {
+            return [
+                { title: 'Budget summary', headers: ['Metric', 'Value'], rows: [
+                    ['Total planned', this.state.budget_total_planned],
+                    ['Actual (practical)', this.state.budget_total_practical],
+                    ['Theoretical (to date)', this.state.budget_total_theoretical],
+                    ['Gross margin', this.state.budget_total_gross_margin],
+                    ['Achievement %', this.state.budget_achievement_pct],
+                ] },
+                { title: 'Planned vs practical by cost center', headers: ['Cost center', 'Planned', 'Practical'],
+                  rows: this.budgetPairRows.map((r) => [r.label, r.planned, r.practical]) },
+            ];
+        }
+
+        return [];
+    }
+
+    onExportDashboard() {
+        const sections = this._exportSections.filter((s) => s.rows.length);
+        if (!sections.length) {
+            this.notification.add('Nothing to export on this tab yet.', { type: 'warning' });
+            return;
+        }
+        const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+        const lines = [];
+        for (const sec of sections) {
+            lines.push(esc(sec.title));
+            if (sec.headers) lines.push(sec.headers.map(esc).join(','));
+            for (const row of sec.rows) lines.push(row.map(esc).join(','));
+            lines.push('');
+        }
+        const csv = lines.join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `aqua_dashboard_${this.state.activeTab}_${Date.now()}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
     }
 
     async loadData() {

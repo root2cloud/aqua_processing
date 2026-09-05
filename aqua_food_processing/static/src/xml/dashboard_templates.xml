@@ -37,7 +37,10 @@
                         <div class="icon-btn" t-on-click="onRefresh" title="Refresh">
                             <i class="fa fa-bell"/><span class="badge-dot"/>
                         </div>
-                        <button type="button" class="export-btn"><i class="fa fa-download"/>Export</button>
+                        <button type="button" class="export-btn" t-on-click="onExportDashboard" title="Export this tab as CSV"><i class="fa fa-download"/></button>
+                        <div class="profile-btn" t-on-click="onProfileClick" title="My Profile">
+                            <img t-attf-src="/web/image?model=res.users&amp;field=avatar_128&amp;id={{user.userId}}" alt="Profile"/>
+                        </div>
                     </div>
                 </div>
 
@@ -380,7 +383,7 @@
 
                         <div class="aqua-card">
                             <div class="card-head-row">
-                                <h3>Attention needed</h3>
+                                <h3>Alerts &amp; Notifications</h3>
                                 <span class="view-all" t-on-click="onDrillQcHold">View all</span>
                             </div>
                             <div style="margin-top:10px;">
