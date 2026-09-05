@@ -73,6 +73,22 @@
 .o_aqua_dashboard .pill-input .fa{ font-size:13px; color:inherit; }
 .o_aqua_dashboard .pill-input .fa-chevron-down{ font-size:10px; color:var(--ink-mute); }
 .o_aqua_dashboard .pill-input.search-pill{ min-width:180px; color:var(--ink-mute); }
+.o_aqua_dashboard .search-pill input[type="text"]{ border:none; background:transparent; font:inherit; color:var(--ink); padding:0; outline:none; width:180px; }
+.o_aqua_dashboard .search-pill input[type="text"]::placeholder{ color:var(--ink-mute); }
+.o_aqua_dashboard .search-clear{ cursor:pointer; color:var(--ink-mute); }
+.o_aqua_dashboard .search-clear:hover{ color:var(--ink-soft); }
+.o_aqua_dashboard .search-dropdown{
+    position:absolute; top:calc(100% + 6px); left:0; right:0; min-width:280px;
+    background:#fff; border:1px solid var(--line); border-radius:14px;
+    box-shadow:0 12px 28px rgba(18,24,31,0.12); padding:6px; z-index:50;
+    max-height:340px; overflow-y:auto;
+}
+.o_aqua_dashboard .search-dropdown-msg{ padding:10px 12px; font-size:12.5px; color:var(--ink-mute); }
+.o_aqua_dashboard .search-dropdown-group{ padding:8px 12px 4px; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-mute); }
+.o_aqua_dashboard .search-dropdown-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 12px; border-radius:10px; cursor:pointer; font-size:13px; }
+.o_aqua_dashboard .search-dropdown-row:hover{ background:#F5F7FA; }
+.o_aqua_dashboard .search-dropdown-row .label{ color:var(--ink); font-weight:600; }
+.o_aqua_dashboard .search-dropdown-row .sublabel{ color:var(--ink-mute); font-size:11.5px; flex-shrink:0; }
 
 /* ---- custom filter dropdown (replaces native <select> popups, which
    render as an unstyled browser list that clashes with the rest of the
@@ -180,6 +196,10 @@
 .o_aqua_dashboard .aqua-hero-lightbox-close:hover{ background:rgba(255,255,255,.22); }
 .o_aqua_dashboard .weather-top{ display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--ink-soft); }
 .o_aqua_dashboard .temp{ font-size:44px; font-weight:700; margin:10px 0 4px; }
+.o_aqua_dashboard .weather-row{ display:flex; align-items:center; justify-content:space-between; }
+.o_aqua_dashboard .weather-row .temp{ margin:0; }
+.o_aqua_dashboard .weather-icon{ flex-shrink:0; }
+.o_aqua_dashboard .weather-updated{ font-size:10.5px; margin-top:2px; }
 .o_aqua_dashboard .inset-card{ background:#F7F8FA; border:none; padding:18px; margin-top:20px; border-radius:20px; }
 .o_aqua_dashboard .inset-card h3{ font-size:13.5px; }
 
