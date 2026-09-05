@@ -2,7 +2,7 @@
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { user } from "@web/core/user";
-import { Component, onMounted, useState, useExternalListener } from "@odoo/owl";
+import { Component, onMounted, onWillUnmount, useState, useExternalListener } from "@odoo/owl";
 
 import { KpiTile } from "../components/kpi_tile/kpi_tile";
 import { ChartWidget } from "../components/chart_widget/chart_widget";
@@ -166,6 +166,8 @@ class AquaDashboard extends Component {
         });
         onMounted(() => this.loadData());
         onMounted(() => this._loadWeather());
+        onMounted(() => this._initCountUpObserver());
+        onWillUnmount(() => this._teardownCountUpObserver());
     }
 
     // ---- Shared UI helper: status label -> badge color class ----
@@ -905,6 +907,109 @@ class AquaDashboard extends Component {
         blue: '#2F6FED', teal: '#12A594', amber: '#E8940C',
         coral: '#E2543A', purple: '#7C6CF0', green: '#3AA655', gray: '#CBD5E0',
     };
+
+    // ==================================================================
+    //  KPI count-up animation
+    // ------------------------------------------------------------------
+    //  Any element rendered with data-countup="<raw number>" and
+    //  data-count-fmt="<name of a formatter method on this class>" (see
+    //  the .stat-val / .val elements in dashboard_templates.xml) gets
+    //  animated from its last known value up/down to the new one whenever
+    //  that attribute changes - including the very first time it appears,
+    //  e.g. a tab switch mounting a fresh KPI grid, so it counts up from 0
+    //  instead of just popping the final number into place.
+    //
+    //  Implemented with a MutationObserver instead of an Owl lifecycle
+    //  hook so it doesn't care *why* the DOM changed (initial render, tab
+    //  switch remounting a whole subtree, a filter reload patching a
+    //  single number) - anything with that attribute gets the same
+    //  treatment automatically, wherever it's used.
+    // ==================================================================
+    _initCountUpObserver() {
+        this._countUpLastValues = new WeakMap();
+        this._countUpFrames = new WeakMap();
+        const root = document.querySelector(".o_aqua_dashboard");
+        if (!root) return;
+        this._countUpRoot = root;
+
+        const scan = (el) => {
+            if (!el.querySelectorAll) return;
+            const nodes = el.matches && el.matches("[data-countup]")
+                ? [el, ...el.querySelectorAll("[data-countup]")]
+                : el.querySelectorAll("[data-countup]");
+            nodes.forEach((node) => this._runCountUp(node));
+        };
+
+        this._countUpObserver = new MutationObserver((mutations) => {
+            for (const m of mutations) {
+                if (m.type === "attributes" && m.target.hasAttribute("data-countup")) {
+                    this._runCountUp(m.target);
+                } else if (m.type === "childList") {
+                    m.addedNodes.forEach((n) => {
+                        if (n.nodeType === 1) scan(n);
+                    });
+                }
+            }
+        });
+        this._countUpObserver.observe(root, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ["data-countup"],
+        });
+
+        // Anything already in the DOM on first mount (initial page load)
+        // counts up from 0 too, same as a freshly-mounted tab.
+        scan(root);
+    }
+
+    _teardownCountUpObserver() {
+        if (this._countUpObserver) {
+            this._countUpObserver.disconnect();
+            this._countUpObserver = null;
+        }
+        (this._countUpFrames instanceof WeakMap) && null; // no-op, WeakMap needs no explicit cleanup
+    }
+
+    _runCountUp(el) {
+        const raw = el.getAttribute("data-countup");
+        if (raw === null) return;
+        const target = Number(raw);
+        if (Number.isNaN(target)) return;
+
+        const fmtName = el.getAttribute("data-count-fmt") || "fmtNum";
+        const suffix = el.getAttribute("data-count-suffix") || "";
+        const fmtFn = typeof this[fmtName] === "function" ? this[fmtName].bind(this) : (v) => String(Math.round(v));
+
+        const from = this._countUpLastValues.get(el);
+        const start = from === undefined ? 0 : from;
+        // Nothing meaningfully changed (e.g. an unrelated re-render touched
+        // the attribute but wrote the same number) - skip re-animating.
+        if (from !== undefined && Math.abs(from - target) < 0.005) return;
+
+        const prevFrame = this._countUpFrames.get(el);
+        if (prevFrame) cancelAnimationFrame(prevFrame);
+
+        const duration = 700;
+        const t0 = performance.now();
+        const easeOutQuart = (t) => 1 - Math.pow(1 - t, 4);
+
+        const step = (now) => {
+            const elapsed = now - t0;
+            const p = Math.min(1, elapsed / duration);
+            const eased = easeOutQuart(p);
+            const current = start + (target - start) * eased;
+            el.textContent = fmtFn(current) + suffix;
+            if (p < 1) {
+                this._countUpFrames.set(el, requestAnimationFrame(step));
+            } else {
+                el.textContent = fmtFn(target) + suffix;
+                this._countUpLastValues.set(el, target);
+                this._countUpFrames.delete(el);
+            }
+        };
+        this._countUpFrames.set(el, requestAnimationFrame(step));
+    }
 
     fmtNum(v) {
         return Math.round(v || 0).toLocaleString('en-IN');

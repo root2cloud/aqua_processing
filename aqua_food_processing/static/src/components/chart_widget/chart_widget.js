@@ -422,7 +422,12 @@ export class ChartWidget extends Component {
         const baseOptions = {
             responsive: true,
             maintainAspectRatio: false,
-            animation: { duration: 400 },
+            // Longer, eased draw-in (was a flat 400ms) so the line/bar
+            // visibly grows into place on every mount - initial load, tab
+            // switch (ChartWidget is destroyed/recreated per tab, see
+            // dashboard.js), and filter/period changes alike - instead of
+            // just appearing.
+            animation: { duration: 900, easing: "easeOutQuart" },
             plugins: {
                 legend: {
                     display: datasets.length > 1,

@@ -79,26 +79,25 @@
 
                 <!-- ══════════════════════ OVERVIEW TAB ══════════════════════ -->
                 <t t-if="isTabActive('overview')">
-
                     <div class="grid g-hero">
                         <div class="aqua-card hero-card">
                             <h3>Processing overview</h3>
                             <p class="muted">Live overview of processing plant</p>
                             <div class="mini-stats">
                                 <div class="mini-stat" style="background:var(--blue-tint);" t-on-click="onDrillTotalWeightReceived">
-                                    <div class="val"><t t-esc="fmtTon(state.total_weight_received)"/></div>
+                                    <div class="val" t-attf-data-countup="{{state.total_weight_received}}" data-count-fmt="fmtTon"><t t-esc="fmtTon(state.total_weight_received)"/></div>
                                     <div class="lbl">Raw material received</div>
                                 </div>
                                 <div class="mini-stat" style="background:var(--teal-tint);" t-on-click="onDrillTotalProcessingOrders">
-                                    <div class="val"><t t-esc="fmtTon(state.total_input_qty)"/></div>
+                                    <div class="val" t-attf-data-countup="{{state.total_input_qty}}" data-count-fmt="fmtTon"><t t-esc="fmtTon(state.total_input_qty)"/></div>
                                     <div class="lbl">In production</div>
                                 </div>
                                 <div class="mini-stat" style="background:var(--amber-tint);" t-on-click="onDrillTotalStockOnHand">
-                                    <div class="val"><t t-esc="fmtTon(state.total_stock_on_hand)"/></div>
+                                    <div class="val" t-attf-data-countup="{{state.total_stock_on_hand}}" data-count-fmt="fmtTon"><t t-esc="fmtTon(state.total_stock_on_hand)"/></div>
                                     <div class="lbl">Finished goods</div>
                                 </div>
                                 <div class="mini-stat" style="background:var(--purple-tint);">
-                                    <div class="val"><t t-esc="fmtPct(ovYieldPct)"/></div>
+                                    <div class="val" t-attf-data-countup="{{ovYieldPct}}" data-count-fmt="fmtPct"><t t-esc="fmtPct(ovYieldPct)"/></div>
                                     <div class="lbl">Yield (period)</div>
                                 </div>
                             </div>
@@ -237,13 +236,13 @@
                                 <t t-set="chip" t-value="comparisonChip('total_input_qty')"/>
                                 <span t-if="chip" class="chip" t-attf-style="background:{{chip.bg}}; color:{{chip.color}};"><t t-esc="chip.text"/></span>
                             </div>
-                            <div><div class="stat-val"><t t-esc="fmtTon(state.total_input_qty)"/></div><div class="stat-lbl">Input this period</div></div>
+                            <div><div class="stat-val" t-attf-data-countup="{{state.total_input_qty}}" data-count-fmt="fmtTon"><t t-esc="fmtTon(state.total_input_qty)"/></div><div class="stat-lbl">Input this period</div></div>
                         </div>
                         <div class="aqua-card stat-card">
                             <div class="stat-top">
                                 <div class="stat-icon" style="background:var(--teal-tint); color:var(--teal);"><i class="fa fa-line-chart"/></div>
                             </div>
-                            <div><div class="stat-val"><t t-esc="fmtPct(ovYieldPct)"/></div><div class="stat-lbl">Overall yield</div></div>
+                            <div><div class="stat-val" t-attf-data-countup="{{ovYieldPct}}" data-count-fmt="fmtPct"><t t-esc="fmtPct(ovYieldPct)"/></div><div class="stat-lbl">Overall yield</div></div>
                         </div>
                         <div class="aqua-card stat-card" t-on-click="onDrillCancelledReceipts">
                             <div class="stat-top">
@@ -251,14 +250,14 @@
                                 <t t-set="chip" t-value="comparisonChip('rejection_rate', true)"/>
                                 <span t-if="chip" class="chip" t-attf-style="background:{{chip.bg}}; color:{{chip.color}};"><t t-esc="chip.text"/></span>
                             </div>
-                            <div><div class="stat-val"><t t-esc="fmtPct(state.rejection_rate)"/></div><div class="stat-lbl">Rejection rate</div></div>
+                            <div><div class="stat-val" t-attf-data-countup="{{state.rejection_rate}}" data-count-fmt="fmtPct"><t t-esc="fmtPct(state.rejection_rate)"/></div><div class="stat-lbl">Rejection rate</div></div>
                         </div>
                         <div class="aqua-card stat-card" t-on-click="onDrillTotalProcessingOrders">
                             <div class="stat-top">
                                 <div class="stat-icon" style="background:var(--purple-tint); color:var(--purple);"><i class="fa fa-users"/></div>
                                 <span class="chip" style="background:#F1F2F4; color:var(--ink-soft);"><t t-esc="state.active_vendor_count"/> vendors active</span>
                             </div>
-                            <div><div class="stat-val"><t t-esc="procgOrderedByStatus.done"/> orders</div><div class="stat-lbl">Completed this period</div></div>
+                            <div><div class="stat-val" t-attf-data-countup="{{procgOrderedByStatus.done}}" data-count-fmt="fmtNum" data-count-suffix=" orders"><t t-esc="procgOrderedByStatus.done"/> orders</div><div class="stat-lbl">Completed this period</div></div>
                         </div>
                     </div>
 
@@ -440,31 +439,30 @@
 
                 <!-- ══════════════════════ PROCUREMENT TAB ══════════════════════ -->
                 <t t-if="isTabActive('procurement')">
-
                     <div class="grid g-kpi6">
                         <div class="aqua-card kpi-tile" t-on-click="onDrillTotalReceipts">
                             <div class="stat-top"><div class="stat-icon" style="background:var(--blue-tint); color:var(--blue);"><i class="fa fa-clipboard"/></div></div>
-                            <div><div class="stat-val" t-esc="fmtNum(state.total_receipts)"/><div class="stat-lbl">Total receipts</div></div>
+                            <div><div class="stat-val" t-attf-data-countup="{{state.total_receipts}}" data-count-fmt="fmtNum" t-esc="fmtNum(state.total_receipts)"/><div class="stat-lbl">Total receipts</div></div>
                         </div>
                         <div class="aqua-card kpi-tile" t-on-click="onDrillTotalWeightReceived">
                             <div class="stat-top"><div class="stat-icon" style="background:var(--teal-tint); color:var(--teal);"><i class="fa fa-balance-scale"/></div></div>
-                            <div><div class="stat-val" t-esc="fmtTon(state.total_weight_received)"/><div class="stat-lbl">Weight received</div></div>
+                            <div><div class="stat-val" t-attf-data-countup="{{state.total_weight_received}}" data-count-fmt="fmtTon" t-esc="fmtTon(state.total_weight_received)"/><div class="stat-lbl">Weight received</div></div>
                         </div>
                         <div class="aqua-card kpi-tile" t-on-click="onDrillActiveVendors">
                             <div class="stat-top"><div class="stat-icon" style="background:var(--purple-tint); color:var(--purple);"><i class="fa fa-users"/></div></div>
-                            <div><div class="stat-val" t-esc="fmtNum(state.active_vendor_count)"/><div class="stat-lbl">Active vendors</div></div>
+                            <div><div class="stat-val" t-attf-data-countup="{{state.active_vendor_count}}" data-count-fmt="fmtNum" t-esc="fmtNum(state.active_vendor_count)"/><div class="stat-lbl">Active vendors</div></div>
                         </div>
                         <div class="aqua-card kpi-tile" t-on-click="onDrillTotalPurchaseSpend">
                             <div class="stat-top"><div class="stat-icon" style="background:var(--amber-tint); color:var(--amber);"><i class="fa fa-inr"/></div></div>
-                            <div><div class="stat-val" t-esc="fmtINR(state.total_purchase_spend)"/><div class="stat-lbl">Purchase spend</div></div>
+                            <div><div class="stat-val" t-attf-data-countup="{{state.total_purchase_spend}}" data-count-fmt="fmtINR" t-esc="fmtINR(state.total_purchase_spend)"/><div class="stat-lbl">Purchase spend</div></div>
                         </div>
                         <div class="aqua-card kpi-tile" t-on-click="onDrillTotalPurchaseSpend">
                             <div class="stat-top"><div class="stat-icon" style="background:var(--green-tint); color:var(--green);"><i class="fa fa-money"/></div></div>
-                            <div><div class="stat-val" t-esc="fmtINRPerKg(state.avg_price_per_kg)"/><div class="stat-lbl">Avg price / kg</div></div>
+                            <div><div class="stat-val" t-attf-data-countup="{{state.avg_price_per_kg}}" data-count-fmt="fmtINRPerKg" t-esc="fmtINRPerKg(state.avg_price_per_kg)"/><div class="stat-lbl">Avg price / kg</div></div>
                         </div>
                         <div class="aqua-card kpi-tile" t-on-click="onDrillCancelledReceipts">
                             <div class="stat-top"><div class="stat-icon" style="background:var(--coral-tint); color:var(--coral);"><i class="fa fa-times"/></div></div>
-                            <div><div class="stat-val" t-esc="fmtPct(state.rejection_rate)"/><div class="stat-lbl">Rejection rate</div></div>
+                            <div><div class="stat-val" t-attf-data-countup="{{state.rejection_rate}}" data-count-fmt="fmtPct" t-esc="fmtPct(state.rejection_rate)"/><div class="stat-lbl">Rejection rate</div></div>
                         </div>
                     </div>
 
@@ -473,14 +471,14 @@
                         <div class="aqua-card" style="display:flex; align-items:center; justify-content:space-between; cursor:pointer;" t-on-click="onDrillTotalStockOnHand">
                             <div style="display:flex; align-items:center; gap:16px;">
                                 <div class="stat-icon" style="width:44px; height:44px; background:var(--green-tint); color:var(--green); font-size:20px;"><i class="fa fa-cubes"/></div>
-                                <div><div class="stat-val" style="font-size:26px;" t-esc="fmtTon(state.total_stock_on_hand)"/><div class="stat-lbl">Current stock on hand</div></div>
+                                <div><div class="stat-val" t-attf-data-countup="{{state.total_stock_on_hand}}" data-count-fmt="fmtTon" style="font-size:26px;" t-esc="fmtTon(state.total_stock_on_hand)"/><div class="stat-lbl">Current stock on hand</div></div>
                             </div>
                             <svg width="90" height="36" viewBox="0 0 90 36"><polyline points="0,26 20,22 40,24 60,12 90,6" fill="none" stroke="var(--green)" stroke-width="2.5"/></svg>
                         </div>
                         <div class="aqua-card" style="display:flex; align-items:center; justify-content:space-between; cursor:pointer;" t-on-click="onDrillStockValue">
                             <div style="display:flex; align-items:center; gap:16px;">
                                 <div class="stat-icon" style="width:44px; height:44px; background:var(--blue-tint); color:var(--blue); font-size:20px;"><i class="fa fa-inr"/></div>
-                                <div><div class="stat-val" style="font-size:26px;" t-esc="fmtINR(state.stock_value)"/><div class="stat-lbl">Stock value</div></div>
+                                <div><div class="stat-val" t-attf-data-countup="{{state.stock_value}}" data-count-fmt="fmtINR" style="font-size:26px;" t-esc="fmtINR(state.stock_value)"/><div class="stat-lbl">Stock value</div></div>
                             </div>
                             <svg width="90" height="36" viewBox="0 0 90 36"><polyline points="0,20 20,24 40,14 60,18 90,4" fill="none" stroke="var(--blue)" stroke-width="2.5"/></svg>
                         </div>
@@ -705,27 +703,26 @@
 
                 <!-- ══════════════════════ PROCESSING TAB ══════════════════════ -->
                 <t t-if="isTabActive('processing')">
-
                     <div class="grid g-kpi5">
                         <div class="aqua-card kpi-tile" t-on-click="onDrillTotalProcessingOrders">
                             <div class="stat-top"><div class="stat-icon" style="background:var(--blue-tint); color:var(--blue);"><i class="fa fa-clipboard"/></div></div>
-                            <div><div class="stat-val" t-esc="fmtNum(state.total_processing_orders)"/><div class="stat-lbl">Processing orders</div></div>
+                            <div><div class="stat-val" t-attf-data-countup="{{state.total_processing_orders}}" data-count-fmt="fmtNum" t-esc="fmtNum(state.total_processing_orders)"/><div class="stat-lbl">Processing orders</div></div>
                         </div>
                         <div class="aqua-card kpi-tile" t-on-click="onDrillTotalProcessingOrders">
                             <div class="stat-top"><div class="stat-icon" style="background:var(--teal-tint); color:var(--teal);"><i class="fa fa-sign-in"/></div></div>
-                            <div><div class="stat-val" t-esc="fmtTon(state.total_input_qty)"/><div class="stat-lbl">Total input qty</div></div>
+                            <div><div class="stat-val" t-attf-data-countup="{{state.total_input_qty}}" data-count-fmt="fmtTon" t-esc="fmtTon(state.total_input_qty)"/><div class="stat-lbl">Total input qty</div></div>
                         </div>
                         <div class="aqua-card kpi-tile" t-on-click="onDrillWipStock">
                             <div class="stat-top"><div class="stat-icon" style="background:var(--amber-tint); color:var(--amber);"><i class="fa fa-spinner"/></div></div>
-                            <div><div class="stat-val" t-esc="fmtNum(state.wip_stock_kg) + ' kg'"/><div class="stat-lbl">Staged for processing</div></div>
+                            <div><div class="stat-val" t-attf-data-countup="{{state.wip_stock_kg}}" data-count-fmt="fmtNum" data-count-suffix=" kg" t-esc="fmtNum(state.wip_stock_kg) + ' kg'"/><div class="stat-lbl">Staged for processing</div></div>
                         </div>
                         <div class="aqua-card kpi-tile">
                             <div class="stat-top"><div class="stat-icon" style="background:var(--purple-tint); color:var(--purple);"><i class="fa fa-snowflake-o"/></div></div>
-                            <div><div class="stat-val" t-esc="fmtNum(state.active_blast_freeze_count)"/><div class="stat-lbl">Active blast freeze cycles</div></div>
+                            <div><div class="stat-val" t-attf-data-countup="{{state.active_blast_freeze_count}}" data-count-fmt="fmtNum" t-esc="fmtNum(state.active_blast_freeze_count)"/><div class="stat-lbl">Active blast freeze cycles</div></div>
                         </div>
                         <div class="aqua-card kpi-tile" t-on-click="() => this.onProcessingStatusChartClick({label: 'Done'})">
                             <div class="stat-top"><div class="stat-icon" style="background:var(--green-tint); color:var(--green);"><i class="fa fa-check"/></div></div>
-                            <div><div class="stat-val" t-esc="fmtPct(state.total_processing_orders ? (procgOrderedByStatus.done / state.total_processing_orders * 100) : 0)"/><div class="stat-lbl">Orders done</div></div>
+                            <div><div class="stat-val" t-attf-data-countup="{{state.total_processing_orders ? (procgOrderedByStatus.done / state.total_processing_orders * 100) : 0}}" data-count-fmt="fmtPct" t-esc="fmtPct(state.total_processing_orders ? (procgOrderedByStatus.done / state.total_processing_orders * 100) : 0)"/><div class="stat-lbl">Orders done</div></div>
                         </div>
                     </div>
 
@@ -870,31 +867,30 @@
 
                 <!-- ══════════════════════ QUALITY CONTROL TAB ══════════════════════ -->
                 <t t-if="isTabActive('quality')">
-
                     <div class="grid g-kpi6">
                         <div class="aqua-card kpi-tile" t-on-click="onDrillQcTotal">
                             <div class="stat-top"><div class="stat-icon" style="background:var(--blue-tint); color:var(--blue);"><i class="fa fa-list-alt"/></div></div>
-                            <div><div class="stat-val" t-esc="fmtNum(state.qc_total)"/><div class="stat-lbl">Total checks</div></div>
+                            <div><div class="stat-val" t-attf-data-countup="{{state.qc_total}}" data-count-fmt="fmtNum" t-esc="fmtNum(state.qc_total)"/><div class="stat-lbl">Total checks</div></div>
                         </div>
                         <div class="aqua-card kpi-tile" t-on-click="onDrillQcFail">
                             <div class="stat-top"><div class="stat-icon" style="background:var(--coral-tint); color:var(--coral);"><i class="fa fa-times"/></div></div>
-                            <div><div class="stat-val" t-esc="fmtNum(state.qc_fail_count)"/><div class="stat-lbl">Failed</div></div>
+                            <div><div class="stat-val" t-attf-data-countup="{{state.qc_fail_count}}" data-count-fmt="fmtNum" t-esc="fmtNum(state.qc_fail_count)"/><div class="stat-lbl">Failed</div></div>
                         </div>
                         <div class="aqua-card kpi-tile">
                             <div class="stat-top"><div class="stat-icon" style="background:var(--amber-tint); color:var(--amber);"><i class="fa fa-hourglass-half"/></div></div>
-                            <div><div class="stat-val" t-esc="fmtNum(state.qc_todo_count)"/><div class="stat-lbl">To do</div></div>
+                            <div><div class="stat-val" t-attf-data-countup="{{state.qc_todo_count}}" data-count-fmt="fmtNum" t-esc="fmtNum(state.qc_todo_count)"/><div class="stat-lbl">To do</div></div>
                         </div>
                         <div class="aqua-card kpi-tile" t-on-click="onDrillQcHold">
                             <div class="stat-top"><div class="stat-icon" style="background:var(--purple-tint); color:var(--purple);"><i class="fa fa-pause-circle"/></div></div>
-                            <div><div class="stat-val" t-esc="fmtNum(state.qc_hold_count)"/><div class="stat-lbl">On hold</div></div>
+                            <div><div class="stat-val" t-attf-data-countup="{{state.qc_hold_count}}" data-count-fmt="fmtNum" t-esc="fmtNum(state.qc_hold_count)"/><div class="stat-lbl">On hold</div></div>
                         </div>
                         <div class="aqua-card kpi-tile">
                             <div class="stat-top"><div class="stat-icon" style="background:var(--teal-tint); color:var(--teal);"><i class="fa fa-flask"/></div></div>
-                            <div><div class="stat-val" t-esc="fmt1(state.avg_histamine_ppm) + ' ppm'"/><div class="stat-lbl">Avg histamine</div></div>
+                            <div><div class="stat-val" t-attf-data-countup="{{state.avg_histamine_ppm}}" data-count-fmt="fmt1" data-count-suffix=" ppm" t-esc="fmt1(state.avg_histamine_ppm) + ' ppm'"/><div class="stat-lbl">Avg histamine</div></div>
                         </div>
                         <div class="aqua-card kpi-tile">
                             <div class="stat-top"><div class="stat-icon" style="background:var(--green-tint); color:var(--green);"><i class="fa fa-star"/></div></div>
-                            <div><div class="stat-val" t-esc="fmt1(state.avg_sensory_score) + ' / 10'"/><div class="stat-lbl">Avg sensory score</div></div>
+                            <div><div class="stat-val" t-attf-data-countup="{{state.avg_sensory_score}}" data-count-fmt="fmt1" data-count-suffix=" / 10" t-esc="fmt1(state.avg_sensory_score) + ' / 10'"/><div class="stat-lbl">Avg sensory score</div></div>
                         </div>
                     </div>
 
@@ -1086,7 +1082,6 @@
                      Budgetary Positions / Budgets. This tab is a read-only summary;
                      all editing still happens in Accounting. -->
                 <t t-if="isTabActive('budget')">
-
                     <div class="aqua-card" style="margin-bottom:18px; cursor:pointer;" t-on-click="onOpenBudgetRecord">
                         <div class="budget-header">
                             <div>
@@ -1110,23 +1105,23 @@
                         <div class="grid g-kpi5">
                             <div class="aqua-card kpi-tile" t-on-click="onOpenBudgetRecord">
                                 <div class="stat-top"><div class="stat-icon" style="background:var(--blue-tint); color:var(--blue);"><i class="fa fa-bullseye"/></div></div>
-                                <div><div class="stat-val" t-esc="fmtINR(state.budget_total_planned)"/><div class="stat-lbl">Total planned</div></div>
+                                <div><div class="stat-val" t-attf-data-countup="{{state.budget_total_planned}}" data-count-fmt="fmtINR" t-esc="fmtINR(state.budget_total_planned)"/><div class="stat-lbl">Total planned</div></div>
                             </div>
                             <div class="aqua-card kpi-tile" t-on-click="onOpenBudgetRecord">
                                 <div class="stat-top"><div class="stat-icon" style="background:var(--teal-tint); color:var(--teal);"><i class="fa fa-inr"/></div></div>
-                                <div><div class="stat-val" t-esc="fmtINR(state.budget_total_practical)"/><div class="stat-lbl">Actual (practical)</div></div>
+                                <div><div class="stat-val" t-attf-data-countup="{{state.budget_total_practical}}" data-count-fmt="fmtINR" t-esc="fmtINR(state.budget_total_practical)"/><div class="stat-lbl">Actual (practical)</div></div>
                             </div>
                             <div class="aqua-card kpi-tile" t-on-click="onOpenBudgetRecord">
                                 <div class="stat-top"><div class="stat-icon" style="background:var(--purple-tint); color:var(--purple);"><i class="fa fa-clock-o"/></div></div>
-                                <div><div class="stat-val" t-esc="fmtINR(state.budget_total_theoretical)"/><div class="stat-lbl">Theoretical (to date)</div></div>
+                                <div><div class="stat-val" t-attf-data-countup="{{state.budget_total_theoretical}}" data-count-fmt="fmtINR" t-esc="fmtINR(state.budget_total_theoretical)"/><div class="stat-lbl">Theoretical (to date)</div></div>
                             </div>
                             <div class="aqua-card kpi-tile" t-on-click="onOpenBudgetRecord">
                                 <div class="stat-top"><div class="stat-icon" style="background:var(--green-tint); color:var(--green);"><i class="fa fa-line-chart"/></div></div>
-                                <div><div class="stat-val" t-esc="fmtINR(state.budget_total_gross_margin)"/><div class="stat-lbl">Gross margin</div></div>
+                                <div><div class="stat-val" t-attf-data-countup="{{state.budget_total_gross_margin}}" data-count-fmt="fmtINR" t-esc="fmtINR(state.budget_total_gross_margin)"/><div class="stat-lbl">Gross margin</div></div>
                             </div>
                             <div class="aqua-card kpi-tile" t-on-click="onOpenBudgetRecord">
                                 <div class="stat-top"><div class="stat-icon" style="background:var(--amber-tint); color:var(--amber);"><i class="fa fa-percent"/></div></div>
-                                <div><div class="stat-val" t-esc="fmtPct(state.budget_achievement_pct)"/><div class="stat-lbl">Achievement</div></div>
+                                <div><div class="stat-val" t-attf-data-countup="{{state.budget_achievement_pct}}" data-count-fmt="fmtPct" t-esc="fmtPct(state.budget_achievement_pct)"/><div class="stat-lbl">Achievement</div></div>
                             </div>
                         </div>
 
