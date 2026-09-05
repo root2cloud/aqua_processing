@@ -936,6 +936,17 @@ class AquaDashboard extends Component {
         // filter/period change that recomputes the segments.
         this._donutArcLastValues = new WeakMap();
         this._donutArcFrames = new WeakMap();
+        // Same idea again, but for the plain rectangular bar fills used
+        // all over the dashboard: horizontal progress/track bars, the
+        // purchase-to-stock funnel, WIP bars, stacked pass/fail segments,
+        // etc. (data-bar-pct, animates CSS width) and the vertical
+        // "ordered vs received" column sticks (data-bar-pct-v, animates
+        // CSS height). Each bar grows from 0 up to its target percentage
+        // instead of just appearing at full length.
+        this._barPctLastValues = new WeakMap();
+        this._barPctFrames = new WeakMap();
+        this._barPctVLastValues = new WeakMap();
+        this._barPctVFrames = new WeakMap();
         const root = document.querySelector(".o_aqua_dashboard");
         if (!root) return;
         this._countUpRoot = root;
@@ -951,6 +962,16 @@ class AquaDashboard extends Component {
                 ? [el, ...el.querySelectorAll("[data-donut-arc]")]
                 : el.querySelectorAll("[data-donut-arc]");
             donutNodes.forEach((node) => this._runDonutArc(node));
+
+            const barNodes = el.matches && el.matches("[data-bar-pct]")
+                ? [el, ...el.querySelectorAll("[data-bar-pct]")]
+                : el.querySelectorAll("[data-bar-pct]");
+            barNodes.forEach((node) => this._runBarPct(node, "h"));
+
+            const barVNodes = el.matches && el.matches("[data-bar-pct-v]")
+                ? [el, ...el.querySelectorAll("[data-bar-pct-v]")]
+                : el.querySelectorAll("[data-bar-pct-v]");
+            barVNodes.forEach((node) => this._runBarPct(node, "v"));
         };
 
         this._countUpObserver = new MutationObserver((mutations) => {
@@ -959,6 +980,10 @@ class AquaDashboard extends Component {
                     this._runCountUp(m.target);
                 } else if (m.type === "attributes" && m.target.hasAttribute("data-donut-arc")) {
                     this._runDonutArc(m.target);
+                } else if (m.type === "attributes" && m.target.hasAttribute("data-bar-pct")) {
+                    this._runBarPct(m.target, "h");
+                } else if (m.type === "attributes" && m.target.hasAttribute("data-bar-pct-v")) {
+                    this._runBarPct(m.target, "v");
                 } else if (m.type === "childList") {
                     m.addedNodes.forEach((n) => {
                         if (n.nodeType === 1) scan(n);
@@ -970,7 +995,7 @@ class AquaDashboard extends Component {
             childList: true,
             subtree: true,
             attributes: true,
-            attributeFilter: ["data-countup", "data-donut-arc"],
+            attributeFilter: ["data-countup", "data-donut-arc", "data-bar-pct", "data-bar-pct-v"],
         });
 
         // Anything already in the DOM on first mount (initial page load)
@@ -1084,6 +1109,65 @@ class AquaDashboard extends Component {
             }
         };
         this._donutArcFrames.set(el, requestAnimationFrame(step));
+    }
+
+    // ==================================================================
+    //  Rectangular bar-fill draw-in animation
+    // ------------------------------------------------------------------
+    //  Covers every plain percentage bar on the dashboard: the .fill bars
+    //  inside a .track (Production progress' operation breakdown,
+    //  Receipts by species, Spend by vendor, Received weight by vendor,
+    //  Today's stock by product/location, Input weight by species,
+    //  Rejected qty by species, Planned vs practical by cost center...),
+    //  the .funnel-bar in the Purchase-to-stock funnel, the .hbar-fill in
+    //  the WIP-by-product chart, and the stacked .seg bars in IPQC by
+    //  shop-floor operation / Residue screening - all of these carry
+    //  data-bar-pct="<final %>" and animate their CSS width from 0 up to
+    //  that percentage. The vertical column "sticks" in Ordered vs
+    //  received carry data-bar-pct-v instead and animate height the same
+    //  way. axis is "h" for width or "v" for height.
+    // ==================================================================
+    _runBarPct(el, axis) {
+        const attr = axis === "v" ? "data-bar-pct-v" : "data-bar-pct";
+        const prop = axis === "v" ? "height" : "width";
+        const raw = el.getAttribute(attr);
+        if (raw === null) return;
+        const target = Number(raw);
+        if (Number.isNaN(target)) return;
+
+        const store = axis === "v" ? this._barPctVLastValues : this._barPctLastValues;
+        const frames = axis === "v" ? this._barPctVFrames : this._barPctFrames;
+
+        const from = store.get(el);
+        const start = from === undefined ? 0 : from;
+        if (from !== undefined && Math.abs(from - target) < 0.05) {
+            el.style[prop] = `${target.toFixed(2)}%`;
+            store.set(el, target);
+            return;
+        }
+
+        const prevFrame = frames.get(el);
+        if (prevFrame) cancelAnimationFrame(prevFrame);
+
+        const duration = 800;
+        const t0 = performance.now();
+        const easeOutQuart = (t) => 1 - Math.pow(1 - t, 4);
+
+        const step = (now) => {
+            const elapsed = now - t0;
+            const p = Math.min(1, elapsed / duration);
+            const eased = easeOutQuart(p);
+            const current = start + (target - start) * eased;
+            el.style[prop] = `${current.toFixed(2)}%`;
+            if (p < 1) {
+                frames.set(el, requestAnimationFrame(step));
+            } else {
+                el.style[prop] = `${target.toFixed(2)}%`;
+                store.set(el, target);
+                frames.delete(el);
+            }
+        };
+        frames.set(el, requestAnimationFrame(step));
     }
 
     fmtNum(v) {

@@ -269,7 +269,8 @@
                                 <svg width="140" height="90" viewBox="0 0 140 90">
                                     <path d="M10,80 A60,60 0 0 1 130,80" fill="none" stroke="#EEF0F3" stroke-width="14" stroke-linecap="round"/>
                                     <path d="M10,80 A60,60 0 0 1 130,80" fill="none" stroke="var(--blue)" stroke-width="14" stroke-linecap="round"
-                                          t-att-stroke-dasharray="semiArcDash(ovYieldPct, 60)"/>
+                                          t-att-stroke-dasharray="semiArcDash(ovYieldPct, 60)"
+                                          t-att-data-donut-arc="semiArcDash(ovYieldPct, 60)"/>
                                     <text x="70" y="65" text-anchor="middle" font-size="22" font-weight="700" fill="var(--ink)" font-family="Inter"><t t-esc="fmtPct(ovYieldPct)"/></text>
                                 </svg>
                             </div>
@@ -280,7 +281,7 @@
                                 <t t-foreach="qIpqcByOperationRows" t-as="op" t-key="op.label">
                                     <div class="line-row">
                                         <span class="lbl lbl-sm" t-esc="op.label"/>
-                                        <div class="track"><div class="fill" t-attf-style="width:{{op.passPct}}%;"/></div>
+                                        <div class="track"><div class="fill" t-attf-style="width:{{op.passPct}}%;" t-attf-data-bar-pct="{{op.passPct}}"/></div>
                                         <span class="pct pct-sm"><t t-esc="op.passPct"/>%</span>
                                     </div>
                                 </t>
@@ -313,6 +314,7 @@
                                     <circle cx="65" cy="65" r="52" fill="none" stroke="#EEF0F3" stroke-width="16"/>
                                     <circle cx="65" cy="65" r="52" fill="none" stroke="var(--blue)" stroke-width="16" stroke-linecap="round"
                                             t-att-stroke-dasharray="fullArcDash(ovColdRoomOverallPct, 52)"
+                                            t-att-data-donut-arc="fullArcDash(ovColdRoomOverallPct, 52)"
                                             transform="rotate(-90 65 65)"/>
                                     <text x="65" y="71" text-anchor="middle" font-size="20" font-weight="700" fill="var(--ink)" font-family="Inter"><t t-esc="fmtPct(ovColdRoomOverallPct)"/></text>
                                 </svg>
@@ -522,7 +524,7 @@
                                 <t t-foreach="procSpeciesRows" t-as="row" t-key="row.label">
                                     <div class="line-row" t-on-click="() => this.onSpeciesChartClick({label: row.label})" style="cursor:pointer;">
                                         <span class="lbl" t-esc="row.label"/>
-                                        <div class="track"><div class="fill" t-attf-style="width:{{barPct(row.value, procSpeciesRows)}}%; background:{{row.color}};"/></div>
+                                        <div class="track"><div class="fill" t-attf-style="width:{{barPct(row.value, procSpeciesRows)}}%; background:{{row.color}};" t-attf-data-bar-pct="{{barPct(row.value, procSpeciesRows)}}"/></div>
                                         <span class="pct" t-esc="row.value"/>
                                     </div>
                                 </t>
@@ -536,7 +538,7 @@
                                 <t t-foreach="procSpendByVendorRows" t-as="row" t-key="row.label">
                                     <div class="line-row" t-on-click="() => this.onSpendByVendorChartClick({label: row.label})" style="cursor:pointer;">
                                         <span class="lbl" t-esc="row.label"/>
-                                        <div class="track"><div class="fill" t-attf-style="width:{{barPct(row.value, procSpendByVendorRows)}}%;"/></div>
+                                        <div class="track"><div class="fill" t-attf-style="width:{{barPct(row.value, procSpendByVendorRows)}}%;" t-attf-data-bar-pct="{{barPct(row.value, procSpendByVendorRows)}}"/></div>
                                         <span class="pct" t-esc="fmtINR(row.value)"/>
                                     </div>
                                 </t>
@@ -553,7 +555,7 @@
                                     <div class="funnel-row" t-on-click="() => this.onPurchaseToStockFunnelChartClick({label: row.label})" style="cursor:pointer;">
                                         <span class="funnel-lbl" t-esc="row.label"/>
                                         <div class="funnel-bar-wrap">
-                                            <div class="funnel-bar" t-attf-style="width:{{barPct(row.value, state.purchase_to_stock_funnel)}}%; background:{{cyclePalette(row_index)}};">
+                                            <div class="funnel-bar" t-attf-style="width:{{barPct(row.value, state.purchase_to_stock_funnel)}}%; background:{{cyclePalette(row_index)}};" t-attf-data-bar-pct="{{barPct(row.value, state.purchase_to_stock_funnel)}}">
                                                 <t t-esc="fmtTon(row.value)"/>
                                             </div>
                                         </div>
@@ -571,8 +573,8 @@
                                          t-on-mouseenter="(ev) => this.onSvgPointEnter(ev, row.label + ' — Ordered: ' + this.fmtNum(row.ordered) + ' kg · Received: ' + this.fmtNum(row.received) + ' kg')"
                                          t-on-mouseleave="() => this.onSvgPointLeave()">
                                         <div class="v" t-esc="row.received"/>
-                                        <div class="stick" t-if="isSeriesVisible('ordered_vs_received', 'ordered')" t-attf-style="height:{{row.orderedPct}}%;"/>
-                                        <div class="stick b2" t-if="isSeriesVisible('ordered_vs_received', 'received')" t-attf-style="height:{{row.receivedPct}}%;"/>
+                                        <div class="stick" t-if="isSeriesVisible('ordered_vs_received', 'ordered')" t-attf-style="height:{{row.orderedPct}}%;" t-attf-data-bar-pct-v="{{row.orderedPct}}"/>
+                                        <div class="stick b2" t-if="isSeriesVisible('ordered_vs_received', 'received')" t-attf-style="height:{{row.receivedPct}}%;" t-attf-data-bar-pct-v="{{row.receivedPct}}"/>
                                         <div class="l" t-esc="row.label"/>
                                     </div>
                                 </t>
@@ -639,7 +641,7 @@
                                 <t t-foreach="procWeightByVendorRows" t-as="row" t-key="row.label">
                                     <div class="line-row" t-on-click="() => this.onWeightByVendorChartClick({label: row.label})" style="cursor:pointer;">
                                         <span class="lbl" t-esc="row.label"/>
-                                        <div class="track"><div class="fill" t-attf-style="width:{{barPct(row.value, procWeightByVendorRows)}}%; background:{{row.color}};"/></div>
+                                        <div class="track"><div class="fill" t-attf-style="width:{{barPct(row.value, procWeightByVendorRows)}}%; background:{{row.color}};" t-attf-data-bar-pct="{{barPct(row.value, procWeightByVendorRows)}}"/></div>
                                         <span class="pct" t-esc="fmtTon(row.value)"/>
                                     </div>
                                 </t>
@@ -655,7 +657,7 @@
                                 <t t-foreach="procStockByProductRows" t-as="row" t-key="row.label">
                                     <div class="line-row" t-on-click="() => this.onCurrentStockByProductChartClick({label: row.label})" style="cursor:pointer;">
                                         <span class="lbl" t-esc="row.label"/>
-                                        <div class="track"><div class="fill" t-attf-style="width:{{barPct(row.value, procStockByProductRows)}}%; background:{{row.color}};"/></div>
+                                        <div class="track"><div class="fill" t-attf-style="width:{{barPct(row.value, procStockByProductRows)}}%; background:{{row.color}};" t-attf-data-bar-pct="{{barPct(row.value, procStockByProductRows)}}"/></div>
                                         <span class="pct" t-esc="fmtTon(row.value)"/>
                                     </div>
                                 </t>
@@ -668,7 +670,7 @@
                                 <t t-foreach="procStockByLocationRows" t-as="row" t-key="row.label">
                                     <div class="line-row" t-on-click="() => this.onCurrentStockByLocationChartClick({label: row.label})" style="cursor:pointer;">
                                         <span class="lbl" t-esc="row.label"/>
-                                        <div class="track"><div class="fill" t-attf-style="width:{{barPct(row.value, procStockByLocationRows)}}%; background:{{row.color}};"/></div>
+                                        <div class="track"><div class="fill" t-attf-style="width:{{barPct(row.value, procStockByLocationRows)}}%; background:{{row.color}};" t-attf-data-bar-pct="{{barPct(row.value, procStockByLocationRows)}}"/></div>
                                         <span class="pct" t-esc="fmtTon(row.value)"/>
                                     </div>
                                 </t>
@@ -736,7 +738,7 @@
                                 <t t-foreach="procgWipRows" t-as="row" t-key="row.label">
                                     <div class="hbar-row" t-on-click="() => this.onWipStockByProductChartClick({label: row.label})" style="cursor:pointer;">
                                         <span class="hbar-cat" t-esc="row.label"/>
-                                        <div class="hbar-track"><div class="hbar-fill" t-attf-style="width:{{barPct(row.value, procgWipRows)}}%; background:{{row.color}};"/></div>
+                                        <div class="hbar-track"><div class="hbar-fill" t-attf-style="width:{{barPct(row.value, procgWipRows)}}%; background:{{row.color}};" t-attf-data-bar-pct="{{barPct(row.value, procgWipRows)}}"/></div>
                                     </div>
                                 </t>
                                 <div class="o_aqua_empty" t-if="!procgWipRows.length">Nothing currently staged for processing.</div>
@@ -781,7 +783,7 @@
                                 <t t-foreach="procgInputSpeciesRows" t-as="row" t-key="row.label">
                                     <div class="line-row" t-on-click="() => this.onInputQtyBySpeciesChartClick({label: row.label})" style="cursor:pointer;">
                                         <span class="lbl" t-esc="row.label"/>
-                                        <div class="track"><div class="fill" t-attf-style="width:{{barPct(row.value, procgInputSpeciesRows)}}%; background:{{row.color}};"/></div>
+                                        <div class="track"><div class="fill" t-attf-style="width:{{barPct(row.value, procgInputSpeciesRows)}}%; background:{{row.color}};" t-attf-data-bar-pct="{{barPct(row.value, procgInputSpeciesRows)}}"/></div>
                                         <span class="pct" t-esc="fmtTon(row.value)"/>
                                     </div>
                                 </t>
@@ -982,7 +984,7 @@
                                 <t t-foreach="qRejectedBySpeciesRows" t-as="row" t-key="row.label">
                                     <div class="line-row" t-on-click="() => this.onRejectedQtyBySpeciesChartClick({label: row.label})" style="cursor:pointer;">
                                         <span class="lbl" t-esc="row.label"/>
-                                        <div class="track"><div class="fill" t-attf-style="width:{{barPct(row.value, qRejectedBySpeciesRows)}}%; background:{{row.color}};"/></div>
+                                        <div class="track"><div class="fill" t-attf-style="width:{{barPct(row.value, qRejectedBySpeciesRows)}}%; background:{{row.color}};" t-attf-data-bar-pct="{{barPct(row.value, qRejectedBySpeciesRows)}}"/></div>
                                         <span class="pct" t-esc="fmtTon(row.value)"/>
                                     </div>
                                 </t>
@@ -1023,8 +1025,8 @@
                                 <div class="pair-row" t-on-click="() => this.onIpqcByOperationChartClick({label: row.label})" style="cursor:pointer;">
                                     <span class="lbl" t-esc="row.label"/>
                                     <div class="pair-track">
-                                        <div class="seg" t-if="isSeriesVisible('ipqc_by_operation', 'pass')" t-attf-style="width:{{row.passPct}}%; background:var(--green);"/>
-                                        <div class="seg" t-if="isSeriesVisible('ipqc_by_operation', 'fail')" t-attf-style="width:{{row.failPct}}%; background:var(--coral);"/>
+                                        <div class="seg" t-if="isSeriesVisible('ipqc_by_operation', 'pass')" t-attf-style="width:{{row.passPct}}%; background:var(--green);" t-attf-data-bar-pct="{{row.passPct}}"/>
+                                        <div class="seg" t-if="isSeriesVisible('ipqc_by_operation', 'fail')" t-attf-style="width:{{row.failPct}}%; background:var(--coral);" t-attf-data-bar-pct="{{row.failPct}}"/>
                                     </div>
                                     <span class="pair-count"><t t-esc="row.pass"/> / <t t-esc="row.fail"/></span>
                                 </div>
@@ -1044,7 +1046,7 @@
                                     <span class="lbl" t-esc="row.title"/>
                                     <div class="pair-track">
                                         <t t-foreach="row.segs" t-as="seg" t-key="seg.label">
-                                            <div class="seg" t-if="isSeriesVisible('residue_screening', seg.label)" t-attf-style="width:{{seg.pct}}%; background:{{seg.color}};"/>
+                                            <div class="seg" t-if="isSeriesVisible('residue_screening', seg.label)" t-attf-style="width:{{seg.pct}}%; background:{{seg.color}};" t-attf-data-bar-pct="{{seg.pct}}"/>
                                         </t>
                                     </div>
                                 </div>
@@ -1139,7 +1141,8 @@
                                     <svg width="220" height="130" viewBox="0 0 220 130">
                                         <path d="M15,120 A95,95 0 0 1 205,120" fill="none" stroke="#EEF0F3" stroke-width="18" stroke-linecap="round"/>
                                         <path d="M15,120 A95,95 0 0 1 205,120" fill="none" stroke="var(--blue)" stroke-width="18" stroke-linecap="round"
-                                              t-att-stroke-dasharray="semiArcDash(state.budget_achievement_pct, 95)"/>
+                                              t-att-stroke-dasharray="semiArcDash(state.budget_achievement_pct, 95)"
+                                              t-att-data-donut-arc="semiArcDash(state.budget_achievement_pct, 95)"/>
                                         <text x="110" y="100" text-anchor="middle" font-size="30" font-weight="700" fill="var(--ink)" font-family="Inter" t-esc="fmtPct(state.budget_achievement_pct)"/>
                                     </svg>
                                 </div>
@@ -1155,8 +1158,8 @@
                                     <div class="bar-pair-row" t-on-click="onOpenBudgetRecord" style="cursor:pointer;">
                                         <span class="lbl" t-esc="row.label"/>
                                         <div class="bars">
-                                            <div class="bp" t-if="isSeriesVisible('budget_pair', 'planned')"><div class="track"><div class="fill" t-attf-style="width:{{row.plannedPct}}%; background:var(--blue);"/></div><span class="v" t-esc="fmtINR(row.planned)"/></div>
-                                            <div class="bp" t-if="isSeriesVisible('budget_pair', 'practical')"><div class="track"><div class="fill" t-attf-style="width:{{row.practicalPct}}%; background:var(--teal);"/></div><span class="v" t-esc="fmtINR(row.practical)"/></div>
+                                            <div class="bp" t-if="isSeriesVisible('budget_pair', 'planned')"><div class="track"><div class="fill" t-attf-style="width:{{row.plannedPct}}%; background:var(--blue);" t-attf-data-bar-pct="{{row.plannedPct}}"/></div><span class="v" t-esc="fmtINR(row.planned)"/></div>
+                                            <div class="bp" t-if="isSeriesVisible('budget_pair', 'practical')"><div class="track"><div class="fill" t-attf-style="width:{{row.practicalPct}}%; background:var(--teal);" t-attf-data-bar-pct="{{row.practicalPct}}"/></div><span class="v" t-esc="fmtINR(row.practical)"/></div>
                                         </div>
                                     </div>
                                 </t>
