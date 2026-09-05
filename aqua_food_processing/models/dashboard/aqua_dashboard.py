@@ -1303,3 +1303,60 @@ class AquaDashboard(models.TransientModel):
                 'state': RECEIPT_STATE_LABELS.get(r.state, r.state),
             } for r in recs],
         }
+
+    # ------------------------------------------------------------------
+    # Topbar search: a lightweight "quick open" across the handful of
+    # record types an Aqua plant user actually looks up by number/name
+    # (catch receipts, purchase orders, processing orders, quality checks,
+    # shipments) rather than a full-text search across every model in the
+    # database. Each hit is a plain dict the client renders as one row in
+    # a dropdown; picking one just opens that record's form view (see
+    # onSearchResultClick in dashboard.js) - there's no separate "search
+    # results page".
+    # ------------------------------------------------------------------
+    def global_search(self, query, company_id=None):
+        query = (query or '').strip()
+        if not query or len(query) < 2:
+            return []
+
+        company_domain = [('company_id', '=', company_id)] if company_id else []
+        per_group_limit = 5
+        results = []
+
+        receipts = self.env['aqua.catch.receipt'].search(
+            company_domain + [('name', 'ilike', query)], limit=per_group_limit)
+        results += [{
+            'group': 'Catch Receipts', 'model': 'aqua.catch.receipt', 'id': r.id,
+            'label': r.name, 'sublabel': r.vendor_id.name or '',
+        } for r in receipts]
+
+        orders = self.env['purchase.order'].search(
+            company_domain + ['|', ('name', 'ilike', query), ('partner_id.name', 'ilike', query)],
+            limit=per_group_limit)
+        results += [{
+            'group': 'Purchase Orders', 'model': 'purchase.order', 'id': o.id,
+            'label': o.name, 'sublabel': o.partner_id.name or '',
+        } for o in orders]
+
+        productions = self.env['mrp.production'].search(
+            company_domain + [('name', 'ilike', query)], limit=per_group_limit)
+        results += [{
+            'group': 'Processing Orders', 'model': 'mrp.production', 'id': p.id,
+            'label': p.name, 'sublabel': p.species_id.name or '',
+        } for p in productions]
+
+        checks = self.env['quality.check'].search(
+            AQUA_QC_DOMAIN + [('name', 'ilike', query)], limit=per_group_limit)
+        results += [{
+            'group': 'Quality Checks', 'model': 'quality.check', 'id': c.id,
+            'label': c.name, 'sublabel': QC_STAGE_LABELS.get(c.aqua_test_stage, '') or '',
+        } for c in checks]
+
+        shipments = self.env['aqua.shipment'].search(
+            company_domain + [('name', 'ilike', query)], limit=per_group_limit)
+        results += [{
+            'group': 'Shipments', 'model': 'aqua.shipment', 'id': s.id,
+            'label': s.name, 'sublabel': s.customer_id.name or '',
+        } for s in shipments]
+
+        return results
