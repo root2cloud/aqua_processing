@@ -22,6 +22,7 @@ class AquaDashboard extends Component {
         // the native <title> attribute (which renders as a plain OS tooltip
         // that can't be styled - see svgTooltip/onSvgPointEnter below).
         this.svgTooltip = useState({ visible: false, x: 0, y: 0, text: '' });
+        this.ui = useState({ heroExpanded: false });
         this.state = useState({
             isLoading: true,
             activeTab: 'overview',
@@ -124,6 +125,15 @@ class AquaDashboard extends Component {
         if (AMBER.includes(label)) return 'aqua-badge--amber';
         if (BLUE.includes(label)) return 'aqua-badge--blue';
         return 'aqua-badge--gray';
+    }
+
+    // ---- Overview tab: hero photo expand/lightbox ----
+    onHeroExpandClick() {
+        this.ui.heroExpanded = true;
+    }
+
+    onHeroLightboxClose() {
+        this.ui.heroExpanded = false;
     }
 
     // ---- Tabs: Overview / Procurement / Processing / Quality Control ----
@@ -550,18 +560,27 @@ class AquaDashboard extends Component {
     }
 
     // Multi-segment donut: [{label, value, color}] -> same rows + dasharray/dashoffset.
+    // Segments are drawn as separate rounded-cap arcs with a small gap between
+    // them (not one continuous ring) to match the reference design, and any
+    // negative value is clamped to 0 so a metric that dipped negative (e.g.
+    // frozen stock in) can't produce an invalid dasharray that breaks the
+    // whole ring's rendering.
     donutSegments(parts, r = 58) {
         const circ = 2 * Math.PI * r;
-        const total = parts.reduce((s, p) => s + (p.value || 0), 0) || 1;
+        const clean = (parts || []).map((p) => ({ ...p, value: Math.max(0, p.value || 0) }));
+        const total = clean.reduce((s, p) => s + p.value, 0) || 1;
+        const visibleCount = clean.filter((p) => p.value > 0).length;
+        const gap = visibleCount > 1 ? 7 : 0; // px of arc-length left empty between segments
         let offset = 0;
-        return parts.map((p) => {
-            const len = (p.value / total) * circ;
+        return clean.map((p) => {
+            const slot = (p.value / total) * circ;
+            const len = Math.max(0, slot - gap);
             const seg = {
                 label: p.label, value: p.value, color: p.color,
                 dasharray: `${len.toFixed(1)} ${circ.toFixed(1)}`,
-                dashoffset: (-offset).toFixed(1),
+                dashoffset: (-(offset + gap / 2)).toFixed(1),
             };
-            offset += len;
+            offset += slot;
             return seg;
         });
     }

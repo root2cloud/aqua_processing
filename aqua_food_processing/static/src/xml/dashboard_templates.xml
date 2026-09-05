@@ -33,7 +33,7 @@
                 <t t-if="isTabActive('overview')">
 
                     <div class="grid g-hero">
-                        <div class="aqua-card">
+                        <div class="aqua-card hero-card">
                             <h3>Processing overview</h3>
                             <p class="muted">Live overview of processing plant</p>
                             <div class="mini-stats">
@@ -56,11 +56,23 @@
                             </div>
                             <div class="hero-img">
                                 <img src="/aqua_food_processing/static/src/img/hero-processing.jpg" alt="Shrimp processing line"/>
+                                <button type="button" class="hero-expand-btn" t-on-click="onHeroExpandClick" title="Expand">
+                                    <i class="fa fa-expand"/>
+                                </button>
                                 <div class="hero-tag"><span class="dot"/>
                                     <t t-esc="state.active_blast_freeze_count"/> blast freeze cycle(s) active
                                 </div>
                             </div>
                         </div>
+
+                        <t t-if="ui.heroExpanded">
+                            <div class="aqua-hero-lightbox" t-on-click="onHeroLightboxClose">
+                                <button type="button" class="aqua-hero-lightbox-close" t-on-click="onHeroLightboxClose" title="Close">
+                                    <i class="fa fa-times"/>
+                                </button>
+                                <img src="/aqua_food_processing/static/src/img/hero-processing.jpg" alt="Shrimp processing line" t-on-click="(ev) => ev.stopPropagation()"/>
+                            </div>
+                        </t>
 
                         <div class="aqua-card">
                             <div class="weather-top"><i class="fa fa-map-marker"/> Visakhapatnam, India</div>
@@ -76,7 +88,7 @@
                                     <svg width="150" height="150" viewBox="0 0 150 150">
                                         <circle cx="75" cy="75" r="58" fill="none" stroke="#EEF0F3" stroke-width="20"/>
                                         <t t-foreach="ovResourceMonitoringSegments" t-as="seg" t-key="seg.label">
-                                            <circle cx="75" cy="75" r="58" fill="none" t-attf-stroke="{{seg.color}}" stroke-width="20"
+                                            <circle cx="75" cy="75" r="58" fill="none" t-attf-stroke="{{seg.color}}" stroke-width="20" stroke-linecap="round"
                                                     t-attf-stroke-dasharray="{{seg.dasharray}}" t-attf-stroke-dashoffset="{{seg.dashoffset}}"
                                                     transform="rotate(-90 75 75)"/>
                                         </t>
@@ -351,7 +363,7 @@
                                 <svg width="150" height="150" viewBox="0 0 150 150">
                                     <circle cx="75" cy="75" r="58" fill="none" stroke="#EEF0F3" stroke-width="20"/>
                                     <t t-foreach="procReceiptStatusSegments" t-as="seg" t-key="seg.label">
-                                        <circle cx="75" cy="75" r="58" fill="none" stroke-width="20" style="cursor:pointer;"
+                                        <circle cx="75" cy="75" r="58" fill="none" stroke-width="20" stroke-linecap="round" style="cursor:pointer;"
                                                 t-att-stroke="seg.color" t-att-stroke-dasharray="seg.dasharray" t-att-stroke-dashoffset="seg.dashoffset"
                                                 transform="rotate(-90 75 75)"
                                                 t-on-click="() => this.onReceiptStatusChartClick({label: seg.label})"
@@ -611,7 +623,7 @@
                                 <svg width="150" height="150" viewBox="0 0 150 150">
                                     <circle cx="75" cy="75" r="58" fill="none" stroke="#EEF0F3" stroke-width="20"/>
                                     <t t-foreach="procgStatusSegments" t-as="seg" t-key="seg.label">
-                                        <circle cx="75" cy="75" r="58" fill="none" stroke-width="20" style="cursor:pointer;"
+                                        <circle cx="75" cy="75" r="58" fill="none" stroke-width="20" stroke-linecap="round" style="cursor:pointer;"
                                                 t-att-stroke="seg.color" t-att-stroke-dasharray="seg.dasharray" t-att-stroke-dashoffset="seg.dashoffset"
                                                 transform="rotate(-90 75 75)"
                                                 t-on-click="() => this.onProcessingStatusChartClick({label: seg.label})"
@@ -653,7 +665,7 @@
                                 <svg width="150" height="150" viewBox="0 0 150 150">
                                     <circle cx="75" cy="75" r="58" fill="none" stroke="#EEF0F3" stroke-width="20"/>
                                     <t t-foreach="procgBlastFreezeSegments" t-as="seg" t-key="seg.label">
-                                        <circle cx="75" cy="75" r="58" fill="none" stroke-width="20"
+                                        <circle cx="75" cy="75" r="58" fill="none" stroke-width="20" stroke-linecap="round"
                                                 t-att-stroke="seg.color" t-att-stroke-dasharray="seg.dasharray" t-att-stroke-dashoffset="seg.dashoffset"
                                                 transform="rotate(-90 75 75)"/>
                                     </t>
@@ -782,7 +794,7 @@
                                 <svg width="150" height="150" viewBox="0 0 150 150">
                                     <circle cx="75" cy="75" r="58" fill="none" stroke="#EEF0F3" stroke-width="20"/>
                                     <t t-foreach="qQcStageSegments" t-as="seg" t-key="seg.label">
-                                        <circle cx="75" cy="75" r="58" fill="none" stroke-width="20" style="cursor:pointer;"
+                                        <circle cx="75" cy="75" r="58" fill="none" stroke-width="20" stroke-linecap="round" style="cursor:pointer;"
                                                 t-att-stroke="seg.color" t-att-stroke-dasharray="seg.dasharray" t-att-stroke-dashoffset="seg.dashoffset"
                                                 transform="rotate(-90 75 75)"
                                                 t-on-click="() => this.onQcStageChartClick({label: seg.label})"
@@ -810,7 +822,7 @@
                                 <svg width="150" height="150" viewBox="0 0 150 150">
                                     <circle cx="75" cy="75" r="58" fill="none" stroke="#EEF0F3" stroke-width="20"/>
                                     <t t-foreach="qIntakeDecisionSegments" t-as="seg" t-key="seg.label">
-                                        <circle cx="75" cy="75" r="58" fill="none" stroke-width="20" style="cursor:pointer;"
+                                        <circle cx="75" cy="75" r="58" fill="none" stroke-width="20" stroke-linecap="round" style="cursor:pointer;"
                                                 t-att-stroke="seg.color" t-att-stroke-dasharray="seg.dasharray" t-att-stroke-dashoffset="seg.dashoffset"
                                                 transform="rotate(-90 75 75)"
                                                 t-on-click="() => this.onIntakeDecisionChartClick({label: seg.label})"
