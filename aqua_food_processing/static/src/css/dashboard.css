@@ -122,8 +122,107 @@
 .o_aqua_dashboard .aqua-dropdown-option .fa-check{ font-size:11px; color:var(--blue); }
 .o_aqua_dashboard .icon-btn{ width:40px; height:40px; border-radius:14px; background:#FFFFFF !important; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; position:relative; color:var(--ink-soft); cursor:pointer; box-shadow:none !important; }
 .o_aqua_dashboard .badge-dot{ position:absolute; top:6px; right:6px; width:8px; height:8px; border-radius:50%; background:var(--coral); }
+
+/* ---- Custom tooltip (topbar icons + filter pills) — replaces the native
+   browser title tooltip (unstyled, delayed, inconsistent across browsers)
+   with one that matches the dashboard's own visual language: dark pill,
+   small arrow, quick fade/slide-in on hover or keyboard focus. Applied via
+   class="aqua-tooltip" data-aqua-tooltip="…" instead of the title attribute.
+   Every tooltip in this dashboard lives in the topbar, right at the top of
+   the page, so all of them open DOWNWARD — a single rule set, no per-corner
+   variants, to avoid the arrow/bubble drifting out of sync with each other. ---- */
+.o_aqua_dashboard [data-aqua-tooltip]{ position:relative; overflow:visible; }
+.o_aqua_dashboard [data-aqua-tooltip]::after{
+  content:attr(data-aqua-tooltip);
+  position:absolute; top:calc(100% + 11px); left:50%; transform:translate(-50%, -4px);
+  background:var(--ink); color:#fff; font-size:12px; font-weight:500; letter-spacing:.01em; line-height:1.3;
+  white-space:nowrap; padding:8px 12px; border-radius:10px;
+  box-shadow:0 12px 32px rgba(18,24,31,.14), 0 2px 8px rgba(18,24,31,.06);
+  opacity:0; pointer-events:none; z-index:60;
+  transition:opacity .12s ease, transform .12s ease;
+}
+.o_aqua_dashboard [data-aqua-tooltip]::before{
+  content:''; position:absolute; top:calc(100% + 7px); left:50%; transform:translate(-50%, -4px) rotate(45deg);
+  width:8px; height:8px; background:var(--ink); border-radius:2px;
+  opacity:0; pointer-events:none; z-index:59;
+  transition:opacity .12s ease, transform .12s ease;
+}
+.o_aqua_dashboard [data-aqua-tooltip]:hover::after, .o_aqua_dashboard [data-aqua-tooltip]:focus-visible::after{
+  opacity:1; transform:translate(-50%, 0);
+}
+.o_aqua_dashboard [data-aqua-tooltip]:hover::before, .o_aqua_dashboard [data-aqua-tooltip]:focus-visible::before{
+  opacity:1; transform:translate(-50%, 0) rotate(45deg);
+}
+/* Right-edge topbar icons (bell/export/profile) would overflow the viewport
+   if centered under the icon — anchor those bubbles to the right edge of
+   the icon instead, and re-center just the small arrow under the icon
+   (all three are a fixed 40px wide, so 16px centers the 8px arrow). */
+.o_aqua_dashboard .top-actions [data-aqua-tooltip]::after{
+  left:auto; right:0; transform:translateY(-4px);
+}
+.o_aqua_dashboard .top-actions [data-aqua-tooltip]:hover::after, .o_aqua_dashboard .top-actions [data-aqua-tooltip]:focus-visible::after{
+  transform:translateY(0);
+}
+.o_aqua_dashboard .top-actions [data-aqua-tooltip]::before{
+  left:auto; right:16px; transform:translateY(-4px) rotate(45deg);
+}
+.o_aqua_dashboard .top-actions [data-aqua-tooltip]:hover::before, .o_aqua_dashboard .top-actions [data-aqua-tooltip]:focus-visible::before{
+  transform:translateY(0) rotate(45deg);
+}
+/* Once a trigger's own dropdown/panel is open, the mouse is usually still
+   sitting on it (that's how it got opened), so the :hover tooltip would
+   otherwise stay glued on top of the freshly-opened panel. Force it off
+   for as long as that panel is open, regardless of hover state. */
+.o_aqua_dashboard .aqua-dropdown-trigger--open[data-aqua-tooltip]::after,
+.o_aqua_dashboard .aqua-dropdown-trigger--open[data-aqua-tooltip]::before,
+.o_aqua_dashboard .icon-btn--open[data-aqua-tooltip]::after,
+.o_aqua_dashboard .icon-btn--open[data-aqua-tooltip]::before{
+  opacity:0 !important;
+}
+
+/* ---- Notification bell popover ---- */
+.o_aqua_dashboard .aqua-bell-wrap{ position:relative; }
+.o_aqua_dashboard .aqua-bell-panel{
+  position:absolute; top:calc(100% + 10px); right:0; z-index:40;
+  width:320px; background:#FFFFFF; border:1px solid var(--line); border-radius:var(--radius-sm);
+  box-shadow:0 12px 32px rgba(18,24,31,.14), 0 2px 8px rgba(18,24,31,.06);
+  animation:aqua-dropdown-in .12s cubic-bezier(.16,1,.3,1);
+}
+.o_aqua_dashboard .aqua-bell-panel__head{ padding:14px 16px 10px; border-bottom:1px solid var(--line); }
+.o_aqua_dashboard .aqua-bell-panel__head h3{ font-size:14px; font-weight:700; margin:0; }
+.o_aqua_dashboard .aqua-bell-panel__body{ padding:4px 16px 8px; max-height:320px; overflow-y:auto; }
+.o_aqua_dashboard .aqua-bell-panel__body .alert-row:hover{ background:var(--bg-page); margin:0 -8px; padding-left:8px; padding-right:8px; border-radius:10px; }
+
+/* ---- Notification bell: shakes continuously while there's an unseen
+   alert (QC hold/fail, cancelled receipt), stops the moment it's clicked --
+   see bellIsShaking / onBellClick in dashboard.js. Animates just the icon
+   glyph, not the button box, so the border/badge stay put. ---- */
+.o_aqua_dashboard .icon-btn.bell-shake i.fa-bell{
+  display:inline-block;
+  animation:aqua-bell-shake 1.4s ease-in-out infinite;
+  transform-origin:50% 0;
+}
+@keyframes aqua-bell-shake{
+  0%, 100%{ transform:rotate(0deg); }
+  10%{ transform:rotate(14deg); }
+  20%{ transform:rotate(-12deg); }
+  30%{ transform:rotate(10deg); }
+  40%{ transform:rotate(-8deg); }
+  50%{ transform:rotate(6deg); }
+  60%{ transform:rotate(-4deg); }
+  70%{ transform:rotate(2deg); }
+  80%, 100%{ transform:rotate(0deg); }
+}
+@media (prefers-reduced-motion: reduce){
+  .o_aqua_dashboard .icon-btn.bell-shake i.fa-bell{ animation:none; }
+}
 .o_aqua_dashboard .export-btn{ width:40px; height:40px; background:var(--ink); color:#fff; border:none; border-radius:14px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; }
-.o_aqua_dashboard .profile-btn{ width:40px; height:40px; border-radius:50%; overflow:hidden; cursor:pointer; border:1px solid var(--line); flex-shrink:0; }
+.o_aqua_dashboard .profile-btn{ width:40px; height:40px; cursor:pointer; flex-shrink:0; }
+/* The circular mask lives on this inner wrapper, not on .profile-btn itself —
+   .profile-btn also carries the tooltip's ::after/::before pseudo-elements,
+   and overflow:hidden on that same element would clip the tooltip bubble
+   the instant it tries to render below the button. */
+.o_aqua_dashboard .profile-btn-mask{ width:100%; height:100%; border-radius:50%; overflow:hidden; border:1px solid var(--line); }
 .o_aqua_dashboard .profile-btn img{ width:100%; height:100%; object-fit:cover; display:block; }
 
 /* ---- grid / card primitives ---- */
@@ -405,11 +504,11 @@
   position:absolute; pointer-events:none; z-index:20;
   transform:translate(-50%, calc(-100% - 12px));
   background:var(--ink); color:#fff;
-  border-radius:12px; padding:9px 13px;
+  border-radius:10px; padding:8px 12px;
   font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-  font-size:12.5px; line-height:1.5; white-space:nowrap;
-  box-shadow:0 10px 30px rgba(18,24,31,.22), 0 2px 8px rgba(18,24,31,.12);
-  opacity:0; transition:opacity .12s ease, transform .12s ease;
+  font-size:12px; font-weight:500; letter-spacing:.01em; line-height:1.4; white-space:nowrap;
+  box-shadow:0 12px 32px rgba(18,24,31,.14), 0 2px 8px rgba(18,24,31,.06);
+  opacity:0; transition:opacity .12s cubic-bezier(.16,1,.3,1), transform .12s cubic-bezier(.16,1,.3,1);
 }
 /* Variant for the hand-drawn SVG trend lines: fixed-positioned (viewport
    coordinates from getBoundingClientRect), always visible while mounted
@@ -418,9 +517,8 @@
   position:fixed; z-index:1100; opacity:1;
 }
 .o_aqua_dashboard .aqua-chart-tooltip::after{
-  content:""; position:absolute; left:50%; bottom:-5px; transform:translateX(-50%);
-  width:10px; height:10px; background:var(--ink); border-radius:2px;
-  clip-path:polygon(0 0, 100% 0, 50% 100%);
+  content:""; position:absolute; left:50%; bottom:-4px; transform:translateX(-50%) rotate(45deg);
+  width:8px; height:8px; background:var(--ink); border-radius:2px;
 }
 .o_aqua_dashboard .aqua-chart-tooltip-title{
   font-weight:600; font-size:11px; color:rgba(255,255,255,.6);
@@ -428,7 +526,7 @@
 }
 .o_aqua_dashboard .aqua-chart-tooltip-row{ display:flex; align-items:center; gap:7px; }
 .o_aqua_dashboard .aqua-chart-tooltip-dot{ width:7px; height:7px; border-radius:50%; flex:0 0 auto; }
-.o_aqua_dashboard .aqua-chart-tooltip-value{ font-weight:600; color:#fff; }
+.o_aqua_dashboard .aqua-chart-tooltip-value{ font-weight:500; color:#fff; }
 
 .o_aqua_dashboard .aqua-loading-overlay { display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.6); }
 .o_aqua_dashboard .aqua-spinner { width:22px; height:22px; border:3px solid var(--line); border-top-color:var(--blue); border-radius:50%; display:inline-block; animation:aqua-spin .7s linear infinite; }

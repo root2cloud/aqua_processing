@@ -2,7 +2,7 @@
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { user } from "@web/core/user";
-import { Component, onMounted, useState } from "@odoo/owl";
+import { Component, onMounted, useState, useExternalListener } from "@odoo/owl";
 
 import { KpiTile } from "../components/kpi_tile/kpi_tile";
 import { ChartWidget } from "../components/chart_widget/chart_widget";
@@ -24,7 +24,34 @@ class AquaDashboard extends Component {
         // the native <title> attribute (which renders as a plain OS tooltip
         // that can't be styled - see svgTooltip/onSvgPointEnter below).
         this.svgTooltip = useState({ visible: false, x: 0, y: 0, text: '' });
-        this.ui = useState({ heroExpanded: false });
+        this.ui = useState({
+            heroExpanded: false,
+            // Bell (topbar): shakes continuously whenever there's an unseen
+            // alert (QC hold/fail, cancelled receipt) and stops once the user
+            // clicks it. alertsSignature remembers *which* alerts were last
+            // seen so a fresh alert (or set of alerts) re-triggers the shake
+            // even if the user had already dismissed an earlier one -- see
+            // loadData()/onBellClick() below. notifOpen toggles the little
+            // popover the bell opens, listing the same alerts as the
+            // Overview tab's "Alerts & Notifications" card.
+            alertsDismissed: true,
+            alertsSignature: '',
+            notifOpen: false,
+            // Briefly true right after the export button is clicked, purely
+            // to duck its tooltip out of the way (the browser's own
+            // :hover state otherwise keeps it glued on screen for as long
+            // as the cursor stays put, which reads oddly right after a
+            // click). See onExportDashboard() below.
+            exportJustClicked: false,
+        });
+        // Clicking outside the open notifications popover closes it -- same
+        // pattern FilterBar uses for its own dropdowns (.aqua-dropdown).
+        useExternalListener(window, "click", (ev) => {
+            if (!this.ui.notifOpen) return;
+            if (!ev.target.closest(".aqua-bell-wrap")) {
+                this.ui.notifOpen = false;
+            }
+        });
         // Topbar quick-search: debounced query -> global_search() results,
         // rendered as a dropdown under the search box (see onSearchInput /
         // onSearchResultClick). Kept outside `state` since it has nothing
@@ -495,6 +522,8 @@ class AquaDashboard extends Component {
     }
 
     onExportDashboard() {
+        this.ui.exportJustClicked = true;
+        setTimeout(() => { this.ui.exportJustClicked = false; }, 600);
         const sections = this._exportSections.filter((s) => s.rows.length);
         if (!sections.length) {
             this.notification.add('Nothing to export on this tab yet.', { type: 'warning' });
@@ -529,6 +558,44 @@ class AquaDashboard extends Component {
         });
         Object.assign(this.state, data);
         this.state.isLoading = false;
+
+        // Bell shake: only (re)trigger it when the actual set of alerts has
+        // changed since it was last seen -- a plain refresh that turns up
+        // the same alerts shouldn't restart an animation the user already
+        // dismissed.
+        const alertsSignature = `${this.state.qc_hold_count}|${this.state.qc_fail_count}|${this.state.cancelled_receipts}`;
+        if (alertsSignature !== this.ui.alertsSignature) {
+            this.ui.alertsSignature = alertsSignature;
+            this.ui.alertsDismissed = !this.hasActiveAlerts;
+        }
+    }
+
+    // ---- Topbar: notification bell ----
+    get hasActiveAlerts() {
+        return !!(this.state.qc_hold_count || this.state.qc_fail_count || this.state.cancelled_receipts);
+    }
+
+    get bellIsShaking() {
+        return this.hasActiveAlerts && !this.ui.alertsDismissed;
+    }
+
+    onBellClick() {
+        // Stops the shake immediately (don't wait on the network round-trip
+        // below) and opens the popover listing the current alerts. Only
+        // refreshes data when *opening* it, not on every toggle.
+        this.ui.alertsDismissed = true;
+        this.ui.notifOpen = !this.ui.notifOpen;
+        if (this.ui.notifOpen) {
+            this.onRefresh();
+        }
+    }
+
+    // Wraps the existing onDrillXxx handlers so clicking a row inside the
+    // notifications popover both opens the drill panel and closes the
+    // popover, instead of leaving it open behind the drill panel.
+    onBellAlertClick(handlerName) {
+        this.ui.notifOpen = false;
+        this[handlerName]();
     }
 
     // ---- KPI sparkline ----
