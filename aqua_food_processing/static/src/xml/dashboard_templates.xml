@@ -208,6 +208,7 @@
                                         <t t-foreach="ovResourceMonitoringSegments" t-as="seg" t-key="seg.label">
                                             <circle cx="75" cy="75" r="58" fill="none" t-attf-stroke="{{seg.color}}" stroke-width="20" stroke-linecap="round" style="cursor:pointer;"
                                                     t-attf-stroke-dasharray="{{seg.dasharray}}" t-attf-stroke-dashoffset="{{seg.dashoffset}}"
+                                                    t-attf-data-donut-arc="{{seg.dasharray}}"
                                                     transform="rotate(-90 75 75)"
                                                     t-on-click="() => this.onResourceMonitoringChartClick({label: seg.label})"
                                                     t-on-mouseenter="(ev) => this.onSvgPointEnter(ev, seg.label + ': ' + this.fmtTon(seg.value))"
@@ -494,6 +495,7 @@
                                     <t t-foreach="procReceiptStatusSegments" t-as="seg" t-key="seg.label">
                                         <circle cx="75" cy="75" r="58" fill="none" stroke-width="20" stroke-linecap="round" style="cursor:pointer;"
                                                 t-att-stroke="seg.color" t-att-stroke-dasharray="seg.dasharray" t-att-stroke-dashoffset="seg.dashoffset"
+                                                t-att-data-donut-arc="seg.dasharray"
                                                 transform="rotate(-90 75 75)"
                                                 t-on-click="() => this.onReceiptStatusChartClick({label: seg.label})"
                                                 t-on-mouseenter="(ev) => this.onSvgPointEnter(ev, seg.label + ': ' + this.fmtNum(seg.value))"
@@ -752,6 +754,7 @@
                                     <t t-foreach="procgStatusSegments" t-as="seg" t-key="seg.label">
                                         <circle cx="75" cy="75" r="58" fill="none" stroke-width="20" stroke-linecap="round" style="cursor:pointer;"
                                                 t-att-stroke="seg.color" t-att-stroke-dasharray="seg.dasharray" t-att-stroke-dashoffset="seg.dashoffset"
+                                                t-att-data-donut-arc="seg.dasharray"
                                                 transform="rotate(-90 75 75)"
                                                 t-on-click="() => this.onProcessingStatusChartClick({label: seg.label})"
                                                 t-on-mouseenter="(ev) => this.onSvgPointEnter(ev, seg.label + ': ' + this.fmtNum(seg.value))"
@@ -794,6 +797,7 @@
                                     <t t-foreach="procgBlastFreezeSegments" t-as="seg" t-key="seg.label">
                                         <circle cx="75" cy="75" r="58" fill="none" stroke-width="20" stroke-linecap="round"
                                                 t-att-stroke="seg.color" t-att-stroke-dasharray="seg.dasharray" t-att-stroke-dashoffset="seg.dashoffset"
+                                                t-att-data-donut-arc="seg.dasharray"
                                                 transform="rotate(-90 75 75)"/>
                                     </t>
                                     <text x="75" y="71" text-anchor="middle" font-size="12" fill="var(--ink-mute)" font-family="Inter">Cycles</text>
@@ -922,6 +926,7 @@
                                     <t t-foreach="qQcStageSegments" t-as="seg" t-key="seg.label">
                                         <circle cx="75" cy="75" r="58" fill="none" stroke-width="20" stroke-linecap="round" style="cursor:pointer;"
                                                 t-att-stroke="seg.color" t-att-stroke-dasharray="seg.dasharray" t-att-stroke-dashoffset="seg.dashoffset"
+                                                t-att-data-donut-arc="seg.dasharray"
                                                 transform="rotate(-90 75 75)"
                                                 t-on-click="() => this.onQcStageChartClick({label: seg.label})"
                                                 t-on-mouseenter="(ev) => this.onSvgPointEnter(ev, seg.label + ': ' + this.fmtNum(seg.value))"
@@ -950,6 +955,7 @@
                                     <t t-foreach="qIntakeDecisionSegments" t-as="seg" t-key="seg.label">
                                         <circle cx="75" cy="75" r="58" fill="none" stroke-width="20" stroke-linecap="round" style="cursor:pointer;"
                                                 t-att-stroke="seg.color" t-att-stroke-dasharray="seg.dasharray" t-att-stroke-dashoffset="seg.dashoffset"
+                                                t-att-data-donut-arc="seg.dasharray"
                                                 transform="rotate(-90 75 75)"
                                                 t-on-click="() => this.onIntakeDecisionChartClick({label: seg.label})"
                                                 t-on-mouseenter="(ev) => this.onSvgPointEnter(ev, seg.label + ': ' + this.fmtNum(seg.value))"

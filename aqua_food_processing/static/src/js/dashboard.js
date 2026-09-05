@@ -928,22 +928,37 @@ class AquaDashboard extends Component {
     _initCountUpObserver() {
         this._countUpLastValues = new WeakMap();
         this._countUpFrames = new WeakMap();
+        // Same draw-in treatment as the KPI count-up above, but for the
+        // SVG donut/ring arcs (see data-donut-arc on the segment <circle>
+        // elements in dashboard_templates.xml): each arc grows from an
+        // empty ring up to its final sweep length instead of just
+        // appearing fully drawn, on initial load, tab switches and any
+        // filter/period change that recomputes the segments.
+        this._donutArcLastValues = new WeakMap();
+        this._donutArcFrames = new WeakMap();
         const root = document.querySelector(".o_aqua_dashboard");
         if (!root) return;
         this._countUpRoot = root;
 
         const scan = (el) => {
             if (!el.querySelectorAll) return;
-            const nodes = el.matches && el.matches("[data-countup]")
+            const countupNodes = el.matches && el.matches("[data-countup]")
                 ? [el, ...el.querySelectorAll("[data-countup]")]
                 : el.querySelectorAll("[data-countup]");
-            nodes.forEach((node) => this._runCountUp(node));
+            countupNodes.forEach((node) => this._runCountUp(node));
+
+            const donutNodes = el.matches && el.matches("[data-donut-arc]")
+                ? [el, ...el.querySelectorAll("[data-donut-arc]")]
+                : el.querySelectorAll("[data-donut-arc]");
+            donutNodes.forEach((node) => this._runDonutArc(node));
         };
 
         this._countUpObserver = new MutationObserver((mutations) => {
             for (const m of mutations) {
                 if (m.type === "attributes" && m.target.hasAttribute("data-countup")) {
                     this._runCountUp(m.target);
+                } else if (m.type === "attributes" && m.target.hasAttribute("data-donut-arc")) {
+                    this._runDonutArc(m.target);
                 } else if (m.type === "childList") {
                     m.addedNodes.forEach((n) => {
                         if (n.nodeType === 1) scan(n);
@@ -955,11 +970,11 @@ class AquaDashboard extends Component {
             childList: true,
             subtree: true,
             attributes: true,
-            attributeFilter: ["data-countup"],
+            attributeFilter: ["data-countup", "data-donut-arc"],
         });
 
         // Anything already in the DOM on first mount (initial page load)
-        // counts up from 0 too, same as a freshly-mounted tab.
+        // counts up / draws in from empty too, same as a freshly-mounted tab.
         scan(root);
     }
 
@@ -1009,6 +1024,66 @@ class AquaDashboard extends Component {
             }
         };
         this._countUpFrames.set(el, requestAnimationFrame(step));
+    }
+
+    // ==================================================================
+    //  Donut/ring arc draw-in animation
+    // ------------------------------------------------------------------
+    //  Companion to the KPI count-up above, for the SVG segment <circle>
+    //  elements used by every donut chart on the dashboard (Resource
+    //  monitoring, Receipt status, Processing order status, Blast freeze
+    //  status, Checks by stage, Intake decisions - see donutSegments()
+    //  below and the matching data-donut-arc bindings in
+    //  dashboard_templates.xml). Each element carries
+    //  data-donut-arc="<len> <circumference>" (the same numbers used for
+    //  the real stroke-dasharray); whenever that attribute appears or
+    //  changes - initial mount, a tab switch remounting the chart, or a
+    //  filter/period change recomputing the segments - the arc's visible
+    //  length is animated from its last known value (0 the first time) up
+    //  to the new one, instead of the ring just popping into its final
+    //  shape. stroke-dashoffset is left alone: only the drawn length of
+    //  the arc grows, so it sweeps out in place from the same start point.
+    // ==================================================================
+    _runDonutArc(el) {
+        const raw = el.getAttribute("data-donut-arc");
+        if (raw === null) return;
+        const nums = raw.trim().split(/\s+/).map(Number);
+        const target = nums[0];
+        const circ = nums[1];
+        if (Number.isNaN(target) || Number.isNaN(circ)) return;
+
+        const from = this._donutArcLastValues.get(el);
+        const start = from === undefined ? 0 : from;
+        // Nothing meaningfully changed - skip re-animating, just make sure
+        // the live attribute matches (in case circ itself shifted slightly).
+        if (from !== undefined && Math.abs(from - target) < 0.05) {
+            el.setAttribute("stroke-dasharray", `${target.toFixed(1)} ${circ.toFixed(1)}`);
+            this._donutArcLastValues.set(el, target);
+            return;
+        }
+
+        const prevFrame = this._donutArcFrames.get(el);
+        if (prevFrame) cancelAnimationFrame(prevFrame);
+
+        const duration = 800;
+        const t0 = performance.now();
+        const easeOutQuart = (t) => 1 - Math.pow(1 - t, 4);
+
+        const step = (now) => {
+            const elapsed = now - t0;
+            const p = Math.min(1, elapsed / duration);
+            const eased = easeOutQuart(p);
+            const current = start + (target - start) * eased;
+            el.setAttribute("stroke-dasharray", `${current.toFixed(1)} ${circ.toFixed(1)}`);
+            if (p < 1) {
+                this._donutArcFrames.set(el, requestAnimationFrame(step));
+            } else {
+                el.setAttribute("stroke-dasharray", `${target.toFixed(1)} ${circ.toFixed(1)}`);
+                this._donutArcLastValues.set(el, target);
+                this._donutArcFrames.delete(el);
+            }
+        };
+        this._donutArcFrames.set(el, requestAnimationFrame(step));
     }
 
     fmtNum(v) {
