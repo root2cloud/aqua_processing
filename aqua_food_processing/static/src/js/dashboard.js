@@ -560,17 +560,16 @@ class AquaDashboard extends Component {
     }
 
     // Multi-segment donut: [{label, value, color}] -> same rows + dasharray/dashoffset.
-    // Segments are drawn as separate rounded-cap arcs with a small gap between
-    // them (not one continuous ring) to match the reference design, and any
-    // negative value is clamped to 0 so a metric that dipped negative (e.g.
-    // frozen stock in) can't produce an invalid dasharray that breaks the
-    // whole ring's rendering.
+    // Segments are drawn as separate rounded-cap arcs with a visible gap between
+    // them (not one continuous ring) to match the reference design. Zero/negative
+    // values are dropped entirely rather than drawn at 0 length — a 0-length dash
+    // with a round linecap still paints a small solid dot, which would otherwise
+    // show up as a stray fleck of color on the ring.
     donutSegments(parts, r = 58) {
         const circ = 2 * Math.PI * r;
-        const clean = (parts || []).map((p) => ({ ...p, value: Math.max(0, p.value || 0) }));
+        const clean = (parts || []).filter((p) => (p.value || 0) > 0);
         const total = clean.reduce((s, p) => s + p.value, 0) || 1;
-        const visibleCount = clean.filter((p) => p.value > 0).length;
-        const gap = visibleCount > 1 ? 7 : 0; // px of arc-length left empty between segments
+        const gap = clean.length > 1 ? 10 : 0; // px of arc-length left empty between segments
         let offset = 0;
         return clean.map((p) => {
             const slot = (p.value / total) * circ;
