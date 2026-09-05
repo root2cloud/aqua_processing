@@ -351,6 +351,7 @@
                                         data="receiptTrendChartData"
                                         height="220"
                                         fillHeight="true"
+                                        title="'Recent activity — receipt trend'"
                                         onElementClick="(ctx) => this.onReceiptTrendChartClick(ctx)"
                                     />
                                 </div>
@@ -594,6 +595,7 @@
                                         data="dailyWeightTrendChartData"
                                         height="220"
                                         fillHeight="true"
+                                        title="'Weight received trend'"
                                         onElementClick="(ctx) => this.onDailyWeightTrendChartClick(ctx)"
                                     />
                                 </div>
@@ -615,6 +617,7 @@
                                         data="purchaseSpendTrendChartData"
                                         height="220"
                                         fillHeight="true"
+                                        title="'Purchase spend trend'"
                                         onElementClick="(ctx) => this.onPurchaseSpendTrendChartClick(ctx)"
                                     />
                                 </div>
@@ -997,6 +1000,7 @@
                                         data="qcTrendChartData"
                                         height="220"
                                         fillHeight="true"
+                                        title="'QC checks trend'"
                                         onElementClick="(ctx) => this.onQcTrendChartClick(ctx)"
                                     />
                                 </div>

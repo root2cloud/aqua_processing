@@ -9,6 +9,19 @@
          PNG export button nobody asked for) was pure duplication - see
          canvas-wrap below, which now owns the card's full content area. -->
 
+    <!-- Expand button lives OUTSIDE canvas-wrap on purpose: canvas-wrap sets
+         its own position:relative (needed for the loading-spinner overlay),
+         which would make the button anchor to the chart's plotting area and
+         sit awkwardly mid-chart. Left un-positioned here, the button instead
+         anchors to the nearest positioned ancestor up the tree - the
+         surrounding .aqua-card itself (see dashboard.css) - so it lands in
+         that card's actual top-right corner, above the title, exactly like
+         the hero photo's expand button, on every chart card without any
+         per-panel markup changes. -->
+    <button type="button" class="aqua-chart-expand-btn" t-on-click="onExpandClick" title="Expand">
+      <i class="fa fa-expand"/>
+    </button>
+
     <!-- Canvas is always mounted; the loading spinner is an overlay drawn on
          top of it, not a replacement for it, so toggling isLoading never
          destroys/recreates the canvas element itself. -->
@@ -25,6 +38,27 @@
     </div>
 
   </div>
+
+  <!-- Fullscreen lightbox: a second, independent Chart.js instance drawn on
+       its own canvas rather than moving the original <canvas> node, since
+       Chart.js binds a rendering context to one canvas element for its
+       whole lifetime. Destroyed on close (see onCloseExpanded) so it isn't
+       silently kept alive off-screen. -->
+  <t t-if="state.expanded">
+    <div class="aqua-chart-lightbox" t-on-click="onCloseExpanded">
+      <div class="aqua-chart-lightbox__panel" t-on-click.stop="">
+        <div class="aqua-chart-lightbox__header">
+          <span class="aqua-chart-lightbox__title" t-esc="props.title"/>
+          <button type="button" class="aqua-chart-lightbox__close" t-on-click="onCloseExpanded" title="Close">
+            <i class="fa fa-times"/>
+          </button>
+        </div>
+        <div class="aqua-chart-lightbox__canvas-wrap">
+          <canvas t-ref="expandedChartCanvas"/>
+        </div>
+      </div>
+    </div>
+  </t>
 </t>
 
 </templates>

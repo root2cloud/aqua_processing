@@ -120,7 +120,7 @@
 .o_aqua_dashboard .aqua-dropdown-option--active{ background:var(--blue-tint); color:var(--blue); font-weight:600; }
 .o_aqua_dashboard .aqua-dropdown-option--active:hover{ background:var(--blue-tint); }
 .o_aqua_dashboard .aqua-dropdown-option .fa-check{ font-size:11px; color:var(--blue); }
-.o_aqua_dashboard .icon-btn{ width:40px; height:40px; border-radius:14px; background:#FFFFFF !important; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; position:relative; color:var(--ink-soft); cursor:pointer; box-shadow:none !important; }
+.o_aqua_dashboard .icon-btn{ width:40px; height:40px; border-radius:14px; background:#FFFFFF !important; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; position:relative; color:var(--ink); cursor:pointer; box-shadow:none !important; }
 .o_aqua_dashboard .badge-dot{ position:absolute; top:6px; right:6px; width:8px; height:8px; border-radius:50%; background:var(--coral); }
 
 /* ---- Custom tooltip (topbar icons + filter pills) — replaces the native
@@ -251,6 +251,7 @@
    the page purely with elevation). A hairline border is kept but at 4%
    opacity, just enough to crisp the edge on very bright screens. */
 .o_aqua_dashboard .aqua-card{
+  position:relative;
   background:#FFFFFF !important;
   border-radius:var(--radius-lg) !important;
   padding:24px !important;
@@ -279,6 +280,15 @@
    the canvas-wrap below fill the card. ---- */
 .o_aqua_dashboard .aqua-chart-card{ display:flex; flex-direction:column; height:100%; }
 .o_aqua_dashboard .aqua-chart-card__canvas-wrap{ flex:1; }
+.o_aqua_dashboard .aqua-chart-expand-btn{ position:absolute; top:14px; right:14px; width:28px; height:28px; border-radius:8px; background:rgba(18,24,31,.55); border:none; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:12px; transition:background .12s ease; z-index:2; }
+.o_aqua_dashboard .aqua-chart-expand-btn:hover{ background:rgba(18,24,31,.78); }
+.o_aqua_dashboard .aqua-chart-lightbox{ position:fixed; inset:0; background:rgba(18,24,31,.55); backdrop-filter:blur(2px); display:flex; align-items:center; justify-content:center; z-index:1000; padding:32px; }
+.o_aqua_dashboard .aqua-chart-lightbox__panel{ background:#fff; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.25); width:min(1100px, 100%); max-height:90vh; display:flex; flex-direction:column; overflow:hidden; }
+.o_aqua_dashboard .aqua-chart-lightbox__header{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--line, #edf2f7); }
+.o_aqua_dashboard .aqua-chart-lightbox__title{ font-weight:600; font-size:15px; color:#1A202C; }
+.o_aqua_dashboard .aqua-chart-lightbox__close{ width:30px; height:30px; border-radius:8px; background:transparent; border:none; color:#4A5568; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px; }
+.o_aqua_dashboard .aqua-chart-lightbox__close:hover{ background:rgba(18,24,31,.08); color:#1A202C; }
+.o_aqua_dashboard .aqua-chart-lightbox__canvas-wrap{ position:relative; flex:1; min-height:420px; padding:20px; }
 
 /* ---- tab bar ---- */
 .o_aqua_dashboard .tabbar{ display:flex; gap:4px; background:#FFFFFF !important; border:1px solid var(--line); border-radius:16px; padding:6px; margin-bottom:20px; width:fit-content; flex-wrap:wrap; box-shadow:none !important; }

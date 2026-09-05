@@ -16,6 +16,7 @@ import {
     onWillUpdateProps,
     onWillUnmount,
     useRef,
+    useState,
 } from "@odoo/owl";
 
 export class ChartWidget extends Component {
@@ -38,6 +39,10 @@ export class ChartWidget extends Component {
         fillHeight:     { type: Boolean, optional: true },
         isLoading:      { type: Boolean, optional: true },
         onElementClick: { type: Function, optional: true },
+        // Title shown in the fullscreen lightbox header when the expand
+        // button is used - purely cosmetic, charts still render fine
+        // without one.
+        title:          { type: String, optional: true },
     };
 
     // Owl only reads defaults from `static defaultProps`, never from a
@@ -50,11 +55,20 @@ export class ChartWidget extends Component {
         fillHeight:     false,
         isLoading:      false,
         onElementClick: () => {},
+        title:          "",
     };
 
     setup() {
         this.canvasRef = useRef("chartCanvas");
+        this.expandedCanvasRef = useRef("expandedChartCanvas");
         this._chart = null;
+        this._expandedChart = null;
+        // Every chart gets its own expand/fullscreen toggle (see the
+        // aqua-chart-expand-btn in the template) instead of relying on the
+        // parent dashboard to track per-chart state - that would mean
+        // wiring a new useState flag into AquaDashboard for every single
+        // chart panel on the page.
+        this.state = useState({ expanded: false });
 
         onMounted(() => this._initChart());
 
@@ -80,9 +94,57 @@ export class ChartWidget extends Component {
                 // Chart.js can animate the data change smoothly.
                 setTimeout(() => this._updateChart(), 0);
             }
+            if (this.state.expanded) {
+                setTimeout(() => this._updateExpandedChart(), 0);
+            }
         });
 
-        onWillUnmount(() => this._destroyChart());
+        onWillUnmount(() => {
+            this._destroyChart();
+            this._destroyExpandedChart();
+        });
+    }
+
+    onExpandClick() {
+        this.state.expanded = true;
+        // The lightbox canvas only exists in the DOM once t-if="state.expanded"
+        // renders it, so the Chart.js instance for it has to be created
+        // *after* that render, not synchronously here.
+        setTimeout(() => this._initExpandedChart(), 0);
+    }
+
+    onCloseExpanded() {
+        this.state.expanded = false;
+        this._destroyExpandedChart();
+    }
+
+    _initExpandedChart() {
+        const canvas = this.expandedCanvasRef.el;
+        if (!canvas || !window.Chart) return;
+        this._destroyExpandedChart();
+        const config = this._getChartJsConfig();
+        if (config) {
+            this._expandedChart = new window.Chart(canvas, config);
+        }
+    }
+
+    _updateExpandedChart() {
+        if (!this._expandedChart) {
+            this._initExpandedChart();
+            return;
+        }
+        const config = this._getChartJsConfig();
+        if (!config) return;
+        this._expandedChart.data = config.data;
+        this._expandedChart.options = config.options;
+        this._expandedChart.update();
+    }
+
+    _destroyExpandedChart() {
+        if (this._expandedChart) {
+            this._expandedChart.destroy();
+            this._expandedChart = null;
+        }
     }
 
     _destroyChart() {
@@ -262,6 +324,84 @@ export class ChartWidget extends Component {
         };
     }
 
+    /**
+     * Active-tick "bubble" plugin — instead of (or in addition to) the
+     * dashed crosshair line, this draws a small dark rounded pill/bubble
+     * directly over the x-axis label of whichever point is currently
+     * hovered, with the label text re-drawn in white on top - matching the
+     * reference mockup where the active day number ("03") sits inside a
+     * solid dark circle instead of the default plain axis text. Nothing is
+     * drawn when no point is active, since `_active` is empty then.
+     */
+    _activeTickBubblePlugin() {
+        return {
+            id: "aquaActiveTickBubble",
+            afterDatasetsDraw: (chart) => {
+                const active = chart.tooltip && chart.tooltip._active;
+                if (!active || !active.length) return;
+
+                const xScale = chart.scales && chart.scales.x;
+                if (!xScale || typeof xScale.getPixelForTick !== "function") return;
+
+                const index = active[0].index;
+                const label = chart.data.labels && chart.data.labels[index];
+                if (label === undefined || label === null) return;
+
+                const x = xScale.getPixelForTick(index);
+                if (typeof x !== "number" || Number.isNaN(x)) return;
+
+                const text = String(label);
+                const tickFontSize = (xScale.options.ticks.font && xScale.options.ticks.font.size) || 12;
+                const fontFamily = (xScale.options.ticks.font && xScale.options.ticks.font.family) ||
+                    "Inter, -apple-system, BlinkMacSystemFont, sans-serif";
+
+                const ctx = chart.ctx;
+                ctx.save();
+                ctx.font = `600 ${tickFontSize}px ${fontFamily}`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+
+                const textWidth = ctx.measureText(text).width;
+                const radius = Math.max(tickFontSize / 2 + 7, 15);
+                const bubbleWidth = Math.max(textWidth + 18, radius * 2);
+                const centerY = xScale.top + (xScale.options.ticks.padding || 8) + radius;
+
+                const rectX = x - bubbleWidth / 2;
+                const rectY = centerY - radius;
+                const rectH = radius * 2;
+
+                // Painting a plain white rect first blanks out the default
+                // tick label Chart.js already drew for this index, so the
+                // bubble reads as a clean replacement rather than double
+                // text bleeding through a see-through fill.
+                ctx.fillStyle = "#fff";
+                ctx.fillRect(rectX - 2, rectY - 2, bubbleWidth + 4, rectH + 4);
+
+                // Rounded pill (falls back to a plain circle when the text
+                // is short enough that bubbleWidth === radius*2). Fill is
+                // a light, mostly see-through tint with just a thin border
+                // so it reads as a soft transparent bubble, not a solid
+                // block - dark text on top keeps it legible.
+                ctx.beginPath();
+                ctx.moveTo(rectX + radius, rectY);
+                ctx.arcTo(rectX + bubbleWidth, rectY, rectX + bubbleWidth, rectY + rectH, radius);
+                ctx.arcTo(rectX + bubbleWidth, rectY + rectH, rectX, rectY + rectH, radius);
+                ctx.arcTo(rectX, rectY + rectH, rectX, rectY, radius);
+                ctx.arcTo(rectX, rectY, rectX + bubbleWidth, rectY, radius);
+                ctx.closePath();
+                ctx.fillStyle = "rgba(113, 128, 150, 0.18)";
+                ctx.fill();
+                ctx.lineWidth = 1.25;
+                ctx.strokeStyle = "rgba(113, 128, 150, 0.55)";
+                ctx.stroke();
+
+                ctx.fillStyle = "#1A202C";
+                ctx.fillText(text, x, centerY + 1);
+                ctx.restore();
+            },
+        };
+    }
+
     _getChartJsConfig() {
         const { chartType, data, options } = this.props;
 
@@ -368,7 +508,7 @@ export class ChartWidget extends Component {
                             },
                         },
                     },
-                    plugins: [this._lineGlowPlugin(), this._crosshairPlugin()],
+                    plugins: [this._lineGlowPlugin(), this._crosshairPlugin(), this._activeTickBubblePlugin()],
                 };
             }
 
@@ -378,11 +518,13 @@ export class ChartWidget extends Component {
                     data: { labels: data.labels, datasets },
                     options: {
                         ...baseOptions,
+                        interaction: { mode: "index", intersect: false },
                         scales: {
                             x: { grid: { display: false } },
                             y: { beginAtZero: true, grid: { color: "#f0f0f0" } },
                         },
                     },
+                    plugins: [this._activeTickBubblePlugin()],
                 };
 
             case "stacked":
@@ -394,11 +536,13 @@ export class ChartWidget extends Component {
                     },
                     options: {
                         ...baseOptions,
+                        interaction: { mode: "index", intersect: false },
                         scales: {
                             x: { stacked: true, grid: { display: false } },
                             y: { stacked: true, beginAtZero: true, grid: { color: "#f0f0f0" } },
                         },
                     },
+                    plugins: [this._activeTickBubblePlugin()],
                 };
 
             case "horizontalBar":
