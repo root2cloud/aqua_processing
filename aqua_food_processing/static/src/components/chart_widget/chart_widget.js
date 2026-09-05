@@ -145,6 +145,7 @@ export class ChartWidget extends Component {
             this._expandedChart.destroy();
             this._expandedChart = null;
         }
+        this._removeExpandedTooltipEl();
     }
 
     _destroyChart() {
@@ -162,6 +163,13 @@ export class ChartWidget extends Component {
         }
     }
 
+    _removeExpandedTooltipEl() {
+        if (this._expandedTooltipEl) {
+            this._expandedTooltipEl.remove();
+            this._expandedTooltipEl = null;
+        }
+    }
+
     /**
      * Custom HTML tooltip that matches the rest of the dashboard's visual
      * system (rounded card, soft shadow, Inter font, brand accent dot)
@@ -169,6 +177,17 @@ export class ChartWidget extends Component {
      * per chart and repositioned/repopulated on every 'active tooltip'
      * event, then hidden (not destroyed) on 'inactive' — recreating the
      * node on every hover is what causes the flash-to-plain-box look.
+     *
+     * The mini chart and the expanded/lightbox chart are two separate
+     * Chart.js instances sharing this same callback, so they each need
+     * their OWN cached tooltip element - reusing a single this._tooltipEl
+     * for both meant whichever chart got hovered first "owned" the div
+     * (appended into its own canvas wrapper), and hovering the other
+     * chart afterwards just repositioned that same div using the wrong
+     * chart's coordinates, rendering it off in the original wrapper
+     * (often hidden behind the lightbox overlay) instead of showing up
+     * where the person was actually hovering - looking like the expanded
+     * chart had "lost" its data/tooltip entirely.
      */
     _renderCustomTooltip(tctx) {
         const { chart, tooltip } = tctx;
@@ -176,14 +195,17 @@ export class ChartWidget extends Component {
         const wrapper = canvas.parentNode;
         if (!wrapper) return;
 
-        if (!this._tooltipEl) {
+        const isExpanded = chart === this._expandedChart;
+        const cacheKey = isExpanded ? "_expandedTooltipEl" : "_tooltipEl";
+
+        if (!this[cacheKey]) {
             const el = document.createElement("div");
             el.className = "aqua-chart-tooltip";
             wrapper.style.position = wrapper.style.position || "relative";
             wrapper.appendChild(el);
-            this._tooltipEl = el;
+            this[cacheKey] = el;
         }
-        const el = this._tooltipEl;
+        const el = this[cacheKey];
 
         if (tooltip.opacity === 0) {
             el.style.opacity = 0;
