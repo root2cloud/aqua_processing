@@ -76,6 +76,7 @@
         'views/export_logistics/aqua_export_document_views.xml',
         'wizard/export_logistics/aqua_stuff_container_wizard_views.xml',
         # dashboard
+        'views/dashboard/aqua_profile_form_views.xml',
         'views/dashboard/aqua_dashboard_views.xml',
         # reports
         'report/aqua_reports.xml',
@@ -96,6 +97,7 @@
             'aqua_food_processing/static/src/components/chart_widget/chart_widget.xml',
             'aqua_food_processing/static/src/components/drill_panel/drill_panel.js',
             'aqua_food_processing/static/src/components/drill_panel/drill_panel.xml',
+            'aqua_food_processing/static/src/js/fluid_cursor.js',
             'aqua_food_processing/static/src/js/dashboard.js',
             'aqua_food_processing/static/src/xml/dashboard_templates.xml',
         ],
