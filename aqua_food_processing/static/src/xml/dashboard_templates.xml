@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
     <t t-name="aqua_food_processing.DashboardMain">
-        <div class="o_aqua_dashboard">
+        <div class="o_aqua_dashboard" t-att-class="{ 'o_aqua_dashboard--dark': ui.darkMode }">
             <div class="aqua-main">
 
                 <!-- ══════════════════════ TOPBAR ══════════════════════ -->
@@ -83,6 +83,35 @@
                                             <i class="fa fa-user"/>
                                             <span>My Profile</span>
                                         </div>
+                                        <label class="aqua-profile-menu-item aqua-profile-menu-item--toggle">
+                                            <i t-att-class="ui.darkMode ? 'fa fa-moon-o' : 'fa fa-sun-o'"/>
+                                            <span>Dark mode</span>
+                                            <span class="aqua-theme-switch">
+                                                <input type="checkbox" t-att-checked="ui.darkMode" t-on-change="onToggleDarkMode"/>
+                                                <div class="aqua-slider aqua-slider--round">
+                                                    <div class="aqua-sun-moon">
+                                                        <svg id="aqua-moon-dot-1" class="aqua-moon-dot" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"/></svg>
+                                                        <svg id="aqua-moon-dot-2" class="aqua-moon-dot" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"/></svg>
+                                                        <svg id="aqua-moon-dot-3" class="aqua-moon-dot" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"/></svg>
+                                                        <svg id="aqua-light-ray-1" class="aqua-light-ray" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"/></svg>
+                                                        <svg id="aqua-light-ray-2" class="aqua-light-ray" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"/></svg>
+                                                        <svg id="aqua-light-ray-3" class="aqua-light-ray" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"/></svg>
+                                                        <svg id="aqua-cloud-1" class="aqua-cloud-dark" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"/></svg>
+                                                        <svg id="aqua-cloud-2" class="aqua-cloud-dark" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"/></svg>
+                                                        <svg id="aqua-cloud-3" class="aqua-cloud-dark" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"/></svg>
+                                                        <svg id="aqua-cloud-4" class="aqua-cloud-light" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"/></svg>
+                                                        <svg id="aqua-cloud-5" class="aqua-cloud-light" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"/></svg>
+                                                        <svg id="aqua-cloud-6" class="aqua-cloud-light" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"/></svg>
+                                                    </div>
+                                                    <div class="aqua-stars">
+                                                        <svg id="aqua-star-1" class="aqua-star" viewBox="0 0 20 20"><path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z"/></svg>
+                                                        <svg id="aqua-star-2" class="aqua-star" viewBox="0 0 20 20"><path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z"/></svg>
+                                                        <svg id="aqua-star-3" class="aqua-star" viewBox="0 0 20 20"><path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z"/></svg>
+                                                        <svg id="aqua-star-4" class="aqua-star" viewBox="0 0 20 20"><path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z"/></svg>
+                                                    </div>
+                                                </div>
+                                            </span>
+                                        </label>
                                     </div>
                                 </div>
                             </t>
@@ -227,7 +256,7 @@
                                 <h3>Resource monitoring</h3>
                                 <div class="donut-wrap">
                                     <svg width="150" height="150" viewBox="0 0 150 150">
-                                        <circle cx="75" cy="75" r="58" fill="none" stroke="#EEF0F3" stroke-width="20"/>
+                                        <circle cx="75" cy="75" r="58" fill="none" stroke="var(--track)" stroke-width="20"/>
                                         <t t-foreach="ovResourceMonitoringSegments" t-as="seg" t-key="seg.label">
                                             <circle cx="75" cy="75" r="58" fill="none" t-attf-stroke="{{seg.color}}" stroke-width="20" stroke-linecap="round" style="cursor:pointer;"
                                                     t-attf-stroke-dasharray="{{seg.dasharray}}" t-attf-stroke-dashoffset="{{seg.dashoffset}}"
@@ -279,7 +308,7 @@
                         <div class="aqua-card stat-card" t-on-click="onDrillTotalProcessingOrders">
                             <div class="stat-top">
                                 <div class="stat-icon" style="background:var(--purple-tint); color:var(--purple);"><i class="fa fa-users"/></div>
-                                <span class="chip" style="background:#F1F2F4; color:var(--ink-soft);"><t t-esc="state.active_vendor_count"/> vendors active</span>
+                                <span class="chip" style="background:var(--track); color:var(--ink-soft);"><t t-esc="state.active_vendor_count"/> vendors active</span>
                             </div>
                             <div><div class="stat-val" t-attf-data-countup="{{procgOrderedByStatus.done}}" data-count-fmt="fmtNum" data-count-suffix=" orders"><t t-esc="procgOrderedByStatus.done"/> orders</div><div class="stat-lbl">Completed this period</div></div>
                         </div>
@@ -290,7 +319,7 @@
                             <h3>Production progress</h3>
                             <div class="arc-wrap">
                                 <svg width="140" height="90" viewBox="0 0 140 90">
-                                    <path d="M10,80 A60,60 0 0 1 130,80" fill="none" stroke="#EEF0F3" stroke-width="14" stroke-linecap="round"/>
+                                    <path d="M10,80 A60,60 0 0 1 130,80" fill="none" stroke="var(--track)" stroke-width="14" stroke-linecap="round"/>
                                     <path d="M10,80 A60,60 0 0 1 130,80" fill="none" stroke="var(--blue)" stroke-width="14" stroke-linecap="round"
                                           t-att-stroke-dasharray="semiArcDash(ovYieldPct, 60)"
                                           t-att-data-donut-arc="semiArcDash(ovYieldPct, 60)"/>
@@ -334,7 +363,7 @@
                             <h3>Cold storage status</h3>
                             <div class="arc-wrap" style="margin-top:14px;">
                                 <svg width="130" height="130" viewBox="0 0 130 130">
-                                    <circle cx="65" cy="65" r="52" fill="none" stroke="#EEF0F3" stroke-width="16"/>
+                                    <circle cx="65" cy="65" r="52" fill="none" stroke="var(--track)" stroke-width="16"/>
                                     <circle cx="65" cy="65" r="52" fill="none" stroke="var(--blue)" stroke-width="16" stroke-linecap="round"
                                             t-att-stroke-dasharray="fullArcDash(ovColdRoomOverallPct, 52)"
                                             t-att-data-donut-arc="fullArcDash(ovColdRoomOverallPct, 52)"
@@ -516,7 +545,7 @@
                             <p class="muted">Open · Completed · Cancelled</p>
                             <div class="donut-wrap">
                                 <svg width="150" height="150" viewBox="0 0 150 150">
-                                    <circle cx="75" cy="75" r="58" fill="none" stroke="#EEF0F3" stroke-width="20"/>
+                                    <circle cx="75" cy="75" r="58" fill="none" stroke="var(--track)" stroke-width="20"/>
                                     <t t-foreach="procReceiptStatusSegments" t-as="seg" t-key="seg.label">
                                         <circle cx="75" cy="75" r="58" fill="none" stroke-width="20" stroke-linecap="round" style="cursor:pointer;"
                                                 t-att-stroke="seg.color" t-att-stroke-dasharray="seg.dasharray" t-att-stroke-dashoffset="seg.dashoffset"
@@ -775,7 +804,7 @@
                             <p class="muted">Confirmed → in progress → done</p>
                             <div class="donut-wrap">
                                 <svg width="150" height="150" viewBox="0 0 150 150">
-                                    <circle cx="75" cy="75" r="58" fill="none" stroke="#EEF0F3" stroke-width="20"/>
+                                    <circle cx="75" cy="75" r="58" fill="none" stroke="var(--track)" stroke-width="20"/>
                                     <t t-foreach="procgStatusSegments" t-as="seg" t-key="seg.label">
                                         <circle cx="75" cy="75" r="58" fill="none" stroke-width="20" stroke-linecap="round" style="cursor:pointer;"
                                                 t-att-stroke="seg.color" t-att-stroke-dasharray="seg.dasharray" t-att-stroke-dashoffset="seg.dashoffset"
@@ -818,7 +847,7 @@
                             <p class="muted">Cycle status across cold rooms</p>
                             <div class="donut-wrap">
                                 <svg width="150" height="150" viewBox="0 0 150 150">
-                                    <circle cx="75" cy="75" r="58" fill="none" stroke="#EEF0F3" stroke-width="20"/>
+                                    <circle cx="75" cy="75" r="58" fill="none" stroke="var(--track)" stroke-width="20"/>
                                     <t t-foreach="procgBlastFreezeSegments" t-as="seg" t-key="seg.label">
                                         <circle cx="75" cy="75" r="58" fill="none" stroke-width="20" stroke-linecap="round"
                                                 t-att-stroke="seg.color" t-att-stroke-dasharray="seg.dasharray" t-att-stroke-dashoffset="seg.dashoffset"
@@ -947,7 +976,7 @@
                             <p class="muted">IQC · IPQC · Final QC</p>
                             <div class="donut-wrap">
                                 <svg width="150" height="150" viewBox="0 0 150 150">
-                                    <circle cx="75" cy="75" r="58" fill="none" stroke="#EEF0F3" stroke-width="20"/>
+                                    <circle cx="75" cy="75" r="58" fill="none" stroke="var(--track)" stroke-width="20"/>
                                     <t t-foreach="qQcStageSegments" t-as="seg" t-key="seg.label">
                                         <circle cx="75" cy="75" r="58" fill="none" stroke-width="20" stroke-linecap="round" style="cursor:pointer;"
                                                 t-att-stroke="seg.color" t-att-stroke-dasharray="seg.dasharray" t-att-stroke-dashoffset="seg.dashoffset"
@@ -976,7 +1005,7 @@
                             <p class="muted">Raw material stage only</p>
                             <div class="donut-wrap">
                                 <svg width="150" height="150" viewBox="0 0 150 150">
-                                    <circle cx="75" cy="75" r="58" fill="none" stroke="#EEF0F3" stroke-width="20"/>
+                                    <circle cx="75" cy="75" r="58" fill="none" stroke="var(--track)" stroke-width="20"/>
                                     <t t-foreach="qIntakeDecisionSegments" t-as="seg" t-key="seg.label">
                                         <circle cx="75" cy="75" r="58" fill="none" stroke-width="20" stroke-linecap="round" style="cursor:pointer;"
                                                 t-att-stroke="seg.color" t-att-stroke-dasharray="seg.dasharray" t-att-stroke-dashoffset="seg.dashoffset"
@@ -1162,7 +1191,7 @@
                                 <p class="muted">Practical vs theoretical spend, to date</p>
                                 <div class="gauge-wrap">
                                     <svg width="220" height="130" viewBox="0 0 220 130">
-                                        <path d="M15,120 A95,95 0 0 1 205,120" fill="none" stroke="#EEF0F3" stroke-width="18" stroke-linecap="round"/>
+                                        <path d="M15,120 A95,95 0 0 1 205,120" fill="none" stroke="var(--track)" stroke-width="18" stroke-linecap="round"/>
                                         <path d="M15,120 A95,95 0 0 1 205,120" fill="none" stroke="var(--blue)" stroke-width="18" stroke-linecap="round"
                                               t-att-stroke-dasharray="semiArcDash(state.budget_achievement_pct, 95)"
                                               t-att-data-donut-arc="semiArcDash(state.budget_achievement_pct, 95)"/>

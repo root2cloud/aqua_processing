@@ -58,7 +58,29 @@ class AquaDashboard extends Component {
             // notifOpen. See onProfileButtonClick()/onProfileMenuClick()
             // below.
             profileOpen: false,
+            // Dark mode toggle, shown as a switch inside the avatar
+            // popover (see onToggleDarkMode() below). Persisted per-browser
+            // in localStorage so it survives reloads/tab switches without
+            // needing a server round-trip; restored in setup() below,
+            // straight after this useState() call, so the very first
+            // render already carries the right value (no light-mode flash).
+            darkMode: false,
         });
+        try {
+            this.ui.darkMode = window.localStorage.getItem(AquaDashboard.DARK_MODE_STORAGE_KEY) === '1';
+        } catch (e) {
+            // localStorage can throw in locked-down/private-browsing
+            // contexts - dark mode just falls back to off (its default)
+            // rather than breaking the dashboard.
+        }
+        // The native browser scrollbar (page, drill panel, inner
+        // table-scroll areas) can't be reached by CSS scoped under
+        // .o_aqua_dashboard - only a class on <body> gets far enough up
+        // the tree. Applied here for the initial render, flipped again in
+        // onToggleDarkMode(), and removed on unmount so it never leaks
+        // into whatever view/module the user navigates to next.
+        this._syncBodyDarkScrollbar();
+        onWillUnmount(() => document.body.classList.remove(AquaDashboard.DARK_SCROLLBAR_BODY_CLASS));
         // Clicking outside the open notifications popover closes it -- same
         // pattern FilterBar uses for its own dropdowns (.aqua-dropdown).
         useExternalListener(window, "click", (ev) => {
@@ -254,6 +276,13 @@ class AquaDashboard extends Component {
     static FALLBACK_LAT = 17.6868;
     static FALLBACK_LON = 83.2185;
     static FALLBACK_LOCATION_LABEL = 'Visakhapatnam, India';
+    // localStorage key for the dark mode toggle (avatar popover) - see
+    // onToggleDarkMode() and the ui.darkMode restore in setup() above.
+    static DARK_MODE_STORAGE_KEY = 'aqua_food_processing.dark_mode';
+    // Class toggled on document.body (not this.el) so the themed
+    // scrollbar CSS in dashboard.css can reach the page's native
+    // scrollbar - see _syncBodyDarkScrollbar() below.
+    static DARK_SCROLLBAR_BODY_CLASS = 'o_aqua_dashboard_dark_scrollbar';
 
     // Resolves the browser's current position via the Geolocation API,
     // wrapped in a promise with a timeout so a slow/never-answered
@@ -497,6 +526,36 @@ class AquaDashboard extends Component {
     // onProfileMenuClick() below for what that row does.
     onProfileButtonClick() {
         this.ui.profileOpen = !this.ui.profileOpen;
+    }
+
+    // Dark mode switch, in the same avatar popover as "My Profile". Flips
+    // ui.darkMode (which the template maps onto an `o_aqua_dashboard--dark`
+    // modifier class on the dashboard root - see dashboard_templates.xml
+    // and the corresponding overrides in dashboard.css), and persists the
+    // choice so it's remembered next time this user opens the dashboard.
+    // Kept as its own row rather than closing the popover on click, since
+    // someone flipping the switch a couple of times to compare light/dark
+    // shouldn't have to reopen the menu each time.
+    onToggleDarkMode() {
+        this.ui.darkMode = !this.ui.darkMode;
+        this._syncBodyDarkScrollbar();
+        try {
+            window.localStorage.setItem(
+                AquaDashboard.DARK_MODE_STORAGE_KEY,
+                this.ui.darkMode ? '1' : '0'
+            );
+        } catch (e) {
+            // Preference just won't persist across reloads - not worth
+            // failing the toggle itself over.
+        }
+    }
+
+    // See the DARK_SCROLLBAR_BODY_CLASS comment above - keeps <body>'s
+    // class in step with ui.darkMode so the page's native scrollbar (and
+    // the drill panel's/any inner table-scroll's) picks up the themed
+    // thumb/track from dashboard.css.
+    _syncBodyDarkScrollbar() {
+        document.body.classList.toggle(AquaDashboard.DARK_SCROLLBAR_BODY_CLASS, this.ui.darkMode);
     }
 
     // Opens the same res.users form the standard Odoo user-menu avatar

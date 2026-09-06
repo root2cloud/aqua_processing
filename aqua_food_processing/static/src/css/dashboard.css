@@ -43,6 +43,7 @@
 
 .o_aqua_dashboard {
   --bg-page:#F3F5F7; --card:#FFFFFF; --ink:#12181F; --ink-soft:#5B6672; --ink-mute:#9AA3AD; --line:#EAEDF1;
+  --surface-soft:#F7F8FA; --track:#EEF0F3;
   --blue:#2F6FED; --blue-tint:#EAF1FE; --teal:#12A594; --teal-tint:#E4F7F4; --amber:#E8940C; --amber-tint:#FDF2E0;
   --coral:#E2543A; --coral-tint:#FDEAE6; --purple:#7C6CF0; --purple-tint:#EFEDFE; --green:#3AA655; --green-tint:#E7F6EA;
   --radius-lg:26px; --radius-md:20px; --radius-sm:14px;
@@ -57,9 +58,161 @@
 .o_aqua_dashboard *{ box-sizing:border-box; }
 .o_aqua_dashboard .aqua-main{ padding:26px 48px 60px; max-width:1400px; margin:0 auto; }
 
+/* ==========================================================================
+   DARK MODE
+   Toggled by the switch in the avatar popover (dashboard.js: ui.darkMode /
+   onToggleDarkMode; dashboard_templates.xml maps it onto this modifier
+   class on the dashboard root). Same near-black palette as the approved
+   dark mockups: true-black page AND card surface (#000), separated only by
+   a 1px border, with a slightly-raised --surface-soft for nested boxes
+   (storage rows, shipment cards, inventory tiles, stage tiles...) and a
+   --track color for progress-bar/chart-track backgrounds.
+
+   A handful of components (chart tooltip, generic [data-aqua-tooltip]
+   bubbles, the drill panel header, the export button) are deliberately
+   left on their original fixed dark-navy/white styling below rather than
+   following --ink - --ink itself has to flip to a light color for dark
+   mode body text, and re-using it for these "always-dark chip" components
+   would turn them into light chips with invisible white-on-white text.
+
+   Not covered: the "My Profile" edit dialog (aqua_profile_form_views.xml)
+   is a standard Odoo form dialog rendered outside this component's DOM
+   tree (opened via the action service), so it isn't reachable through this
+   scoped class and stays on the light theme. ========================== */
+.o_aqua_dashboard.o_aqua_dashboard--dark{
+  --bg-page:#000000; --card:#000000; --ink:#F5F5F5; --ink-soft:#9B9B9B; --ink-mute:#6B6B6B; --line:#2A2A2A;
+  --surface-soft:#141414; --track:#242424;
+}
+/* Mini-stat KPI tiles (overview hero card) deliberately keep their
+   light-mode pastel background + dark text in both themes - a darkened
+   version of the same tint was harder to read and lost the color-coding
+   the light mode relies on, and flipping the text to light-mode ink would
+   make it invisible against that pale background. */
+.o_aqua_dashboard.o_aqua_dashboard--dark .mini-stat .val{ color:#12181F; }
+.o_aqua_dashboard.o_aqua_dashboard--dark .mini-stat .lbl{ color:#5B6672; }
+
+/* ---- custom scrollbar (dark mode only) ----
+   Native scrollbars aren't reachable through .o_aqua_dashboard-scoped CSS
+   since the outer page scrollbar belongs to <body>, not our component -
+   dashboard.js toggles this class on document.body alongside ui.darkMode
+   (see onToggleDarkMode / the setup()/onWillUnmount hooks) so every
+   scrollable area on the page (the main scroll, the drill panel body, any
+   inner table-scroll) gets a themed thumb/track while dark mode is on,
+   and reverts the moment it's switched off or this dashboard unmounts. */
+body.o_aqua_dashboard_dark_scrollbar{ scrollbar-color:#2A2A2A #000000; scrollbar-width:thin; }
+body.o_aqua_dashboard_dark_scrollbar ::-webkit-scrollbar{ width:12px; height:12px; }
+body.o_aqua_dashboard_dark_scrollbar ::-webkit-scrollbar-track{ background:#000000; }
+body.o_aqua_dashboard_dark_scrollbar ::-webkit-scrollbar-thumb{ background:#2A2A2A; border-radius:8px; border:2px solid #000000; }
+body.o_aqua_dashboard_dark_scrollbar ::-webkit-scrollbar-thumb:hover{ background:#3A3A3A; }
+body.o_aqua_dashboard_dark_scrollbar ::-webkit-scrollbar-corner{ background:#000000; }
+.o_aqua_dashboard.o_aqua_dashboard--dark .pill-input,
+.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-search-pill,
+.o_aqua_dashboard.o_aqua_dashboard--dark .icon-btn,
+.o_aqua_dashboard.o_aqua_dashboard--dark .tabbar{
+  background:var(--card) !important;
+}
+.o_aqua_dashboard.o_aqua_dashboard--dark .tab:not(.active):hover{ background:var(--surface-soft) !important; }
+.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-dropdown-trigger:hover{ border-color:#3A3A3A; }
+
+/* popovers / dropdowns */
+.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-dropdown-panel,
+.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-bell-panel,
+.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-profile-panel,
+.o_aqua_dashboard.o_aqua_dashboard--dark .search-dropdown{
+  background:var(--card);
+}
+.o_aqua_dashboard.o_aqua_dashboard--dark .search-dropdown-row:hover{ background:var(--surface-soft); }
+
+/* main card surface - flat black + hairline border, no shadow (a shadow
+   this dark is invisible anyway; the mockups relied on the border alone) */
+.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-card{
+  background:var(--card) !important;
+  border-color:var(--line) !important;
+  box-shadow:none !important;
+}
+.o_aqua_dashboard.o_aqua_dashboard--dark a.aqua-card:hover,
+.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-card[style*="cursor:pointer"]:hover,
+.o_aqua_dashboard.o_aqua_dashboard--dark .stat-card:hover,
+.o_aqua_dashboard.o_aqua_dashboard--dark .kpi-tile:hover,
+.o_aqua_dashboard.o_aqua_dashboard--dark .stage-card:hover{
+  box-shadow:none !important;
+}
+.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-card.stage-card{ background:var(--surface-soft) !important; }
+
+/* export button: bg follows --ink (now light in dark mode), so the text
+   needs to flip to dark to stay legible - see block comment above */
+.o_aqua_dashboard.o_aqua_dashboard--dark .export-btn{ color:#0A0A0A; }
+
+/* nested "soft" surfaces that were a flat light gray in light mode */
+.o_aqua_dashboard.o_aqua_dashboard--dark .storage-row,
+.o_aqua_dashboard.o_aqua_dashboard--dark .ship-card,
+.o_aqua_dashboard.o_aqua_dashboard--dark .inv-item,
+.o_aqua_dashboard.o_aqua_dashboard--dark .stage-box,
+.o_aqua_dashboard.o_aqua_dashboard--dark .wip-row,
+.o_aqua_dashboard.o_aqua_dashboard--dark .inset-card{
+  background:var(--surface-soft);
+}
+
+/* progress-bar / funnel / hbar track backgrounds */
+.o_aqua_dashboard.o_aqua_dashboard--dark .funnel-bar-wrap,
+.o_aqua_dashboard.o_aqua_dashboard--dark .hbar-track,
+.o_aqua_dashboard.o_aqua_dashboard--dark .bp .track,
+.o_aqua_dashboard.o_aqua_dashboard--dark .line-row .track{
+  background:var(--track);
+}
+.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-badge--gray,
+.o_aqua_dashboard.o_aqua_dashboard--dark .pill-sm.aqua-badge--gray{ background:var(--track); }
+.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-drill-table .aqua-badge{ background:var(--track) !important; color:var(--ink-soft) !important; }
+
+/* tables */
+.o_aqua_dashboard.o_aqua_dashboard--dark .dtable tbody tr:hover{ background:var(--surface-soft); }
+.o_aqua_dashboard.o_aqua_dashboard--dark .table-scroll .dtable thead th{ background:var(--card); }
+
+/* drill-down side panel + its table (header stays dark-navy in both
+   themes - see block comment above). !important here guards these three
+   against the same "still shows the light-mode white" issue the profile
+   menu title fix above ran into with bare h1/h3 - safer to force it. */
+.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-drill-panel{ background:var(--card) !important; }
+.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-drill-panel__body{ background:var(--bg-page) !important; }
+.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-drill-table{ background:var(--card) !important; }
+.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-drill-table thead th{ background:var(--surface-soft) !important; }
+.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-drill-table tbody tr{ border-bottom-color:var(--line); }
+.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-drill-table tbody td{ color:var(--ink-soft); }
+/* Row hover: the light-mode hover tint (--blue-tint, a pale pastel) is
+   deliberately kept unchanged across themes for colored badges/icons
+   elsewhere (see the mini-stat KPI note above) - but reused here as a
+   full-row hover it would turn the row almost white, making its (now
+   light-colored) text disappear. Give dark mode its own dark hover
+   instead of inheriting that pastel. */
+.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-drill-table tbody tr:hover{ background:var(--surface-soft) !important; }
+.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-drill-panel__header{ background:#000000 !important; color:#fff; }
+/* Same fix as the table-row hover above: the sliding highlight behind a
+   hovered/selected option in an open filter dropdown (period, comparison)
+   also used the pale --blue-tint, washing out the option text against
+   the now-black dropdown panel. */
+.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-dropdown-glider{ background:var(--surface-soft); }
+
+/* chart lightbox (expand button on a chart card) */
+.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-chart-lightbox__panel{ background:var(--card); }
+.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-chart-lightbox__title{ color:var(--ink); }
+.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-chart-lightbox__close{ color:var(--ink-soft); }
+.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-chart-lightbox__close:hover{ background:rgba(255,255,255,.08); color:var(--ink); }
+
+/* loading overlay scrim */
+.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-loading-overlay{ background:rgba(0,0,0,0.6); }
+
+/* generic topbar tooltips + Chart.js custom tooltip: kept a fixed dark
+   navy chip with white text in both themes (see block comment above) */
+.o_aqua_dashboard.o_aqua_dashboard--dark [data-aqua-tooltip]::after,
+.o_aqua_dashboard.o_aqua_dashboard--dark [data-aqua-tooltip]::before,
+.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-chart-tooltip,
+.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-chart-tooltip::after{
+  background:#12181F;
+}
+
 /* ---- topbar ---- */
 .o_aqua_dashboard .topbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:16px; }
-.o_aqua_dashboard .topbar h1{ font-size:24px; font-weight:700; margin:0; }
+.o_aqua_dashboard .topbar h1{ font-size:24px; font-weight:700; margin:0; color:var(--ink) !important; }
 .o_aqua_dashboard .topbar p{ font-size:13px; color:var(--ink-soft); margin:2px 0 0; }
 .o_aqua_dashboard .top-actions{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
 .o_aqua_dashboard .pill-input{ display:flex; align-items:center; gap:8px; background:#FFFFFF !important; border:1px solid var(--line); border-radius:16px; padding:9px 16px; font-size:13px; color:var(--ink-mute); position:relative; box-shadow:none !important; }
@@ -292,6 +445,67 @@
 .o_aqua_dashboard .aqua-profile-menu-item .fa{ font-size:13px; color:var(--ink-mute); width:14px; text-align:center; }
 .o_aqua_dashboard .aqua-profile-menu-item:hover .fa{ color:var(--blue); }
 
+/* ---- dark mode toggle row + sun/moon switch (avatar popover) ----
+   Adapted from the Uiverse.io sun/moon switch (by RiccardoRapelli),
+   scaled down ~0.615x (60x34 -> 38x22) to sit inline in a menu row next
+   to plain text, and re-namespaced (aqua- prefix on every id/class) so it
+   can't collide with anything else in the Odoo backend. The row itself is
+   a real <label>, and the switch a real checkbox input bound to
+   ui.darkMode/onToggleDarkMode (see dashboard_templates.xml) - clicking
+   anywhere in the row (icon, "Dark mode" text, or the switch itself)
+   toggles it, since a <label> forwards clicks to the checkbox it wraps. */
+.o_aqua_dashboard .aqua-profile-menu-item--toggle{ cursor:pointer; }
+.o_aqua_dashboard .aqua-profile-menu-item--toggle span:not(.aqua-theme-switch){ flex:1; }
+.o_aqua_dashboard .aqua-theme-switch{ position:relative; display:inline-block; flex-shrink:0; width:38px; height:22px; }
+.o_aqua_dashboard .aqua-theme-switch input{ opacity:0; width:0; height:0; position:absolute; }
+.o_aqua_dashboard .aqua-slider{
+  position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0;
+  background-color:#2196f3; transition:.4s; z-index:0; overflow:hidden;
+}
+.o_aqua_dashboard .aqua-slider--round{ border-radius:22px; }
+.o_aqua_dashboard .aqua-slider--round .aqua-sun-moon{ border-radius:50%; }
+.o_aqua_dashboard .aqua-sun-moon{
+  position:absolute; height:16px; width:16px; left:3px; bottom:3px;
+  background-color:#ffe14d; transition:.4s;
+}
+.o_aqua_dashboard .aqua-theme-switch input:checked + .aqua-slider{ background-color:#0a0a0a; }
+.o_aqua_dashboard .aqua-theme-switch input:focus-visible + .aqua-slider{ box-shadow:0 0 0 2px var(--blue-tint); }
+.o_aqua_dashboard .aqua-theme-switch input:checked + .aqua-slider .aqua-sun-moon{
+  transform:translateX(16px); background-color:#fff;
+  animation:aqua-switch-rotate .6s ease-in-out both;
+}
+@keyframes aqua-switch-rotate{ from{ transform:translateX(16px) rotate(0); } to{ transform:translateX(16px) rotate(360deg); } }
+.o_aqua_dashboard .aqua-moon-dot{ opacity:0; transition:.4s; fill:#9aa3ad; position:absolute; z-index:4; }
+.o_aqua_dashboard .aqua-theme-switch input:checked + .aqua-slider .aqua-moon-dot{ opacity:1; }
+.o_aqua_dashboard #aqua-moon-dot-1{ left:6px; top:2px; width:4px; height:4px; }
+.o_aqua_dashboard #aqua-moon-dot-2{ left:1px; top:6px; width:6px; height:6px; }
+.o_aqua_dashboard #aqua-moon-dot-3{ left:10px; top:11px; width:2px; height:2px; }
+.o_aqua_dashboard .aqua-light-ray{ position:absolute; z-index:-1; fill:#fff; opacity:.1; }
+.o_aqua_dashboard #aqua-light-ray-1{ left:-5px; top:-5px; width:26px; height:26px; }
+.o_aqua_dashboard #aqua-light-ray-2{ left:-50%; top:-50%; width:34px; height:34px; }
+.o_aqua_dashboard #aqua-light-ray-3{ left:-11px; top:-11px; width:37px; height:37px; }
+.o_aqua_dashboard .aqua-cloud-light{ position:absolute; fill:#eee; animation-name:aqua-cloud-move; animation-duration:6s; animation-iteration-count:infinite; }
+.o_aqua_dashboard .aqua-cloud-dark{ position:absolute; fill:#ccc; animation-name:aqua-cloud-move; animation-duration:6s; animation-iteration-count:infinite; animation-delay:1s; }
+.o_aqua_dashboard #aqua-cloud-1{ left:18px; top:9px; width:25px; }
+.o_aqua_dashboard #aqua-cloud-2{ left:27px; top:6px; width:12px; }
+.o_aqua_dashboard #aqua-cloud-3{ left:11px; top:15px; width:18px; }
+.o_aqua_dashboard #aqua-cloud-4{ left:22px; top:11px; width:25px; }
+.o_aqua_dashboard #aqua-cloud-5{ left:30px; top:9px; width:12px; }
+.o_aqua_dashboard #aqua-cloud-6{ left:14px; top:16px; width:18px; }
+@keyframes aqua-cloud-move{ 0%{ transform:translateX(0); } 40%{ transform:translateX(3px); } 80%{ transform:translateX(-3px); } 100%{ transform:translateX(0); } }
+.o_aqua_dashboard .aqua-stars{ transform:translateY(-20px); opacity:0; transition:.4s; }
+.o_aqua_dashboard .aqua-star{ fill:#fff; position:absolute; transition:.4s; animation-name:aqua-star-twinkle; animation-duration:2s; animation-iteration-count:infinite; }
+.o_aqua_dashboard .aqua-theme-switch input:checked + .aqua-slider .aqua-stars{ transform:translateY(0); opacity:1; }
+.o_aqua_dashboard #aqua-star-1{ width:12px; top:1px; left:2px; animation-delay:.3s; }
+.o_aqua_dashboard #aqua-star-2{ width:4px; top:10px; left:2px; }
+.o_aqua_dashboard #aqua-star-3{ width:7px; top:12px; left:6px; animation-delay:.6s; }
+.o_aqua_dashboard #aqua-star-4{ width:11px; top:0; left:11px; animation-delay:1.3s; }
+@keyframes aqua-star-twinkle{ 0%{ transform:scale(1); } 40%{ transform:scale(1.2); } 80%{ transform:scale(0.8); } 100%{ transform:scale(1); } }
+@media (prefers-reduced-motion: reduce){
+  .o_aqua_dashboard .aqua-theme-switch input:checked + .aqua-slider .aqua-sun-moon{ animation:none; }
+  .o_aqua_dashboard .aqua-cloud-light, .o_aqua_dashboard .aqua-cloud-dark, .o_aqua_dashboard .aqua-star{ animation:none; }
+}
+
 /* ---- "My Profile" edit dialog (views/dashboard/aqua_profile_form_views.xml)
    This is a real Odoo form-view dialog, not part of the dashboard's own
    DOM tree, so it can't be scoped under .o_aqua_dashboard - it's styled
@@ -396,7 +610,7 @@
   box-shadow:0 4px 10px rgba(18,24,31,0.05), 0 16px 36px rgba(18,24,31,0.09) !important;
   transform:translateY(-2px);
 }
-.o_aqua_dashboard .aqua-card h3{ font-size:15px; font-weight:700; margin:0; letter-spacing:-.01em; }
+.o_aqua_dashboard .aqua-card h3{ font-size:15px; font-weight:700; margin:0; letter-spacing:-.01em; color:var(--ink) !important; }
 .o_aqua_dashboard .aqua-card .muted{ font-size:12.5px; color:var(--ink-soft); margin-top:2px; }
 .o_aqua_dashboard .card-head-row{ display:flex; justify-content:space-between; align-items:center; }
 .o_aqua_dashboard .view-all{ font-size:12px; color:var(--blue); font-weight:600; cursor:pointer; }

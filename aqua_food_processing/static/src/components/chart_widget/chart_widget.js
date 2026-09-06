@@ -239,6 +239,18 @@ export class ChartWidget extends Component {
         el.style.top = canvasTop + tooltip.caretY + "px";
     }
 
+    // Chart.js configs below are plain JS objects, not CSS, so they can't
+    // just read the --ink/--line custom properties the rest of the
+    // dashboard uses for dark mode - this checks whether the canvas is
+    // currently inside a dashboard root that has the dark modifier class
+    // (see dashboard_templates.xml / onToggleDarkMode in dashboard.js) so
+    // grid lines, tick labels, and the doughnut slice border can be picked
+    // to match, instead of staying hardcoded to their light-mode values.
+    _isDarkMode() {
+        const el = this.canvasRef && this.canvasRef.el;
+        return !!(el && el.closest && el.closest(".o_aqua_dashboard--dark"));
+    }
+
     _initChart() {
         const canvas = this.canvasRef.el;
         if (!canvas) return;
@@ -253,6 +265,13 @@ export class ChartWidget extends Component {
             return;
         }
         this._destroyChart();
+        // Global default for tick/legend text color - Chart.js falls back
+        // to this wherever a scale/legend doesn't set its own `color`,
+        // which is every chart here (none of the per-scale configs below
+        // set one explicitly). Set fresh on every (re)build rather than
+        // once at import time since the same page can flip dark mode on
+        // and off without recreating the Chart module itself.
+        window.Chart.defaults.color = this._isDarkMode() ? "#9B9B9B" : "#5B6672";
         const config = this._getChartJsConfig();
         if (config) {
             this._chart = new window.Chart(canvas, config);
@@ -264,6 +283,7 @@ export class ChartWidget extends Component {
             this._initChart();
             return;
         }
+        window.Chart.defaults.color = this._isDarkMode() ? "#9B9B9B" : "#5B6672";
         const config = this._getChartJsConfig();
         if (!config) return;
         this._chart.data = config.data;
@@ -337,7 +357,7 @@ export class ChartWidget extends Component {
                 ctx.beginPath();
                 ctx.setLineDash([4, 4]);
                 ctx.lineWidth = 1;
-                ctx.strokeStyle = "#CBD5E0";
+                ctx.strokeStyle = this._isDarkMode() ? "#3A3A3A" : "#CBD5E0";
                 ctx.moveTo(x, chartArea.top);
                 ctx.lineTo(x, chartArea.bottom);
                 ctx.stroke();
@@ -377,6 +397,7 @@ export class ChartWidget extends Component {
                 const fontFamily = (xScale.options.ticks.font && xScale.options.ticks.font.family) ||
                     "Inter, -apple-system, BlinkMacSystemFont, sans-serif";
 
+                const isDark = this._isDarkMode();
                 const ctx = chart.ctx;
                 ctx.save();
                 ctx.font = `600 ${tickFontSize}px ${fontFamily}`;
@@ -396,7 +417,7 @@ export class ChartWidget extends Component {
                 // tick label Chart.js already drew for this index, so the
                 // bubble reads as a clean replacement rather than double
                 // text bleeding through a see-through fill.
-                ctx.fillStyle = "#fff";
+                ctx.fillStyle = isDark ? "#000" : "#fff";
                 ctx.fillRect(rectX - 2, rectY - 2, bubbleWidth + 4, rectH + 4);
 
                 // Rounded pill (falls back to a plain circle when the text
@@ -417,7 +438,7 @@ export class ChartWidget extends Component {
                 ctx.strokeStyle = "rgba(113, 128, 150, 0.55)";
                 ctx.stroke();
 
-                ctx.fillStyle = "#1A202C";
+                ctx.fillStyle = isDark ? "#F5F5F5" : "#1A202C";
                 ctx.fillText(text, x, centerY + 1);
                 ctx.restore();
             },
@@ -426,6 +447,8 @@ export class ChartWidget extends Component {
 
     _getChartJsConfig() {
         const { chartType, data, options } = this.props;
+        const isDark = this._isDarkMode();
+        const gridColor = isDark ? "rgba(255,255,255,0.07)" : "#f0f0f0";
 
         const COLORS = [
             "#2C7A7B", "#3182CE", "#D69E2E", "#C53030",
@@ -530,7 +553,7 @@ export class ChartWidget extends Component {
                             y: {
                                 beginAtZero: true,
                                 suggestedMax,
-                                grid: { color: "#f0f0f0" },
+                                grid: { color: gridColor },
                                 ticks: { padding: 8 },
                             },
                         },
@@ -548,7 +571,7 @@ export class ChartWidget extends Component {
                         interaction: { mode: "index", intersect: false },
                         scales: {
                             x: { grid: { display: false } },
-                            y: { beginAtZero: true, grid: { color: "#f0f0f0" } },
+                            y: { beginAtZero: true, grid: { color: gridColor } },
                         },
                     },
                     plugins: [this._activeTickBubblePlugin()],
@@ -566,7 +589,7 @@ export class ChartWidget extends Component {
                         interaction: { mode: "index", intersect: false },
                         scales: {
                             x: { stacked: true, grid: { display: false } },
-                            y: { stacked: true, beginAtZero: true, grid: { color: "#f0f0f0" } },
+                            y: { stacked: true, beginAtZero: true, grid: { color: gridColor } },
                         },
                     },
                     plugins: [this._activeTickBubblePlugin()],
@@ -580,7 +603,7 @@ export class ChartWidget extends Component {
                         ...baseOptions,
                         indexAxis: "y",
                         scales: {
-                            x: { beginAtZero: true, grid: { color: "#f0f0f0" } },
+                            x: { beginAtZero: true, grid: { color: gridColor } },
                             y: { grid: { display: false } },
                         },
                     },
@@ -595,7 +618,7 @@ export class ChartWidget extends Component {
                         datasets: [{
                             data: datasets[0]?.data || [],
                             backgroundColor: COLORS.map(c => c + "CC"),
-                            borderColor: "#fff",
+                            borderColor: isDark ? "#000" : "#fff",
                             borderWidth: 2,
                         }],
                     },
