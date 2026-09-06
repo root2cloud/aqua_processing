@@ -89,6 +89,7 @@
             # (see chart_widget.js for why). Must load before chart_widget.js.
             'aqua_food_processing/static/src/lib/chartjs/chart.umd.js',
             'aqua_food_processing/static/src/css/dashboard.css',
+            'aqua_food_processing/static/src/css/loading_indicator.css',
             'aqua_food_processing/static/src/components/kpi_tile/kpi_tile.js',
             'aqua_food_processing/static/src/components/kpi_tile/kpi_tile.xml',
             'aqua_food_processing/static/src/components/filter_bar/filter_bar.js',
@@ -97,7 +98,6 @@
             'aqua_food_processing/static/src/components/chart_widget/chart_widget.xml',
             'aqua_food_processing/static/src/components/drill_panel/drill_panel.js',
             'aqua_food_processing/static/src/components/drill_panel/drill_panel.xml',
-            'aqua_food_processing/static/src/js/fluid_cursor.js',
             'aqua_food_processing/static/src/js/dashboard.js',
             'aqua_food_processing/static/src/xml/dashboard_templates.xml',
         ],
