@@ -12,15 +12,17 @@
                     </div>
                     <div class="top-actions">
                         <FilterBar onFilterChange.bind="onFilterChange" onRefresh.bind="onRefresh" isLoading="state.isLoading"/>
-                        <div class="pill-input search-pill" style="position:relative;">
+                        <div class="aqua-search-pill aqua-tooltip" data-aqua-tooltip="Search"
+                             t-att-class="{ 'aqua-search-pill--expanded': ui.searchExpanded }"
+                             t-on-click="onSearchWrapClick">
                             <i class="fa fa-search"/>
-                            <input type="text" placeholder="Search receipts, orders, checks…"
+                            <input type="text" t-ref="searchInput" placeholder="Search receipts, orders, checks…"
                                    t-att-value="search.query"
                                    t-on-input="onSearchInput"
                                    t-on-focus="onSearchFocus"
                                    t-on-blur="onSearchBlur"/>
-                            <i t-if="search.query" class="fa fa-times-circle search-clear" t-on-click="onSearchClear" title="Clear"/>
-                            <div class="search-dropdown" t-if="search.isOpen">
+                            <i t-if="search.query" class="fa fa-times-circle search-clear" t-on-click.stop="onSearchClear" title="Clear"/>
+                            <div class="search-dropdown" t-if="ui.searchExpanded and search.isOpen">
                                 <div t-if="search.loading" class="search-dropdown-msg">Searching…</div>
                                 <div t-if="!search.loading and !search.results.length" class="search-dropdown-msg">No matches for "<t t-esc="search.query"/>"</div>
                                 <t t-if="!search.loading" t-foreach="searchGroups" t-as="grp" t-key="grp.group">
@@ -60,16 +62,37 @@
                             </t>
                         </div>
                         <button type="button" class="export-btn aqua-tooltip" data-aqua-tooltip="Export this tab as CSV" t-att-class="{ 'icon-btn--open': ui.exportJustClicked }" t-on-click="onExportDashboard"><i class="fa fa-download"/></button>
-                        <div class="profile-btn aqua-tooltip" data-aqua-tooltip="My Profile" t-on-click="onProfileClick">
-                            <div class="profile-btn-mask">
-                                <img t-attf-src="/web/image?model=res.users&amp;field=avatar_128&amp;id={{user.userId}}" alt="Profile"/>
+                        <div class="aqua-profile-wrap">
+                            <div class="profile-btn aqua-tooltip" data-aqua-tooltip="My Profile"
+                                 t-att-class="{ 'icon-btn--open': ui.profileOpen }"
+                                 t-on-click="onProfileButtonClick">
+                                <div class="profile-btn-mask">
+                                    <img t-attf-src="/web/image?model=res.users&amp;field=avatar_128&amp;id={{user.userId}}" alt="Profile"/>
+                                </div>
                             </div>
+                            <t t-if="ui.profileOpen">
+                                <div class="aqua-profile-panel">
+                                    <div class="aqua-profile-panel__head">
+                                        <div class="aqua-profile-panel__avatar">
+                                            <img t-attf-src="/web/image?model=res.users&amp;field=avatar_128&amp;id={{user.userId}}" alt="Profile"/>
+                                        </div>
+                                        <div class="aqua-profile-panel__name" t-esc="user.name"/>
+                                    </div>
+                                    <div class="aqua-profile-panel__body">
+                                        <div class="aqua-profile-menu-item" t-on-click="onProfileMenuClick">
+                                            <i class="fa fa-user"/>
+                                            <span>My Profile</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </t>
                         </div>
                     </div>
                 </div>
 
                 <!-- ══════════════════════ TAB BAR ══════════════════════ -->
-                <div class="tabbar">
+                <div class="tabbar" t-ref="tabbar">
+                    <div class="tab-glider" t-attf-style="transform:translateX({{ui.tabGlider.left}}px);width:{{ui.tabGlider.width}}px;visibility:{{ui.tabGlider.ready ? 'visible' : 'hidden'}};"/>
                     <button type="button" class="tab" t-att-class="{active: isTabActive('overview')}" t-on-click="() => this.setActiveTab('overview')">Overview</button>
                     <button type="button" class="tab" t-att-class="{active: isTabActive('procurement')}" t-on-click="() => this.setActiveTab('procurement')">Procurement</button>
                     <button type="button" class="tab" t-att-class="{active: isTabActive('processing')}" t-on-click="() => this.setActiveTab('processing')">Processing</button>

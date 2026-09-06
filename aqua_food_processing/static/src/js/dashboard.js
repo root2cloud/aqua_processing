@@ -2,12 +2,13 @@
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { user } from "@web/core/user";
-import { Component, onMounted, onWillUnmount, useState, useExternalListener } from "@odoo/owl";
+import { Component, onMounted, onPatched, onWillUnmount, useState, useExternalListener, useRef } from "@odoo/owl";
 
 import { KpiTile } from "../components/kpi_tile/kpi_tile";
 import { ChartWidget } from "../components/chart_widget/chart_widget";
 import { DrillPanel } from "../components/drill_panel/drill_panel";
 import { FilterBar } from "../components/filter_bar/filter_bar";
+import { initFluidCursor } from "./fluid_cursor";
 
 class AquaDashboard extends Component {
     static template = "aqua_food_processing.DashboardMain";
@@ -37,12 +38,26 @@ class AquaDashboard extends Component {
             alertsDismissed: true,
             alertsSignature: '',
             notifOpen: false,
+            // Topbar search collapses down to just an icon (matching the
+            // bell/export icon-buttons) and expands into the input on
+            // click - see onSearchWrapClick/onSearchBlur below.
+            searchExpanded: false,
+            // Sliding highlight behind the active tab in the tab bar. Tabs
+            // are variable-width (labels differ), so this can't be a fixed
+            // 1/3-2/3 CSS transform like an evenly-split segmented control -
+            // it's measured against the real DOM after every render, see
+            // _updateTabGlider() below.
+            tabGlider: { left: 0, width: 0, ready: false },
             // Briefly true right after the export button is clicked, purely
             // to duck its tooltip out of the way (the browser's own
             // :hover state otherwise keeps it glued on screen for as long
             // as the cursor stays put, which reads oddly right after a
             // click). See onExportDashboard() below.
             exportJustClicked: false,
+            // Popover under the avatar - same pattern as the bell's
+            // notifOpen. See onProfileButtonClick()/onProfileMenuClick()
+            // below.
+            profileOpen: false,
         });
         // Clicking outside the open notifications popover closes it -- same
         // pattern FilterBar uses for its own dropdowns (.aqua-dropdown).
@@ -50,6 +65,13 @@ class AquaDashboard extends Component {
             if (!this.ui.notifOpen) return;
             if (!ev.target.closest(".aqua-bell-wrap")) {
                 this.ui.notifOpen = false;
+            }
+        });
+        // Same again for the profile popover.
+        useExternalListener(window, "click", (ev) => {
+            if (!this.ui.profileOpen) return;
+            if (!ev.target.closest(".aqua-profile-wrap")) {
+                this.ui.profileOpen = false;
             }
         });
         // Topbar quick-search: debounced query -> global_search() results,
@@ -168,6 +190,38 @@ class AquaDashboard extends Component {
         onMounted(() => this._loadWeather());
         onMounted(() => this._initCountUpObserver());
         onWillUnmount(() => this._teardownCountUpObserver());
+        onMounted(() => this._initFluidCursor());
+        onWillUnmount(() => this._teardownFluidCursor());
+
+        // ---- Tab bar glider (blue sliding highlight behind active tab) ----
+        this.tabbarRef = useRef("tabbar");
+        this.searchInputRef = useRef("searchInput");
+        onMounted(() => this._updateTabGlider());
+        // Re-measure after every render, not just tab switches: a resize,
+        // sidebar collapse, or the tab labels reflowing can all move the
+        // buttons without going through setActiveTab().
+        onPatched(() => this._updateTabGlider());
+        useExternalListener(window, "resize", () => this._updateTabGlider());
+    }
+
+    // Measures the currently-active tab button and positions the glider
+    // under it. Runs off the real DOM because tab widths vary with their
+    // label ("Overview" vs "Quality Control"), so a fixed percentage
+    // transform (fine for 3 equal-width options) won't line up here.
+    _updateTabGlider() {
+        const bar = this.tabbarRef.el;
+        if (!bar) return;
+        const activeBtn = bar.querySelector(".tab.active");
+        if (!activeBtn) return;
+        const barRect = bar.getBoundingClientRect();
+        const btnRect = activeBtn.getBoundingClientRect();
+        const left = btnRect.left - barRect.left;
+        const width = btnRect.width;
+        if (left !== this.ui.tabGlider.left || width !== this.ui.tabGlider.width || !this.ui.tabGlider.ready) {
+            this.ui.tabGlider.left = left;
+            this.ui.tabGlider.width = width;
+            this.ui.tabGlider.ready = true;
+        }
     }
 
     // ---- Shared UI helper: status label -> badge color class ----
@@ -312,6 +366,17 @@ class AquaDashboard extends Component {
     get weatherWindDisplay() { return this.weather.windKph === null ? '--' : Math.round(this.weather.windKph); }
 
     // ---- Topbar quick search ----
+    // Collapsed to a plain icon-button (same look as the bell/export
+    // icons) until clicked; expands into the input, focuses it, and
+    // collapses itself back down once it loses focus with nothing typed.
+    onSearchWrapClick() {
+        if (this.ui.searchExpanded) return;
+        this.ui.searchExpanded = true;
+        requestAnimationFrame(() => {
+            if (this.searchInputRef.el) this.searchInputRef.el.focus();
+        });
+    }
+
     // Debounced so a fast typist doesn't fire one RPC per keystroke; 250ms
     // is short enough that the dropdown still feels instant.
     onSearchInput(ev) {
@@ -365,7 +430,10 @@ class AquaDashboard extends Component {
     // Delay the close slightly so the click on a result row lands before
     // the dropdown unmounts underneath it.
     onSearchBlur() {
-        setTimeout(() => { this.search.isOpen = false; }, 150);
+        setTimeout(() => {
+            this.search.isOpen = false;
+            if (!this.search.query) this.ui.searchExpanded = false;
+        }, 150);
     }
 
     onSearchClear() {
@@ -423,18 +491,32 @@ class AquaDashboard extends Component {
         this.loadData();
     }
 
-    // ---- Topbar: "My Profile" shortcut ----
+    // ---- Topbar: avatar popover ----
+    // Clicking the avatar itself just opens a small popover (name + a "My
+    // Profile" row) instead of jumping straight into the edit form - see
+    // onProfileMenuClick() below for what that row does.
+    onProfileButtonClick() {
+        this.ui.profileOpen = !this.ui.profileOpen;
+    }
+
     // Opens the same res.users form the standard Odoo user-menu avatar
     // (top-right, above this dashboard) opens under "My Profile" - this is
     // a convenience shortcut for people who live inside this dashboard all
     // day, not a replacement for that menu.
-    onProfileClick() {
+    onProfileMenuClick() {
+        this.ui.profileOpen = false;
         this.action.doAction({
             type: 'ir.actions.act_window',
+            name: 'My Profile',
             res_model: 'res.users',
             res_id: this.user.userId,
             views: [[false, 'form']],
             target: 'new',
+            // Same fields as the stock "My Profile" quick-edit, just under
+            // our own view id (aqua_profile_form_view) so the dialog
+            // carries a class the dashboard CSS can hook into - see
+            // views/dashboard/aqua_profile_form_views.xml.
+            context: { form_view_ref: 'aqua_food_processing.aqua_profile_form_view' },
         });
     }
 
@@ -1009,6 +1091,60 @@ class AquaDashboard extends Component {
             this._countUpObserver = null;
         }
         (this._countUpFrames instanceof WeakMap) && null; // no-op, WeakMap needs no explicit cleanup
+    }
+
+    // ==================================================================
+    //  Aqua fluid cursor
+    // ------------------------------------------------------------------
+    //  Full-viewport WebGL "liquid" trail (see js/fluid_cursor.js) that
+    //  follows the pointer anywhere over the dashboard, tinted to a
+    //  water/teal palette instead of the stock rainbow. The canvas is
+    //  created here (not in the XML template) since it's a page-level
+    //  overlay rather than dashboard content: fixed position, full
+    //  viewport size, pointer-events disabled so it never blocks clicks
+    //  on the cards/buttons underneath, and a modest z-index (see
+    //  .o_aqua_fluid_cursor in dashboard.css) so it stays below Odoo's
+    //  own dropdowns/dialogs/notifications.
+    // ==================================================================
+    _initFluidCursor() {
+        const root = document.querySelector(".o_aqua_dashboard");
+        if (!root || typeof window === "undefined") return;
+        // One canvas for the whole page - if a previous instance is still
+        // around (e.g. fast tab-switch remount), reuse it instead of
+        // stacking up duplicate WebGL contexts.
+        let canvas = document.querySelector(".o_aqua_fluid_cursor");
+        if (!canvas) {
+            canvas = document.createElement("canvas");
+            canvas.className = "o_aqua_fluid_cursor";
+            document.body.appendChild(canvas);
+        }
+        this._fluidCursorCanvas = canvas;
+        try {
+            this._fluidCursorDestroy = initFluidCursor(canvas, {
+                densityDissipation: 3.5,
+                velocityDissipation: 2,
+                pressure: 0.1,
+                curl: 3,
+                splatRadius: 0.2,
+                splatForce: 6000,
+                transparent: true,
+            });
+        } catch (e) {
+            // eslint-disable-next-line no-console
+            console.error("[aqua fluid cursor] failed to start:", e);
+            this._fluidCursorDestroy = null;
+        }
+    }
+
+    _teardownFluidCursor() {
+        if (this._fluidCursorDestroy) {
+            this._fluidCursorDestroy();
+            this._fluidCursorDestroy = null;
+        }
+        if (this._fluidCursorCanvas) {
+            this._fluidCursorCanvas.remove();
+            this._fluidCursorCanvas = null;
+        }
     }
 
     _runCountUp(el) {

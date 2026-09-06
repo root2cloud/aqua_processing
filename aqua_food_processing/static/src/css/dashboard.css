@@ -72,21 +72,48 @@
 .o_aqua_dashboard .pill-input input[type="date"]{ border:none; background:transparent; font:inherit; color:inherit; padding:0; outline:none; }
 .o_aqua_dashboard .pill-input .fa{ font-size:13px; color:inherit; }
 .o_aqua_dashboard .pill-input .fa-chevron-down{ font-size:10px; color:var(--ink-mute); }
-.o_aqua_dashboard .pill-input .aqua-filter-icon{ color:inherit; flex-shrink:0; }
-.o_aqua_dashboard .pill-input.search-pill{ min-width:180px; color:var(--ink-mute); }
-.o_aqua_dashboard .search-pill input[type="text"]{ border:none; background:transparent; font:inherit; color:var(--ink); padding:0; outline:none; width:180px; }
-.o_aqua_dashboard .search-pill input[type="text"]::placeholder{ color:var(--ink-mute); }
-.o_aqua_dashboard .pill-input.search-pill:focus-within{
+/* Topbar search - collapsed down to a plain 40x40 icon-button (same look
+   as the bell/export icons) until clicked, then expands into the input.
+   Width/padding animate with the same bouncy easing as the tab bar and
+   dropdown gliders, so the whole dashboard's motion feels of a piece. */
+.o_aqua_dashboard .aqua-search-pill{
+    position:relative; display:flex; align-items:center; flex-shrink:0;
+    height:40px; width:40px; padding:0; overflow:hidden;
+    background:#FFFFFF !important; border:1px solid var(--line); border-radius:14px;
+    cursor:pointer; box-shadow:none !important;
+    transition:
+        width .4s cubic-bezier(.37,1.95,.66,.56),
+        padding .4s cubic-bezier(.37,1.95,.66,.56),
+        border-color .15s ease, box-shadow .15s ease;
+}
+.o_aqua_dashboard .aqua-search-pill .fa-search{ flex:0 0 40px; width:40px; text-align:center; color:var(--ink); font-size:14px; }
+.o_aqua_dashboard .aqua-search-pill input[type="text"]{
+    flex:1 1 auto; min-width:0; width:0; opacity:0;
+    border:none; background:transparent; font:inherit; color:var(--ink); outline:none; padding:0;
+    transition:width .4s cubic-bezier(.37,1.95,.66,.56), opacity .2s ease;
+}
+.o_aqua_dashboard .aqua-search-pill input[type="text"]::placeholder{ color:var(--ink-mute); }
+.o_aqua_dashboard .aqua-search-pill--expanded{ width:300px; padding:0 6px 0 0; cursor:text; }
+.o_aqua_dashboard .aqua-search-pill--expanded input[type="text"]{ width:auto; opacity:1; transition-delay:.1s; }
+.o_aqua_dashboard .aqua-search-pill--expanded:focus-within{
     border-color:var(--blue) !important;
     box-shadow:0 0 0 3px var(--blue-tint) !important;
 }
-.o_aqua_dashboard .search-clear{ cursor:pointer; color:var(--ink-mute); }
+/* Same "hide the tooltip once it's doing something else" trick already
+   used for the open filter/bell icon-buttons. */
+.o_aqua_dashboard .aqua-search-pill--expanded[data-aqua-tooltip]::after,
+.o_aqua_dashboard .aqua-search-pill--expanded[data-aqua-tooltip]::before{
+    opacity:0 !important;
+}
+.o_aqua_dashboard .search-clear{ flex:0 0 auto; cursor:pointer; color:var(--ink-mute); opacity:0; transition:opacity .2s ease; }
+.o_aqua_dashboard .aqua-search-pill--expanded .search-clear{ opacity:1; }
 .o_aqua_dashboard .search-clear:hover{ color:var(--ink-soft); }
 .o_aqua_dashboard .search-dropdown{
     position:absolute; top:calc(100% + 6px); left:0; right:0; min-width:280px;
     background:#fff; border:1px solid var(--line); border-radius:14px;
     box-shadow:0 12px 28px rgba(18,24,31,0.12); padding:6px; z-index:50;
     max-height:340px; overflow-y:auto;
+    animation:aqua-dropdown-in .12s cubic-bezier(.16,1,.3,1);
 }
 .o_aqua_dashboard .search-dropdown-msg{ padding:10px 12px; font-size:12.5px; color:var(--ink-mute); }
 .o_aqua_dashboard .search-dropdown-group{ padding:8px 12px 4px; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-mute); }
@@ -112,14 +139,28 @@
 }
 @keyframes aqua-dropdown-in{ from{ opacity:0; transform:translateY(-4px); } to{ opacity:1; transform:translateY(0); } }
 .o_aqua_dashboard .aqua-dropdown-option{
+  position:relative; z-index:1;
   display:flex; align-items:center; justify-content:space-between; gap:12px;
   padding:8px 10px; border-radius:10px; font-size:13px; font-weight:500; color:var(--ink-soft);
-  cursor:pointer; white-space:nowrap; transition:background .1s ease, color .1s ease;
+  cursor:pointer; white-space:nowrap; background:transparent !important; transition:color .1s ease;
 }
-.o_aqua_dashboard .aqua-dropdown-option:hover{ background:var(--bg-page); color:var(--ink); }
-.o_aqua_dashboard .aqua-dropdown-option--active{ background:var(--blue-tint); color:var(--blue); font-weight:600; }
-.o_aqua_dashboard .aqua-dropdown-option--active:hover{ background:var(--blue-tint); }
+.o_aqua_dashboard .aqua-dropdown-option:hover{ color:var(--ink); }
+.o_aqua_dashboard .aqua-dropdown-option--active{ color:var(--blue); font-weight:600; }
+.o_aqua_dashboard .aqua-dropdown-option--active:hover{ color:var(--blue); }
 .o_aqua_dashboard .aqua-dropdown-option .fa-check{ font-size:11px; color:var(--blue); }
+
+/* Sliding highlight inside an open dropdown panel - same glide/easing as
+   the tab bar's glider, just moving vertically between option rows
+   instead of horizontally between tabs. Position/height are measured in
+   JS (see filter_bar.js) since rows are variable-height text. */
+.o_aqua_dashboard .aqua-dropdown-glider{
+  position:absolute; left:6px; right:6px; top:0;
+  border-radius:10px; z-index:0; pointer-events:none;
+  background:var(--blue-tint);
+  transition:
+    transform .5s cubic-bezier(.37,1.95,.66,.56),
+    height .35s cubic-bezier(.37,1.95,.66,.56);
+}
 .o_aqua_dashboard .icon-btn{ width:40px; height:40px; border-radius:14px; background:#FFFFFF !important; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; position:relative; color:var(--ink); cursor:pointer; box-shadow:none !important; }
 .o_aqua_dashboard .badge-dot{ position:absolute; top:6px; right:6px; width:8px; height:8px; border-radius:50%; background:var(--coral); }
 
@@ -225,6 +266,93 @@
 .o_aqua_dashboard .profile-btn-mask{ width:100%; height:100%; border-radius:50%; overflow:hidden; border:1px solid var(--line); }
 .o_aqua_dashboard .profile-btn img{ width:100%; height:100%; object-fit:cover; display:block; }
 
+/* ---- Avatar popover - same shape/animation as the bell popover, just a
+   name + "My Profile" row instead of an alert list. Clicking the avatar
+   opens this; clicking "My Profile" inside it is what opens the actual
+   res.users form (see onProfileButtonClick/onProfileMenuClick). ---- */
+.o_aqua_dashboard .aqua-profile-wrap{ position:relative; }
+.o_aqua_dashboard .aqua-profile-panel{
+  position:absolute; top:calc(100% + 10px); right:0; z-index:40;
+  width:220px; background:#FFFFFF; border:1px solid var(--line); border-radius:var(--radius-sm);
+  box-shadow:0 12px 32px rgba(18,24,31,.14), 0 2px 8px rgba(18,24,31,.06);
+  animation:aqua-dropdown-in .12s cubic-bezier(.16,1,.3,1);
+}
+.o_aqua_dashboard .aqua-profile-panel__head{
+  display:flex; align-items:center; gap:10px; padding:14px 16px; border-bottom:1px solid var(--line);
+}
+.o_aqua_dashboard .aqua-profile-panel__avatar{ width:36px; height:36px; border-radius:50%; overflow:hidden; border:1px solid var(--line); flex-shrink:0; }
+.o_aqua_dashboard .aqua-profile-panel__avatar img{ width:100%; height:100%; object-fit:cover; display:block; }
+.o_aqua_dashboard .aqua-profile-panel__name{ font-size:13.5px; font-weight:700; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.o_aqua_dashboard .aqua-profile-panel__body{ padding:6px; }
+.o_aqua_dashboard .aqua-profile-menu-item{
+  display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:10px;
+  font-size:13px; font-weight:500; color:var(--ink-soft); cursor:pointer; transition:background .1s ease, color .1s ease;
+}
+.o_aqua_dashboard .aqua-profile-menu-item:hover{ background:var(--bg-page); color:var(--ink); }
+.o_aqua_dashboard .aqua-profile-menu-item .fa{ font-size:13px; color:var(--ink-mute); width:14px; text-align:center; }
+.o_aqua_dashboard .aqua-profile-menu-item:hover .fa{ color:var(--blue); }
+
+/* ---- "My Profile" edit dialog (views/dashboard/aqua_profile_form_views.xml)
+   This is a real Odoo form-view dialog, not part of the dashboard's own
+   DOM tree, so it can't be scoped under .o_aqua_dashboard - it's styled
+   globally instead, but only ever matches when it contains our custom
+   view's root class (.o_aqua_profile_dialog), so it can't affect any
+   other dialog in the backend. :has() needs a fairly recent browser
+   (Chrome 105+/Safari 15.4+/Firefox 121+) to restyle the modal chrome
+   (header/footer); the sheet content below restyles regardless since it
+   targets .o_aqua_profile_dialog directly. ---- */
+.modal-content:has(.o_aqua_profile_dialog){
+    border-radius:18px; overflow:hidden;
+    box-shadow:0 12px 32px rgba(18,24,31,.14), 0 2px 8px rgba(18,24,31,.06);
+    border:none;
+}
+.modal-content:has(.o_aqua_profile_dialog) .modal-header{
+    padding:16px 20px; border-bottom:1px solid var(--line); background:#FFFFFF;
+}
+.modal-content:has(.o_aqua_profile_dialog) .modal-header .modal-title{
+    font-size:15px; font-weight:700; color:var(--ink);
+}
+.modal-content:has(.o_aqua_profile_dialog) .o_form_button_save{
+    background:var(--blue) !important; border-color:var(--blue) !important;
+    border-radius:10px !important; font-weight:600; box-shadow:none !important;
+}
+.modal-content:has(.o_aqua_profile_dialog) .o_form_button_save:hover{ background:#1d54c9 !important; border-color:#1d54c9 !important; }
+.modal-content:has(.o_aqua_profile_dialog) .o_form_button_cancel{
+    border-radius:10px !important; font-weight:600; border-color:var(--line) !important; color:var(--ink-soft) !important;
+}
+.modal-content:has(.o_aqua_profile_dialog) .o_form_button_cancel:hover{ background:var(--bg-page) !important; color:var(--ink) !important; }
+
+/* Sheet content */
+.o_aqua_profile_dialog{ padding:28px 32px !important; font-family:inherit; }
+.o_aqua_profile_dialog .oe_title label,
+.o_aqua_profile_dialog .o_form_label{
+    font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-mute);
+}
+.o_aqua_profile_dialog .oe_title h1{ margin-top:4px; }
+.o_aqua_profile_dialog .oe_title h1 .o_field_widget input{
+    font-size:26px; font-weight:700; color:var(--ink); border:none; padding:2px 0;
+}
+.o_aqua_profile_dialog .o_group .o_field_widget input{
+    border:none; border-bottom:1px solid var(--line); border-radius:0; padding:6px 2px;
+    font-size:14px; color:var(--ink); transition:border-color .15s ease, box-shadow .15s ease;
+}
+.o_aqua_profile_dialog .o_group .o_field_widget input:focus{
+    border-bottom-color:var(--blue); box-shadow:0 1px 0 0 var(--blue);
+    outline:none;
+}
+/* Circular avatar to match the dashboard's own topbar avatar (see
+   .profile-btn-mask), matching the dashboard's rounded style. Last time
+   this broke the built-in edit/clear (pencil/trash) hover overlay -
+   that was because the container was also given overflow:hidden, which
+   clipped the overlay off since it sits at the image's edge. Rounding
+   only the <img> itself, and leaving the container's box/overflow
+   exactly as Odoo renders it, keeps the overlay intact. */
+.o_aqua_profile_dialog .oe_avatar img{
+    border-radius:50%;
+    object-fit:cover;
+    border:1px solid var(--line);
+}
+
 /* ---- grid / card primitives ---- */
 .o_aqua_dashboard .grid{ display:grid; gap:18px; }
 .o_aqua_dashboard .g-hero{ grid-template-columns:2fr 1fr; margin-bottom:18px; }
@@ -291,10 +419,27 @@
 .o_aqua_dashboard .aqua-chart-lightbox__canvas-wrap{ position:relative; flex:1; min-height:420px; padding:20px; }
 
 /* ---- tab bar ---- */
-.o_aqua_dashboard .tabbar{ display:flex; gap:4px; background:#FFFFFF !important; border:1px solid var(--line); border-radius:16px; padding:6px; margin-bottom:20px; width:fit-content; flex-wrap:wrap; box-shadow:none !important; }
-.o_aqua_dashboard .tab{ padding:9px 16px; border-radius:11px; font-size:12.5px; font-weight:600; color:var(--ink-soft); text-decoration:none; white-space:nowrap; border:none; background:transparent; cursor:pointer; }
-.o_aqua_dashboard .tab.active{ background:var(--blue); color:#fff; }
-.o_aqua_dashboard .tab:not(.active):hover{ background:#F5F6F8; }
+.o_aqua_dashboard .tabbar{ position:relative; display:flex; gap:4px; background:#FFFFFF !important; border:1px solid var(--line); border-radius:16px; padding:6px; margin-bottom:20px; width:fit-content; flex-wrap:wrap; box-shadow:none !important; }
+.o_aqua_dashboard .tab{ position:relative; z-index:1; padding:9px 16px; border-radius:11px; font-size:12.5px; font-weight:600; color:var(--ink-soft); text-decoration:none; white-space:nowrap; border:none; background:transparent !important; cursor:pointer; transition:color .3s ease-in-out; }
+.o_aqua_dashboard .tab.active{ color:#fff; }
+.o_aqua_dashboard .tab:not(.active):hover{ background:#F5F6F8 !important; }
+
+/* Sliding highlight behind the active tab - adapted from the
+   Uiverse.io glass-radio-group (by chase2k25) for the bouncy slide
+   animation, but kept to the exact original flat blue (no gradient,
+   no glow) and driven by left/width measured in JS instead of a
+   fixed translateX(n * 100%) since these tabs aren't equal width. */
+.o_aqua_dashboard .tab-glider{
+    position:absolute;
+    top:6px; bottom:6px; left:0;
+    border-radius:11px;
+    z-index:0;
+    pointer-events:none;
+    background:var(--blue);
+    transition:
+        transform .5s cubic-bezier(.37,1.95,.66,.56),
+        width .35s cubic-bezier(.37,1.95,.66,.56);
+}
 
 /* ---- KPI tiles ----
    Icon badges are rounded squares — matches the reference mockups' icon
@@ -583,3 +728,19 @@
 .o_aqua_dashboard .aqua-drill-table tbody tr:hover { background:var(--blue-tint); }
 .o_aqua_dashboard .aqua-drill-table tbody td { padding:10px 16px; color:#4a5568; }
 .o_aqua_dashboard .aqua-badge { font-size:10.5px; font-weight:600; padding:3px 9px; border-radius:20px; display:inline-block; background:#F1F3F5; color:var(--ink-soft); }
+/* Aqua fluid cursor (see js/fluid_cursor.js): a full-viewport canvas that
+   renders the WebGL liquid trail. It sits fixed over the whole page so the
+   effect follows the pointer anywhere on the dashboard, but pointer-events
+   is off so it never intercepts clicks, and its z-index is kept low so
+   Odoo's own dropdowns/dialogs/notifications (which start around 1000+)
+   always render above it. mix-blend-mode:screen lets the water tint add
+   light onto the page instead of a flat opaque layer sitting on top. */
+.o_aqua_fluid_cursor {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 3;
+    mix-blend-mode: screen;
+}
