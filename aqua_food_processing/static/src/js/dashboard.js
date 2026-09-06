@@ -8,7 +8,6 @@ import { KpiTile } from "../components/kpi_tile/kpi_tile";
 import { ChartWidget } from "../components/chart_widget/chart_widget";
 import { DrillPanel } from "../components/drill_panel/drill_panel";
 import { FilterBar } from "../components/filter_bar/filter_bar";
-import { initFluidCursor } from "./fluid_cursor";
 
 class AquaDashboard extends Component {
     static template = "aqua_food_processing.DashboardMain";
@@ -212,8 +211,6 @@ class AquaDashboard extends Component {
         onMounted(() => this._loadWeather());
         onMounted(() => this._initCountUpObserver());
         onWillUnmount(() => this._teardownCountUpObserver());
-        onMounted(() => this._initFluidCursor());
-        onWillUnmount(() => this._teardownFluidCursor());
 
         // ---- Tab bar glider (blue sliding highlight behind active tab) ----
         this.tabbarRef = useRef("tabbar");
@@ -1150,60 +1147,6 @@ class AquaDashboard extends Component {
             this._countUpObserver = null;
         }
         (this._countUpFrames instanceof WeakMap) && null; // no-op, WeakMap needs no explicit cleanup
-    }
-
-    // ==================================================================
-    //  Aqua fluid cursor
-    // ------------------------------------------------------------------
-    //  Full-viewport WebGL "liquid" trail (see js/fluid_cursor.js) that
-    //  follows the pointer anywhere over the dashboard, tinted to a
-    //  water/teal palette instead of the stock rainbow. The canvas is
-    //  created here (not in the XML template) since it's a page-level
-    //  overlay rather than dashboard content: fixed position, full
-    //  viewport size, pointer-events disabled so it never blocks clicks
-    //  on the cards/buttons underneath, and a modest z-index (see
-    //  .o_aqua_fluid_cursor in dashboard.css) so it stays below Odoo's
-    //  own dropdowns/dialogs/notifications.
-    // ==================================================================
-    _initFluidCursor() {
-        const root = document.querySelector(".o_aqua_dashboard");
-        if (!root || typeof window === "undefined") return;
-        // One canvas for the whole page - if a previous instance is still
-        // around (e.g. fast tab-switch remount), reuse it instead of
-        // stacking up duplicate WebGL contexts.
-        let canvas = document.querySelector(".o_aqua_fluid_cursor");
-        if (!canvas) {
-            canvas = document.createElement("canvas");
-            canvas.className = "o_aqua_fluid_cursor";
-            document.body.appendChild(canvas);
-        }
-        this._fluidCursorCanvas = canvas;
-        try {
-            this._fluidCursorDestroy = initFluidCursor(canvas, {
-                densityDissipation: 3.5,
-                velocityDissipation: 2,
-                pressure: 0.1,
-                curl: 3,
-                splatRadius: 0.2,
-                splatForce: 6000,
-                transparent: true,
-            });
-        } catch (e) {
-            // eslint-disable-next-line no-console
-            console.error("[aqua fluid cursor] failed to start:", e);
-            this._fluidCursorDestroy = null;
-        }
-    }
-
-    _teardownFluidCursor() {
-        if (this._fluidCursorDestroy) {
-            this._fluidCursorDestroy();
-            this._fluidCursorDestroy = null;
-        }
-        if (this._fluidCursorCanvas) {
-            this._fluidCursorCanvas.remove();
-            this._fluidCursorCanvas = null;
-        }
     }
 
     _runCountUp(el) {

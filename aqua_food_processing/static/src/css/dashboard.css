@@ -75,10 +75,12 @@
    mode body text, and re-using it for these "always-dark chip" components
    would turn them into light chips with invisible white-on-white text.
 
-   Not covered: the "My Profile" edit dialog (aqua_profile_form_views.xml)
-   is a standard Odoo form dialog rendered outside this component's DOM
-   tree (opened via the action service), so it isn't reachable through this
-   scoped class and stays on the light theme. ========================== */
+   The "My Profile" edit dialog (aqua_profile_form_views.xml) is a
+   standard Odoo form dialog rendered outside this component's DOM tree
+   (opened via the action service), so it isn't reachable through this
+   scoped class either - it has its own dark-mode block further down,
+   hooked off the body.o_aqua_dashboard_dark_scrollbar class instead. See
+   the "My Profile" dialog section below. ========================== */
 .o_aqua_dashboard.o_aqua_dashboard--dark{
   --bg-page:#000000; --card:#000000; --ink:#F5F5F5; --ink-soft:#9B9B9B; --ink-mute:#6B6B6B; --line:#2A2A2A;
   --surface-soft:#141414; --track:#242424;
@@ -514,7 +516,14 @@ body.o_aqua_dashboard_dark_scrollbar ::-webkit-scrollbar-corner{ background:#000
    other dialog in the backend. :has() needs a fairly recent browser
    (Chrome 105+/Safari 15.4+/Firefox 121+) to restyle the modal chrome
    (header/footer); the sheet content below restyles regardless since it
-   targets .o_aqua_profile_dialog directly. ---- */
+   targets .o_aqua_profile_dialog directly.
+
+   NOTE: because this dialog lives outside .o_aqua_dashboard, none of the
+   var(--ink)/var(--line)/var(--blue)/var(--bg-page) references below
+   actually resolve (those custom properties are only defined on
+   .o_aqua_dashboard and don't reach this far up the DOM) - they silently
+   fall back to Odoo's own base styling, which happens to look right in
+   light mode. See the dark-mode block further down for the fix. ---- */
 .modal-content:has(.o_aqua_profile_dialog){
     border-radius:18px; overflow:hidden;
     box-shadow:0 12px 32px rgba(18,24,31,.14), 0 2px 8px rgba(18,24,31,.06);
@@ -565,6 +574,92 @@ body.o_aqua_dashboard_dark_scrollbar ::-webkit-scrollbar-corner{ background:#000
     border-radius:50%;
     object-fit:cover;
     border:1px solid var(--line);
+}
+
+/* ---- "My Profile" dialog: dark mode ----
+   Previously this dialog always stayed on the light theme even with dark
+   mode on, because (as noted above) it's rendered outside
+   .o_aqua_dashboard's DOM tree, so .o_aqua_dashboard--dark's custom
+   properties never reach it.
+
+   The one piece of dark-mode state that *does* reach this far is the
+   o_aqua_dashboard_dark_scrollbar class dashboard.js already toggles on
+   <body> in step with ui.darkMode (see _syncBodyDarkScrollbar() - it's
+   applied on initial render, on every toggle, and removed on unmount, so
+   it's always in sync whenever this dialog can be open). Hooking off that
+   same class here, rather than adding a new one, avoids touching the JS
+   at all. Colors below are hardcoded to match .o_aqua_dashboard--dark's
+   palette (--bg-page/--card:#000, --ink:#F5F5F5, --ink-soft:#9B9B9B,
+   --ink-mute:#6B6B6B, --line:#2A2A2A, --blue stays the same in both
+   themes) since, per the note above, the custom properties themselves
+   aren't available to copy from here. */
+body.o_aqua_dashboard_dark_scrollbar .modal-content:has(.o_aqua_profile_dialog){
+    background:#000000;
+}
+/* The white card visible around Name/avatar/fields turned out to be
+   Odoo's own .o_form_sheet_bg/.o_form_sheet wrapper (a "paper sheet"
+   look core Odoo gives every form, with its own background-color) -
+   .o_aqua_profile_dialog doesn't land on that exact element, it lands
+   one level up, so setting a background on .o_aqua_profile_dialog alone
+   left this white card showing through underneath. Reaching it through
+   the same :has()-anchored pattern as the header/footer above, with
+   !important since core Odoo's own rule otherwise wins. */
+body.o_aqua_dashboard_dark_scrollbar .modal-content:has(.o_aqua_profile_dialog) .modal-body,
+body.o_aqua_dashboard_dark_scrollbar .modal-content:has(.o_aqua_profile_dialog) .o_form_sheet_bg,
+body.o_aqua_dashboard_dark_scrollbar .modal-content:has(.o_aqua_profile_dialog) .o_form_sheet{
+    background:#000000 !important; box-shadow:none !important;
+}
+body.o_aqua_dashboard_dark_scrollbar .modal-content:has(.o_aqua_profile_dialog) .modal-header{
+    background:#000000; border-bottom-color:#2A2A2A;
+}
+body.o_aqua_dashboard_dark_scrollbar .modal-content:has(.o_aqua_profile_dialog) .modal-header .modal-title{
+    color:#F5F5F5;
+}
+/* Header icon buttons (close X, and the expand/fullscreen toggle next to
+   it) are dark SVG/font-icon glyphs meant for a light header - invisible
+   on our black one. Bootstrap's .btn-close is a masked background-image;
+   Odoo's expand toggle is a plain icon font glyph inheriting text color -
+   covering both generically (any button in the header, not just
+   .btn-close) rather than hardcoding the expand button's exact class.
+   Also forcing opacity:1 - by default that icon is only fully opaque on
+   :hover (a subtle low-opacity-until-hover treatment that reads fine on
+   a light header but leaves it looking "missing" until hovered on a
+   black one), so it needs to stay fully visible at rest here too. */
+body.o_aqua_dashboard_dark_scrollbar .modal-content:has(.o_aqua_profile_dialog) .modal-header .btn-close,
+body.o_aqua_dashboard_dark_scrollbar .modal-content:has(.o_aqua_profile_dialog) .modal-header button,
+body.o_aqua_dashboard_dark_scrollbar .modal-content:has(.o_aqua_profile_dialog) .modal-header button i{
+    opacity:1 !important;
+}
+body.o_aqua_dashboard_dark_scrollbar .modal-content:has(.o_aqua_profile_dialog) .modal-header .btn-close,
+body.o_aqua_dashboard_dark_scrollbar .modal-content:has(.o_aqua_profile_dialog) .modal-header button:not(.btn-close){
+    filter:invert(1) brightness(1.8);
+}
+body.o_aqua_dashboard_dark_scrollbar .modal-content:has(.o_aqua_profile_dialog) .modal-footer{
+    background:#000000; border-top-color:#2A2A2A;
+}
+body.o_aqua_dashboard_dark_scrollbar .modal-content:has(.o_aqua_profile_dialog) .o_form_button_cancel{
+    border-color:#2A2A2A !important; color:#9B9B9B !important;
+}
+body.o_aqua_dashboard_dark_scrollbar .modal-content:has(.o_aqua_profile_dialog) .o_form_button_cancel:hover{
+    background:#141414 !important; color:#F5F5F5 !important;
+}
+/* Sheet content - covers browsers without :has() support too, since these
+   target .o_aqua_profile_dialog directly rather than the modal chrome. */
+body.o_aqua_dashboard_dark_scrollbar .o_aqua_profile_dialog{
+    background:#000000 !important;
+}
+body.o_aqua_dashboard_dark_scrollbar .o_aqua_profile_dialog .oe_title label,
+body.o_aqua_dashboard_dark_scrollbar .o_aqua_profile_dialog .o_form_label{
+    color:#6B6B6B;
+}
+body.o_aqua_dashboard_dark_scrollbar .o_aqua_profile_dialog .oe_title h1 .o_field_widget input{
+    color:#F5F5F5; background:transparent;
+}
+body.o_aqua_dashboard_dark_scrollbar .o_aqua_profile_dialog .o_group .o_field_widget input{
+    color:#F5F5F5; background:transparent; border-bottom-color:#2A2A2A;
+}
+body.o_aqua_dashboard_dark_scrollbar .o_aqua_profile_dialog .oe_avatar img{
+    border-color:#2A2A2A;
 }
 
 /* ---- grid / card primitives ---- */
@@ -942,19 +1037,3 @@ body.o_aqua_dashboard_dark_scrollbar ::-webkit-scrollbar-corner{ background:#000
 .o_aqua_dashboard .aqua-drill-table tbody tr:hover { background:var(--blue-tint); }
 .o_aqua_dashboard .aqua-drill-table tbody td { padding:10px 16px; color:#4a5568; }
 .o_aqua_dashboard .aqua-badge { font-size:10.5px; font-weight:600; padding:3px 9px; border-radius:20px; display:inline-block; background:#F1F3F5; color:var(--ink-soft); }
-/* Aqua fluid cursor (see js/fluid_cursor.js): a full-viewport canvas that
-   renders the WebGL liquid trail. It sits fixed over the whole page so the
-   effect follows the pointer anywhere on the dashboard, but pointer-events
-   is off so it never intercepts clicks, and its z-index is kept low so
-   Odoo's own dropdowns/dialogs/notifications (which start around 1000+)
-   always render above it. mix-blend-mode:screen lets the water tint add
-   light onto the page instead of a flat opaque layer sitting on top. */
-.o_aqua_fluid_cursor {
-    position: fixed;
-    inset: 0;
-    width: 100vw;
-    height: 100vh;
-    pointer-events: none;
-    z-index: 3;
-    mix-blend-mode: screen;
-}
