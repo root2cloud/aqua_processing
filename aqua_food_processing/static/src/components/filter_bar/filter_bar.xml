@@ -14,10 +14,12 @@
       <i class="fa fa-chevron-down"/>
     </div>
     <t t-if="state.openMenu === 'period'">
-      <div class="aqua-dropdown-panel">
+      <div class="aqua-dropdown-panel" t-ref="periodPanel" t-on-mouseleave="() => this.onPanelMouseLeave('period')">
+        <div class="aqua-dropdown-glider" t-attf-style="transform:translateY({{gliders.period.top}}px);height:{{gliders.period.height}}px;visibility:{{gliders.period.ready ? 'visible' : 'hidden'}};"/>
         <t t-foreach="periodOptions" t-as="opt" t-key="opt.value">
           <div class="aqua-dropdown-option"
                t-att-class="{ 'aqua-dropdown-option--active': state.period === opt.value }"
+               t-on-mouseenter="(ev) => this.onOptionHover('period', ev)"
                t-on-click="() => this.selectPeriod(opt.value)">
             <span t-esc="opt.label"/>
             <i t-if="state.period === opt.value" class="fa fa-check"/>
@@ -47,10 +49,12 @@
       <i class="fa fa-chevron-down"/>
     </div>
     <t t-if="state.openMenu === 'compare'">
-      <div class="aqua-dropdown-panel">
+      <div class="aqua-dropdown-panel" t-ref="comparePanel" t-on-mouseleave="() => this.onPanelMouseLeave('compare')">
+        <div class="aqua-dropdown-glider" t-attf-style="transform:translateY({{gliders.compare.top}}px);height:{{gliders.compare.height}}px;visibility:{{gliders.compare.ready ? 'visible' : 'hidden'}};"/>
         <t t-foreach="compareOptions" t-as="opt" t-key="opt.value">
           <div class="aqua-dropdown-option"
                t-att-class="{ 'aqua-dropdown-option--active': state.compare === opt.value }"
+               t-on-mouseenter="(ev) => this.onOptionHover('compare', ev)"
                t-on-click="() => this.selectCompare(opt.value)">
             <span t-esc="opt.label"/>
             <i t-if="state.compare === opt.value" class="fa fa-check"/>
