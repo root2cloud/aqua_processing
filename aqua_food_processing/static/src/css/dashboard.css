@@ -469,10 +469,10 @@ body.o_aqua_dashboard_dark_scrollbar ::-webkit-scrollbar-corner{ background:#000
    anywhere in the row (icon, "Dark mode" text, or the switch itself)
    toggles it, since a <label> forwards clicks to the checkbox it wraps. */
 .o_aqua_dashboard .aqua-profile-menu-item--toggle{ cursor:pointer; }
-/* Only the text label stretches; every span belonging to a switch (either
-   the sun/moon one below or the plain one further down) has to keep its
-   own fixed width, or it would be stretched across the whole row. */
-.o_aqua_dashboard .aqua-profile-menu-item--toggle span:not(.aqua-theme-switch):not(.aqua-toggle-switch):not(.aqua-toggle-track){ flex:1; }
+/* Only the text label stretches. Scoped to direct children on purpose:
+   the liquid cursor switch contains two dozen nested .sparkle spans, and
+   an unscoped `span` selector here would try to flex every one of them. */
+.o_aqua_dashboard .aqua-profile-menu-item--toggle > span:not(.aqua-theme-switch):not(.aqua-liquid-switch){ flex:1; }
 .o_aqua_dashboard .aqua-theme-switch{ position:relative; display:inline-block; flex-shrink:0; width:38px; height:22px; }
 .o_aqua_dashboard .aqua-theme-switch input{ opacity:0; width:0; height:0; position:absolute; }
 .o_aqua_dashboard .aqua-slider{
@@ -523,42 +523,219 @@ body.o_aqua_dashboard_dark_scrollbar ::-webkit-scrollbar-corner{ background:#000
   .o_aqua_dashboard .aqua-cloud-light, .o_aqua_dashboard .aqua-cloud-dark, .o_aqua_dashboard .aqua-star{ animation:none; }
 }
 
-/* ---- liquid cursor toggle row + plain pill switch (avatar popover) ----
-   Deliberately a plain switch rather than a second copy of the sun/moon
-   one above: that switch's whole design *is* its meaning (sun = light,
-   moon = dark), so reusing its imagery for something unrelated would be
-   misleading, and two elaborate animated switches stacked in one small
-   menu would fight each other for attention. This one is sized to
-   exactly the same 38x22 box with the same 16px knob and 16px travel, so
-   the two rows line up perfectly despite looking different.
+/* ---- liquid cursor toggle row + switch (avatar popover) ----
+   The switch itself is the "nasty-moth-15" toggle from Uiverse.io (by
+   MuhammadHasann, https://uiverse.io/MuhammadHasann/nasty-moth-15): a dark
+   pill whose knob rotates as it slides across and throws off a spray of
+   sparks in the "on" state. Ported here with every class re-namespaced
+   under an aqua- prefix so nothing can collide with the rest of the Odoo
+   backend, and with the following changes - each one either required to
+   make it work in a menu row, or a fix for something that doesn't behave
+   as its author intended:
 
-   Same markup pattern as the dark mode row (a real <label> wrapping a
-   real checkbox bound to ui.liquidCursor/onToggleLiquidCursor - see
-   dashboard_templates.xml), so clicking the icon, the "Liquid cursor"
-   text or the switch itself all toggle it, and it's keyboard-reachable
-   and announced as a checkbox for free. */
-.o_aqua_dashboard .aqua-toggle-switch{ position:relative; display:inline-block; flex-shrink:0; width:38px; height:22px; }
-.o_aqua_dashboard .aqua-toggle-switch input{ opacity:0; width:0; height:0; position:absolute; }
-.o_aqua_dashboard .aqua-toggle-track{
-  position:absolute; top:0; left:0; right:0; bottom:0; cursor:pointer;
-  border-radius:22px; background:#D4D9DF; transition:background .2s ease, box-shadow .15s ease;
+   1. SCALE. The original is built around a 50px knob and works out to
+      roughly 126x66px - far too big to sit next to a line of 13px menu
+      text. Everything is driven off the two variables below instead
+      (--knob and --gap), set so the whole control lands at 42x21px (44x24
+      counting the outer ring). That's the same height as the dark mode
+      switch's 38x22 directly above it, and only a few px wider - this
+      shape is inherently longer than it is tall - so the two rows read as
+      a matched pair rather than one oversized control, and both switches
+      end flush right at the same edge. All the original's fixed lengths
+      (padding, icon size, ring and glow offsets) are scaled by the same
+      ~0.32 factor.
+
+   2. STATE SELECTOR. The original switches state with
+      `@container style(--checked: true)`, a style container query. Those
+      are Chromium/Safari-only - in Firefox the query never matches, so
+      the switch would silently never show its "on" state at all. The
+      markup already has the checkbox as a sibling of the track, so a
+      plain `input:checked ~ .aqua-liquid-switch__track` does the same job
+      with no support caveats, and that's what's used throughout below.
+
+   3. DUPLICATE @keyframes. The original declares `@keyframes sparkle`
+      twice - once for the resting state, once inside the container query
+      for the "on" state. @keyframes are global and are not scoped by a
+      container query, so the second declaration simply replaces the first
+      for the whole document and the resting state never gets its own
+      animation. The two are split into distinctly-named keyframes here
+      (aqua-liquid-sparkle / aqua-liquid-sparkle-out) so each state
+      animates the way the original's source reads.
+
+   4. SPARK TRAVEL. The "on" sparks originally travel 5000% of their own
+      width, which at the original's scale keeps them roughly within the
+      switch. Because the sparks are what stays put while the knob moves,
+      that distance does NOT scale down with the rest of the control -
+      left alone it would fling them ~150px out of a 50px switch, and
+      since .aqua-profile-panel doesn't clip its overflow they'd spray out
+      across the dashboard. Pulled back to 900% so they still clearly
+      escape the knob without leaving the popover.
+
+   5. INVALID box-shadow. The knob's shadow ends in
+      `inset 0 0 0.5rem 0.75rem var(--second)`, and --second is never
+      defined anywhere in the original. An unresolvable var() invalidates
+      the entire declaration at computed-value time, so the knob currently
+      renders with no inset shadow at all, losing the blue underglow the
+      first half of that same declaration was for. The undefined half is
+      dropped and the valid half kept (scaled).
+
+   6. HIDING THE CHECKBOX. `display:none` in the original takes the input
+      out of the tab order entirely. Hidden with opacity/zero-size instead
+      (the same way the dark mode switch above does it) so the row stays
+      keyboard-operable, with a focus ring on the track to match. */
+.o_aqua_dashboard .aqua-liquid-switch{
+  /* Palette kept exactly as the original's - the gradients, borders and
+     glows below are all tuned against these four values, so swapping in
+     the dashboard's own --blue would mean re-tuning every one of them. */
+  --primary:#54a8fc;
+  --light:#d9d9d9;
+  --dark:#121212;
+  --gray:#414344;
+  /* The two knobs the whole control is sized from (see note 1 above).
+     Track content width is (--knob + --gap) * 2, and the "on" knob
+     travels (--gap * 2) + 100%, which is exactly that width minus one
+     knob - so the knob lands flush against the far end either way. */
+  --knob:16px;
+  --gap:2px;
+  /* Sparks are sized in raw px in the original (1-2px against a 50px
+     knob, i.e. fine specks). Those lengths are the one thing that does
+     NOT come out of --knob, so at this control's scale they'd cover the
+     whole knob and bury the icon underneath. --spark reapplies the same
+     ~0.36 reduction the rest of the control got; each spark's own
+     relative size still comes from the --width in its inline style. */
+  --spark:.55;
+  position:relative;
+  /* Creates a stacking context so the track's z-index:-10 glow layers
+     stay tucked behind the switch instead of falling behind the popover
+     itself. */
+  z-index:0;
+  display:inline-flex;
+  align-items:center;
+  flex-shrink:0;
+  line-height:0;
 }
-.o_aqua_dashboard .aqua-toggle-track::before{
-  content:""; position:absolute; height:16px; width:16px; left:3px; bottom:3px;
-  border-radius:50%; background:#FFFFFF; box-shadow:0 1px 3px rgba(18,24,31,.3);
-  transition:transform .2s cubic-bezier(.16,1,.3,1);
+.o_aqua_dashboard .aqua-liquid-switch input{ opacity:0; width:0; height:0; position:absolute; }
+.o_aqua_dashboard .aqua-liquid-switch__track{
+  cursor:pointer;
+  position:relative;
+  display:inline-block;
+  padding:2px;
+  width:calc((var(--knob) + var(--gap)) * 2);
+  height:var(--knob);
+  background-color:var(--dark);
+  border:1px solid #777777;
+  /* No bottom border, on the track and the knob alike - the original's
+     lighting reads as coming from above, and a full border flattens it. */
+  border-bottom:0;
+  border-radius:9999px;
+  /* Bootstrap sets border-box globally in the Odoo backend; this control
+     is laid out in the original's content-box terms, so it has to opt
+     back out or the padding would eat into the knob's travel. */
+  box-sizing:content-box;
+  transition:all .3s ease-in-out;
 }
-.o_aqua_dashboard .aqua-toggle-switch input:checked + .aqua-toggle-track{ background:var(--blue); }
-.o_aqua_dashboard .aqua-toggle-switch input:checked + .aqua-toggle-track::before{ transform:translateX(16px); }
-.o_aqua_dashboard .aqua-toggle-switch input:focus-visible + .aqua-toggle-track{ box-shadow:0 0 0 3px var(--blue-tint); }
-/* The light-mode "off" grey is a mid tone picked against a white popover;
-   on the dark popover it reads as a bright, almost-on-looking pill, so
-   the off state gets its own darker value there (the on state keeps
-   --blue, which works on both). */
-.o_aqua_dashboard.o_aqua_dashboard--dark .aqua-toggle-track{ background:#3A3A3A; }
+/* Outer ring. Sits behind everything and is what picks up the blue cast
+   in the "on" state. */
+.o_aqua_dashboard .aqua-liquid-switch__track::before{
+  content:"";
+  position:absolute;
+  z-index:-10;
+  top:50%; left:50%;
+  transform:translate(-50%, -50%);
+  width:calc(100% + 4px);
+  height:calc(100% + 4px);
+  background-color:var(--gray);
+  border:1px solid #777777;
+  border-bottom:0;
+  border-radius:9999px;
+  transition:all .3s ease-in-out;
+}
+/* The blue-from-above wash, revealed only once the track's own opaque
+   background fades out in the "on" state. */
+.o_aqua_dashboard .aqua-liquid-switch__track::after{
+  content:"";
+  position:absolute;
+  z-index:-10;
+  top:50%; left:50%;
+  transform:translate(-50%, -50%);
+  width:100%; height:100%;
+  background-image:radial-gradient(circle at 50% -100%, rgb(58, 155, 252) 0%, rgba(12, 12, 12, 1) 80%);
+  border-radius:9999px;
+}
+.o_aqua_dashboard .aqua-liquid-switch__knob{
+  position:relative;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  box-sizing:border-box;
+  width:var(--knob);
+  height:var(--knob);
+  background-image:radial-gradient(circle at 50% 0%, #666666 0%, var(--gray) 100%);
+  border:1px solid #aaaaaa;
+  border-bottom:0;
+  border-radius:9999px;
+  box-shadow:inset 0 -1px 1px var(--primary);
+  transition:transform .3s ease-in-out;
+  /* Sparks are held inside the knob at rest and released in the "on"
+     state (see the overflow:visible further down). */
+  overflow:clip;
+}
+.o_aqua_dashboard .aqua-liquid-switch__knob .sparkle{
+  position:absolute;
+  top:50%; left:50%;
+  display:block;
+  /* --width/--deg/--duration come from each span's own inline style in
+     dashboard_templates.xml, which is what gives every spark its own
+     size, direction and speed. The `rotate` property is applied before
+     `transform`, so the translate below runs in each spark's own rotated
+     frame - that's the whole mechanism by which they fan outwards. */
+  width:calc(var(--width) * var(--spark) * 1px);
+  aspect-ratio:1;
+  background-color:var(--light);
+  border-radius:50%;
+  transform-origin:50% 50%;
+  rotate:calc(1deg * var(--deg));
+  transform:translate(-50%, -50%);
+  animation:aqua-liquid-sparkle calc(100s / var(--duration)) linear calc(0s / var(--duration)) infinite;
+}
+@keyframes aqua-liquid-sparkle{
+  to{ width:calc(var(--width) * var(--spark) * .5px); transform:translate(2000%, -50%); }
+}
+.o_aqua_dashboard .aqua-liquid-switch__knob .icon{ width:7px; height:7px; fill:var(--light); flex-shrink:0; }
+
+/* ---- "on" state ---- */
+.o_aqua_dashboard .aqua-liquid-switch input:checked ~ .aqua-liquid-switch__track{
+  background-color:#41434400;
+  border:1px solid #3d6970;
+  border-bottom:0;
+}
+.o_aqua_dashboard .aqua-liquid-switch input:checked ~ .aqua-liquid-switch__track::before{
+  box-shadow:0 5px 14px -10px #0080ff;
+}
+.o_aqua_dashboard .aqua-liquid-switch input:checked ~ .aqua-liquid-switch__track .aqua-liquid-switch__knob{
+  overflow:visible;
+  background-image:radial-gradient(circle at 50% 0%, #045ab1 0%, var(--primary) 100%);
+  border:1px solid var(--primary);
+  border-bottom:0;
+  transform:translateX(calc((var(--gap) * 2) + 100%)) rotate(-225deg);
+}
+.o_aqua_dashboard .aqua-liquid-switch input:checked ~ .aqua-liquid-switch__track .sparkle{
+  z-index:-10;
+  width:calc(var(--width) * var(--spark) * 1.5px);
+  background-color:#acacac;
+  animation:aqua-liquid-sparkle-out calc(100s / var(--duration)) linear calc(10s / var(--duration)) infinite;
+}
+@keyframes aqua-liquid-sparkle-out{
+  to{ width:calc(var(--width) * var(--spark) * 1px); transform:translate(900%, -50%); }
+}
+.o_aqua_dashboard .aqua-liquid-switch input:focus-visible ~ .aqua-liquid-switch__track{
+  box-shadow:0 0 0 3px var(--blue-tint);
+}
 @media (prefers-reduced-motion: reduce){
-  .o_aqua_dashboard .aqua-toggle-track,
-  .o_aqua_dashboard .aqua-toggle-track::before{ transition:none; }
+  .o_aqua_dashboard .aqua-liquid-switch__knob .sparkle{ animation:none; }
+  .o_aqua_dashboard .aqua-liquid-switch__track,
+  .o_aqua_dashboard .aqua-liquid-switch__track::before,
+  .o_aqua_dashboard .aqua-liquid-switch__knob{ transition:none; }
 }
 
 /* ---- "My Profile" edit dialog (views/dashboard/aqua_profile_form_views.xml)
