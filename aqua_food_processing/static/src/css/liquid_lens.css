@@ -1,0 +1,38 @@
+/* ==========================================================================
+   LIQUID RIPPLE
+   A full-surface WebGL fluid simulation driven from liquid_lens.js
+   (_initLiquidLens / _liquidTick) that stirs the *real* dashboard content
+   wherever the cursor moves - see the t-ref="liquidLens" /
+   t-ref="liquidLensCanvas" markup in liquid_lens.xml, and the long comment
+   above _initLiquidLens() in liquid_lens.js for how it maps to the
+   reference effect (https://liquid-image.learnframer.site/) and its
+   underlying CodePen. There is deliberately no lens, frame, or boundary
+   of any kind here - this div simply covers its parent (.o_aqua_dashboard)
+   edge-to-edge, and the WebGL canvas inside it renders fully transparent
+   except where the fluid simulation's "dye" field is currently disturbed.
+   It sits ABOVE .aqua-main in stacking order only so it isn't hidden by
+   any card's own box-shadow/blur; it does NOT read from .aqua-main
+   visually, it reads from a periodic html2canvas screenshot uploaded as a
+   texture instead (see _liquidTakeSnapshot).
+
+   Scoped under .o_aqua_dashboard rather than a class of its own root
+   element, since <LiquidLens/> always mounts as the first child of
+   .o_aqua_dashboard (see dashboard_templates.xml) and .o_aqua_dashboard is
+   also what defines the --bg-page/--card/etc. custom properties this
+   effect's neighbouring dashboard content relies on - keeping the same
+   selector this rule used before the split means no visual change.
+   ========================================================================== */
+.o_aqua_dashboard .aqua-liquid-lens{
+  position:absolute;
+  inset:0;
+  z-index:2;
+  /* Never intercepts clicks/hovers - every real dashboard control keeps
+     working exactly as if this effect weren't there. */
+  pointer-events:none;
+  overflow:hidden;
+}
+.o_aqua_dashboard .aqua-liquid-lens canvas{
+  position:absolute;
+  top:0; left:0;
+  display:block;
+}

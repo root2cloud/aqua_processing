@@ -2,23 +2,14 @@
 <templates xml:space="preserve">
     <t t-name="aqua_food_processing.DashboardMain">
         <div class="o_aqua_dashboard" t-att-class="{ 'o_aqua_dashboard--dark': ui.darkMode }">
-            <!-- Liquid ripple - a WebGL fluid simulation, see the long
-                 comment above _initLiquidLens() in dashboard.js for the
-                 full explanation and how it maps to the reference effect
-                 (https://liquid-image.learnframer.site/). Every couple of
-                 seconds it grabs a fresh html2canvas snapshot of the
-                 *real* dashboard (every card, chart, gap - not a fake
-                 background image) and uploads it as a texture; every
-                 animation frame the fluid sim displaces that texture
-                 per-pixel wherever a cursor-seeded velocity/dye field is
-                 still disturbed, and is fully transparent everywhere
-                 else. There is no lens shape here: the div below covers
-                 the whole dashboard and only ever shows through where
-                 content is actively rippling. pointer-events:none so it
-                 never blocks clicks on the real UI it's disturbing. -->
-            <div class="aqua-liquid-lens" t-ref="liquidLens">
-                <canvas t-ref="liquidLensCanvas"></canvas>
-            </div>
+            <!-- Liquid ripple - a WebGL fluid simulation, now its own
+                 component (see ../components/liquid_lens/liquid_lens.js
+                 for the full explanation and how it maps to the reference
+                 effect, https://liquid-image.learnframer.site/). It reads
+                 this <div class="o_aqua_dashboard"> as its "root" (its own
+                 rendered element's parentElement), so it must stay the
+                 FIRST child here, right where the raw markup used to sit. -->
+            <LiquidLens/>
             <div class="aqua-main">
 
                 <!-- ══════════════════════ TOPBAR ══════════════════════ -->
