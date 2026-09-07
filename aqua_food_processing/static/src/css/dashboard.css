@@ -54,9 +54,46 @@
   min-height:100%;
   width:100%;
   box-sizing:border-box;
+  /* Positioned ancestor for .aqua-liquid-lens below - the lens is moved
+     with a CSS transform computed in JS against this element's own
+     bounding box, so it can roam anywhere over the dashboard (every tab,
+     every card gap), not just one fixed image. */
+  position:relative;
 }
 .o_aqua_dashboard *{ box-sizing:border-box; }
-.o_aqua_dashboard .aqua-main{ padding:26px 48px 60px; max-width:1400px; margin:0 auto; }
+.o_aqua_dashboard .aqua-main{ padding:26px 48px 60px; max-width:1400px; margin:0 auto; position:relative; z-index:1; }
+
+/* ==========================================================================
+   LIQUID RIPPLE
+   A full-surface WebGL fluid simulation driven from dashboard.js
+   (_initLiquidLens / _liquidTick) that stirs the *real* dashboard content
+   wherever the cursor moves - see the t-ref="liquidLens" /
+   t-ref="liquidLensCanvas" markup at the top of dashboard_templates.xml,
+   and the long comment above _initLiquidLens() for how it maps to the
+   reference effect (https://liquid-image.learnframer.site/) and its
+   underlying CodePen. There is deliberately no lens, frame, or boundary
+   of any kind here - this div simply covers the dashboard edge-to-edge,
+   and the WebGL canvas inside it renders fully transparent except where
+   the fluid simulation's "dye" field is currently disturbed. It sits
+   ABOVE .aqua-main in stacking order only so it isn't hidden by any
+   card's own box-shadow/blur; it does NOT read from .aqua-main visually,
+   it reads from a periodic html2canvas screenshot uploaded as a texture
+   instead (see _liquidTakeSnapshot).
+   ========================================================================== */
+.o_aqua_dashboard .aqua-liquid-lens{
+  position:absolute;
+  inset:0;
+  z-index:2;
+  /* Never intercepts clicks/hovers - every real dashboard control keeps
+     working exactly as if this effect weren't there. */
+  pointer-events:none;
+  overflow:hidden;
+}
+.o_aqua_dashboard .aqua-liquid-lens canvas{
+  position:absolute;
+  top:0; left:0;
+  display:block;
+}
 
 /* ==========================================================================
    DARK MODE

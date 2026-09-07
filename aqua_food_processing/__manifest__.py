@@ -88,6 +88,7 @@
             # Chart.js bundled locally - do NOT load from a CDN at runtime
             # (see chart_widget.js for why). Must load before chart_widget.js.
             'aqua_food_processing/static/src/lib/chartjs/chart.umd.js',
+            'aqua_food_processing/static/src/lib/html2canvas/html2canvas.min.js',
             'aqua_food_processing/static/src/css/dashboard.css',
             'aqua_food_processing/static/src/css/loading_indicator.css',
             'aqua_food_processing/static/src/components/kpi_tile/kpi_tile.js',
