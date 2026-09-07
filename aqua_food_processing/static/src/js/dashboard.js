@@ -65,13 +65,39 @@ class AquaDashboard extends Component {
             // straight after this useState() call, so the very first
             // render already carries the right value (no light-mode flash).
             darkMode: false,
+            // Liquid cursor toggle, sitting in the same avatar popover
+            // directly under the dark mode switch (see
+            // onToggleLiquidCursor() below). Drives the t-if on
+            // <LiquidLens/> in dashboard_templates.xml, so switching it
+            // off doesn't merely hide the effect - it unmounts the
+            // component outright, which tears down its WebGL context,
+            // render loop, html2canvas snapshot timer and pointer
+            // listeners (see _teardownLiquidLens in
+            // ../components/liquid_lens/liquid_lens.js). That matters:
+            // anyone reaching for this switch is most likely doing so
+            // because the simulation is costing them frames on a modest
+            // machine, and a merely-invisible effect would still be
+            // burning the same GPU time every frame.
+            //
+            // Defaults to ON (the effect's behaviour before this switch
+            // existed) and, like dark mode, is persisted per-browser in
+            // localStorage and restored below - before the first render,
+            // so a user who turned it off never sees it flash on for a
+            // frame while the dashboard mounts.
+            liquidCursor: true,
         });
         try {
             this.ui.darkMode = window.localStorage.getItem(AquaDashboard.DARK_MODE_STORAGE_KEY) === '1';
+            // Compared against '0' rather than '1' so that "never set"
+            // (null, i.e. a first visit or a cleared profile) keeps the
+            // default of enabled - only an explicit opt-out turns it off.
+            this.ui.liquidCursor =
+                window.localStorage.getItem(AquaDashboard.LIQUID_CURSOR_STORAGE_KEY) !== '0';
         } catch (e) {
             // localStorage can throw in locked-down/private-browsing
-            // contexts - dark mode just falls back to off (its default)
-            // rather than breaking the dashboard.
+            // contexts - dark mode and the liquid cursor just fall back
+            // to their defaults (off and on respectively) rather than
+            // breaking the dashboard.
         }
         // The native browser scrollbar (page, drill panel, inner
         // table-scroll areas) can't be reached by CSS scoped under
@@ -286,6 +312,12 @@ class AquaDashboard extends Component {
     // localStorage key for the dark mode toggle (avatar popover) - see
     // onToggleDarkMode() and the ui.darkMode restore in setup() above.
     static DARK_MODE_STORAGE_KEY = 'aqua_food_processing.dark_mode';
+    // localStorage key for the liquid cursor toggle (avatar popover) -
+    // see onToggleLiquidCursor() and the ui.liquidCursor restore in
+    // setup() above. Note the two keys store opposite defaults: dark
+    // mode is off unless the stored value is '1', the liquid cursor is
+    // on unless the stored value is '0'.
+    static LIQUID_CURSOR_STORAGE_KEY = 'aqua_food_processing.liquid_cursor';
     // Class toggled on document.body (not this.el) so the themed
     // scrollbar CSS in dashboard.css can reach the page's native
     // scrollbar - see _syncBodyDarkScrollbar() below.
@@ -550,6 +582,32 @@ class AquaDashboard extends Component {
             window.localStorage.setItem(
                 AquaDashboard.DARK_MODE_STORAGE_KEY,
                 this.ui.darkMode ? '1' : '0'
+            );
+        } catch (e) {
+            // Preference just won't persist across reloads - not worth
+            // failing the toggle itself over.
+        }
+    }
+
+    // Liquid cursor switch, directly under the dark mode row in the same
+    // avatar popover. Flips ui.liquidCursor, which the template uses as
+    // the t-if on <LiquidLens/> - so this genuinely mounts/unmounts the
+    // effect rather than just hiding it (see the ui.liquidCursor comment
+    // in setup() for why that distinction matters). The component's own
+    // onWillUnmount does all the cleanup - cancels its animation frame
+    // and snapshot timer, drops its pointer/resize listeners, deletes
+    // every GPU resource and releases the WebGL context - and a fresh
+    // one initialises itself from scratch when this is switched back on,
+    // so nothing extra is needed here beyond the flag and persisting it.
+    // Left open (like the dark mode row) rather than closing the popover
+    // on click, so the difference can be compared back and forth without
+    // reopening the menu each time.
+    onToggleLiquidCursor() {
+        this.ui.liquidCursor = !this.ui.liquidCursor;
+        try {
+            window.localStorage.setItem(
+                AquaDashboard.LIQUID_CURSOR_STORAGE_KEY,
+                this.ui.liquidCursor ? '1' : '0'
             );
         } catch (e) {
             // Preference just won't persist across reloads - not worth

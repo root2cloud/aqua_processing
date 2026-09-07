@@ -8,8 +8,19 @@
                  effect, https://liquid-image.learnframer.site/). It reads
                  this <div class="o_aqua_dashboard"> as its "root" (its own
                  rendered element's parentElement), so it must stay the
-                 FIRST child here, right where the raw markup used to sit. -->
-            <LiquidLens/>
+                 FIRST child here, right where the raw markup used to sit.
+
+                 The t-if is the "Liquid cursor" switch in the avatar
+                 popover below (ui.liquidCursor / onToggleLiquidCursor).
+                 It's deliberately a t-if rather than a CSS class or a
+                 hidden attribute: unmounting the component is what
+                 actually stops the WebGL render loop and the periodic
+                 html2canvas snapshot, which is the whole point of
+                 offering the switch. Owl leaves only a text anchor node
+                 in its place while off, so this stays the first *element*
+                 child either way and the parentElement lookup above is
+                 unaffected. -->
+            <LiquidLens t-if="ui.liquidCursor"/>
             <div class="aqua-main">
 
                 <!-- ══════════════════════ TOPBAR ══════════════════════ -->
@@ -118,6 +129,24 @@
                                                         <svg id="aqua-star-4" class="aqua-star" viewBox="0 0 20 20"><path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z"/></svg>
                                                     </div>
                                                 </div>
+                                            </span>
+                                        </label>
+                                        <!-- Liquid cursor switch. Same row
+                                             shape as the dark mode one above
+                                             (a real <label> wrapping a real
+                                             checkbox, so a click anywhere in
+                                             the row toggles it), but with the
+                                             plain pill switch rather than the
+                                             sun/moon one - that switch's
+                                             imagery is specific to what it
+                                             controls and would read as
+                                             nonsense here. -->
+                                        <label class="aqua-profile-menu-item aqua-profile-menu-item--toggle">
+                                            <i class="fa fa-tint"/>
+                                            <span>Liquid cursor</span>
+                                            <span class="aqua-toggle-switch">
+                                                <input type="checkbox" t-att-checked="ui.liquidCursor" t-on-change="onToggleLiquidCursor"/>
+                                                <span class="aqua-toggle-track"/>
                                             </span>
                                         </label>
                                     </div>
