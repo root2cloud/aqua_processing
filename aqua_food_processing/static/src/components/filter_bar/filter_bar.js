@@ -46,6 +46,17 @@ export class FilterBar extends Component {
         // which covers "just opened" and "hovering a different row".
         this.periodPanelRef = useRef("periodPanel");
         this.comparePanelRef = useRef("comparePanel");
+        // Refs for the two custom-range <input type="date"> fields. The
+        // pill's own click handler (openDatePicker below) opens the native
+        // picker on these directly, instead of leaving that job to the
+        // input's built-in calendar-picker-indicator button — see the CSS
+        // comment on ::-webkit-calendar-picker-indicator for why: that
+        // button carries its own hard-coded "Show date picker" tooltip that
+        // no title/CSS can restyle, so it's disabled (pointer-events:none)
+        // and this click handler takes over opening the picker, letting the
+        // pill's [data-aqua-tooltip] be the only tooltip a person ever sees.
+        this.customFromInput = useRef("customFromInput");
+        this.customToInput = useRef("customToInput");
         this.gliders = useState({
             period:  { top: 0, height: 0, ready: false },
             compare: { top: 0, height: 0, ready: false },
@@ -154,5 +165,28 @@ export class FilterBar extends Component {
     onCustomToChange(ev) {
         this.state.customTo = ev.target.value;
         if (this.state.customFrom && this.state.customTo) this._emit();
+    }
+
+    // Opens the native date picker for whichever custom-range input the
+    // person clicked on (name is "customFromInput" or "customToInput").
+    // showPicker() is the standard, user-activation-gated API for this;
+    // older browsers without it (Safari, at time of writing) just fall back
+    // to focusing the field, which still lets someone type a date even if
+    // it can't pop the calendar open on click.
+    openDatePicker(refName) {
+        const input = (refName === "customFromInput" ? this.customFromInput : this.customToInput).el;
+        if (!input) return;
+        if (typeof input.showPicker === "function") {
+            try {
+                input.showPicker();
+                return;
+            } catch {
+                // showPicker() throws if not called from direct user
+                // activation (e.g. re-triggered programmatically) - fall
+                // through to focus() below rather than leaving the click
+                // silently doing nothing.
+            }
+        }
+        input.focus();
     }
 }

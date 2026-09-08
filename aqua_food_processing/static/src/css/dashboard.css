@@ -48,6 +48,13 @@
   --coral:#E2543A; --coral-tint:#FDEAE6; --purple:#7C6CF0; --purple-tint:#EFEDFE; --green:#3AA655; --green-tint:#E7F6EA;
   --radius-lg:26px; --radius-md:20px; --radius-sm:14px;
 
+  /* Pin the UA theme for native form controls rendered inside the
+     dashboard (the <input type="date"> pickers in the filter bar). Without
+     this, a browser/OS running in dark mode can hand our light-themed
+     surfaces a dark-themed picker glyph - light-on-white, i.e. invisible.
+     The dark modifier below flips this to `dark`. */
+  color-scheme:light;
+
   font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
   background:var(--bg-page) !important;
   color:var(--ink);
@@ -96,6 +103,13 @@
 .o_aqua_dashboard.o_aqua_dashboard--dark{
   --bg-page:#000000; --card:#000000; --ink:#F5F5F5; --ink-soft:#9B9B9B; --ink-mute:#6B6B6B; --line:#2A2A2A;
   --surface-soft:#141414; --track:#242424;
+  /* Tells the browser this subtree is dark so UA-rendered chrome follows
+     suit - most visibly the calendar panel that drops down when a date
+     picker in the filter bar is clicked, which would otherwise open as a
+     blinding white sheet over the black dashboard. The picker's little
+     calendar button itself is drawn explicitly further down rather than
+     left to the UA, so its color doesn't vary by browser version. */
+  color-scheme:dark;
 }
 /* Mini-stat KPI tiles (overview hero card) deliberately keep their
    light-mode pastel background + dark text in both themes - a darkened
@@ -237,6 +251,44 @@ body.o_aqua_dashboard_dark_scrollbar ::-webkit-scrollbar-corner{ background:#000
   padding:0; margin:0; cursor:pointer; outline:none;
 }
 .o_aqua_dashboard .pill-input input[type="date"]{ border:none; background:transparent; font:inherit; color:inherit; padding:0; outline:none; }
+/* The pill itself now owns opening the picker (see openDatePicker in
+   filter_bar.js and the ::-webkit-calendar-picker-indicator note below),
+   so it needs the same pointer cursor aqua-dropdown-trigger pills get -
+   text-input cursor stays on the field itself so typing a date still
+   looks like typing. */
+.o_aqua_dashboard .pill-input.date-pill{ cursor:pointer; }
+.o_aqua_dashboard .pill-input input[type="date"]{ cursor:text; }
+/* Native date-picker button. Two separate problems here, fixed together:
+
+   1) Chrome/Edge paint this pseudo-element with a fixed bitmap glyph that
+      is near-black and does NOT follow `color`, so on the dark theme's
+      #000 pill it was black-on-black and vanished entirely (the leading
+      .aqua-filter-icon and the mm/dd/yyyy text survived because both do
+      follow currentColor). Fixed by blanking the UA glyph out and masking
+      our own calendar shape in, painted with background-color, so it's
+      theme-driven and renders identically in both modes.
+
+   2) This button also carries its own hard-coded "Show date picker" hover
+      tooltip that ships with the browser - title/aria attributes can't
+      touch it, and it doesn't match the dashboard's own dark-pill tooltip
+      used on every other pill-input (see [data-aqua-tooltip] below). Fixed
+      by pointer-events:none here, so the button is display-only and the
+      hover/click land on the pill instead - which does carry
+      [data-aqua-tooltip] and, on click, opens this same picker itself via
+      showPicker() (filter_bar.js: openDatePicker). */
+.o_aqua_dashboard .pill-input input[type="date"]::-webkit-calendar-picker-indicator{
+  -webkit-appearance:none; appearance:none;
+  width:13px; height:13px; padding:0; margin:0 0 0 6px; flex:none;
+  pointer-events:none;
+  background-color:var(--ink);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M7%201.5a1%201%200%200%201%201%201V4h8V2.5a1%201%200%201%201%202%200V4h.5A2.5%202.5%200%200%201%2021%206.5V8H3V6.5A2.5%202.5%200%200%201%205.5%204H6V2.5a1%201%200%200%201%201-1Z'/%3E%3Cpath%20d='M3%2010h18v9.5a2.5%202.5%200%200%201-2.5%202.5h-13A2.5%202.5%200%200%201%203%2019.5V10Z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M7%201.5a1%201%200%200%201%201%201V4h8V2.5a1%201%200%201%201%202%200V4h.5A2.5%202.5%200%200%201%2021%206.5V8H3V6.5A2.5%202.5%200%200%201%205.5%204H6V2.5a1%201%200%200%201%201-1Z'/%3E%3Cpath%20d='M3%2010h18v9.5a2.5%202.5%200%200%201-2.5%202.5h-13A2.5%202.5%200%200%201%203%2019.5V10Z'/%3E%3C/svg%3E") center / contain no-repeat;
+  opacity:.75; transition:opacity .15s ease;
+}
+.o_aqua_dashboard .pill-input input[type="date"]::-webkit-calendar-picker-indicator:hover{ opacity:1; }
+/* Firefox exposes no styleable pseudo-element for the picker button; it
+   derives the glyph from color-scheme, which is now declared on both
+   theme roots above, so it stays legible there without extra rules. */
 .o_aqua_dashboard .pill-input .fa{ font-size:13px; color:inherit; }
 .o_aqua_dashboard .pill-input .fa-chevron-down{ font-size:10px; color:var(--ink-mute); }
 /* Topbar search - collapsed down to a plain 40x40 icon-button (same look
