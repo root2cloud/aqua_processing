@@ -1267,3 +1267,59 @@ body.o_aqua_dashboard_dark_scrollbar .o_aqua_profile_dialog .oe_avatar img{
 .o_aqua_dashboard .aqua-drill-table tbody tr:hover { background:var(--blue-tint); }
 .o_aqua_dashboard .aqua-drill-table tbody td { padding:10px 16px; color:#4a5568; }
 .o_aqua_dashboard .aqua-badge { font-size:10.5px; font-weight:600; padding:3px 9px; border-radius:20px; display:inline-block; background:#F1F3F5; color:var(--ink-soft); }
+
+/* ---- Export button click animation ----
+   Hooks into state dashboard.js/dashboard_templates.xml already set up:
+   onExportDashboard() flips ui.exportJustClicked true for 600ms, which
+   the template already maps onto an 'icon-btn--open' class on this same
+   .export-btn (previously used only to suppress its tooltip during that
+   window - see the [data-aqua-tooltip] rules above). No JS/XML change
+   needed - this just animates that existing 600ms window: a quick
+   press-and-pop on the button, the download glyph dropping out and
+   re-settling, and a soft ring pulsing out behind it. */
+.o_aqua_dashboard .export-btn{
+  position: relative; /* anchor for the ring pulse pseudo-element below */
+}
+.o_aqua_dashboard .export-btn.icon-btn--open{
+  animation: aqua-export-pop .6s cubic-bezier(.34, 1.56, .64, 1);
+}
+.o_aqua_dashboard .export-btn.icon-btn--open i.fa-download{
+  display: inline-block;
+  animation: aqua-export-drop .6s ease;
+}
+.o_aqua_dashboard .export-btn.icon-btn--open::after{
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--ink);
+  opacity: .5;
+  animation: aqua-export-ring .6s ease-out;
+  pointer-events: none;
+  z-index: -1;
+}
+@keyframes aqua-export-pop{
+  0%   { transform: scale(1); }
+  30%  { transform: scale(.86); }
+  55%  { transform: scale(1.12); }
+  75%  { transform: scale(.97); }
+  100% { transform: scale(1); }
+}
+@keyframes aqua-export-drop{
+  0%   { transform: translateY(0); opacity: 1; }
+  35%  { transform: translateY(7px); opacity: 0; }
+  36%  { transform: translateY(-7px); opacity: 0; }
+  65%  { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+@keyframes aqua-export-ring{
+  0%   { transform: scale(1);   opacity: .45; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce){
+  .o_aqua_dashboard .export-btn.icon-btn--open,
+  .o_aqua_dashboard .export-btn.icon-btn--open i.fa-download,
+  .o_aqua_dashboard .export-btn.icon-btn--open::after{
+    animation: none;
+  }
+}
