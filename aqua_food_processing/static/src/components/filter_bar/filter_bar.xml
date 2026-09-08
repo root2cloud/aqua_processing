@@ -29,15 +29,33 @@
     </t>
   </div>
 
+  <!-- Custom range. Both pills are AquaDatePicker now: the browser's own
+       calendar (what an <input type="date"> pops open) ignores every token
+       this dashboard is built from, so it landed on the page as a square,
+       system-font panel in Chrome's blue with no dark-mode support. The
+       component draws the same calendar from our own tokens instead, and
+       still emits plain ISO YYYY-MM-DD, so nothing downstream changes.
+       min/max cross-wire the two so an end date can never precede its
+       start, and rangeFrom/rangeTo let each calendar shade the days the
+       other one bounds. -->
   <t t-if="state.period === 'custom'">
-    <div class="pill-input date-pill aqua-tooltip" data-aqua-tooltip="Select start date" t-on-click="() => this.openDatePicker('customFromInput')">
-      <svg class="aqua-filter-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="18" height="16" rx="4" stroke="currentColor" stroke-width="1.8"/><path d="M3 10H21" stroke="currentColor" stroke-width="1.8"/><path d="M8 3V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M16 3V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-      <input type="date" t-ref="customFromInput" t-att-value="state.customFrom" t-on-change="onCustomFromChange" aria-label="Start date"/>
-    </div>
-    <div class="pill-input date-pill aqua-tooltip" data-aqua-tooltip="Select end date" t-on-click="() => this.openDatePicker('customToInput')">
-      <svg class="aqua-filter-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="18" height="16" rx="4" stroke="currentColor" stroke-width="1.8"/><path d="M3 10H21" stroke="currentColor" stroke-width="1.8"/><path d="M8 3V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M16 3V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-      <input type="date" t-ref="customToInput" t-att-value="state.customTo" t-on-change="onCustomToChange" aria-label="End date"/>
-    </div>
+    <AquaDatePicker value="state.customFrom"
+                    onChange.bind="onCustomFromChange"
+                    placeholder="'Start date'"
+                    tooltip="'Select start date'"
+                    ariaLabel="'Start date'"
+                    max="state.customTo"
+                    rangeFrom="state.customFrom"
+                    rangeTo="state.customTo"/>
+    <AquaDatePicker value="state.customTo"
+                    onChange.bind="onCustomToChange"
+                    placeholder="'End date'"
+                    tooltip="'Select end date'"
+                    ariaLabel="'End date'"
+                    min="state.customFrom"
+                    rangeFrom="state.customFrom"
+                    rangeTo="state.customTo"
+                    alignEnd="true"/>
   </t>
 
   <div class="aqua-dropdown">

@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="aqua_food_processing.AquaDatePicker">
+  <div class="aqua-datepicker" t-ref="root"
+       t-att-class="{ 'aqua-datepicker--align-end': props.alignEnd }">
+
+    <!-- Trigger: still the same pill as before, so it sits flush with the
+         period/compare pills on either side. It borrows .aqua-dropdown-trigger
+         purely for the shared hover border, open focus ring and the rule that
+         suppresses the tooltip while a panel is open. -->
+    <div class="pill-input date-pill aqua-dropdown-trigger aqua-tooltip"
+         t-att-class="{ 'aqua-dropdown-trigger--open': state.open }"
+         t-att-data-aqua-tooltip="props.tooltip"
+         t-att-aria-label="props.ariaLabel"
+         role="button" tabindex="0"
+         t-att-aria-expanded="state.open ? 'true' : 'false'"
+         t-on-click="() => this.toggle()"
+         t-on-keydown="onTriggerKeydown">
+      <svg class="aqua-filter-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="18" height="16" rx="4" stroke="currentColor" stroke-width="1.8"/><path d="M3 10H21" stroke="currentColor" stroke-width="1.8"/><path d="M8 3V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M16 3V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span class="aqua-datepicker-value"
+            t-att-class="{ 'aqua-datepicker-value--empty': !hasValue }"
+            t-esc="displayLabel"/>
+    </div>
+
+    <t t-if="state.open">
+      <div class="aqua-datepicker-panel">
+
+        <div class="aqua-datepicker-head">
+          <button type="button" class="aqua-datepicker-nav"
+                  aria-label="Previous" t-on-click="() => this.step(-1)">
+            <i class="fa fa-chevron-left"/>
+          </button>
+          <button type="button" class="aqua-datepicker-title"
+                  t-att-class="{ 'aqua-datepicker-title--drilled': state.view !== 'days' }"
+                  t-on-click="() => this.onHeaderClick()">
+            <span t-esc="headerLabel"/>
+            <i class="fa fa-caret-down"/>
+          </button>
+          <button type="button" class="aqua-datepicker-nav"
+                  aria-label="Next" t-on-click="() => this.step(1)">
+            <i class="fa fa-chevron-right"/>
+          </button>
+        </div>
+
+        <!-- day grid -->
+        <t t-if="state.view === 'days'">
+          <div class="aqua-datepicker-weekdays">
+            <t t-foreach="weekdays" t-as="wd" t-key="wd">
+              <span t-esc="wd"/>
+            </t>
+          </div>
+          <div class="aqua-datepicker-grid">
+            <t t-foreach="weeks" t-as="week" t-key="week.key">
+              <t t-foreach="week.days" t-as="day" t-key="day.iso">
+                <button type="button" class="aqua-datepicker-day"
+                        t-att-class="{
+                            'aqua-datepicker-day--outside':  day.outside,
+                            'aqua-datepicker-day--today':    day.today,
+                            'aqua-datepicker-day--selected': day.selected,
+                            'aqua-datepicker-day--inrange':  day.inRange,
+                        }"
+                        t-att-disabled="day.disabled ? 'disabled' : false"
+                        t-on-click="() => this.selectDay(day)">
+                  <span t-esc="day.day"/>
+                </button>
+              </t>
+            </t>
+          </div>
+        </t>
+
+        <!-- month grid -->
+        <t t-if="state.view === 'months'">
+          <div class="aqua-datepicker-cells">
+            <t t-foreach="months" t-as="m" t-key="m">
+              <button type="button" class="aqua-datepicker-cell"
+                      t-att-class="{ 'aqua-datepicker-cell--selected': m_index === state.month }"
+                      t-att-disabled="isMonthDisabled(m_index) ? 'disabled' : false"
+                      t-on-click="() => this.selectMonth(m_index)">
+                <span t-esc="m"/>
+              </button>
+            </t>
+          </div>
+        </t>
+
+        <!-- year grid -->
+        <t t-if="state.view === 'years'">
+          <div class="aqua-datepicker-cells">
+            <t t-foreach="yearPage" t-as="y" t-key="y">
+              <button type="button" class="aqua-datepicker-cell"
+                      t-att-class="{ 'aqua-datepicker-cell--selected': y === state.year }"
+                      t-att-disabled="isYearDisabled(y) ? 'disabled' : false"
+                      t-on-click="() => this.selectYear(y)">
+                <span t-esc="y"/>
+              </button>
+            </t>
+          </div>
+        </t>
+
+        <div class="aqua-datepicker-foot">
+          <button type="button" class="aqua-datepicker-action"
+                  t-on-click="() => this.onClearClick()">Clear</button>
+          <button type="button" class="aqua-datepicker-action aqua-datepicker-action--primary"
+                  t-att-disabled="isTodayDisabled() ? 'disabled' : false"
+                  t-on-click="() => this.onTodayClick()">Today</button>
+        </div>
+
+      </div>
+    </t>
+
+  </div>
+</t>
+
+</templates>
